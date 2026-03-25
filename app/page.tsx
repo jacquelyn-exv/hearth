@@ -1,6 +1,19 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+
 export default function Home() {
+  const [loggedIn, setLoggedIn] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setLoggedIn(true)
+    })
+  }, [])
+
+  const ctaHref = loggedIn ? '/dashboard' : '/signup'
+
   return (
     <main style={{
       fontFamily: "'DM Sans', system-ui, sans-serif",
@@ -20,37 +33,54 @@ export default function Home() {
         top: 0,
         zIndex: 200
       }}>
-        <div style={{
+        <a href="/" style={{
           fontFamily: "'Playfair Display', Georgia, serif",
           fontSize: '21px',
-          color: '#F8F4EE'
+          color: '#F8F4EE',
+          textDecoration: 'none'
         }}>
           Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span>
-        </div>
+        </a>
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-          {['Guides', 'About'].map(link => (
-            <button key={link} style={{
-              background: 'none',
-              border: 'none',
-              color: 'rgba(248,244,238,0.65)',
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: '13px',
-              padding: '6px 11px',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}>{link}</button>
-          ))}
-          <button style={{
-            background: '#C47B2B',
-            border: 'none',
-            color: '#fff',
+          <a href="/guides" style={{
+            color: 'rgba(248,244,238,0.65)',
             fontFamily: "'DM Sans', sans-serif",
             fontSize: '13px',
-            fontWeight: 500,
-            padding: '6px 14px',
+            padding: '6px 11px',
             borderRadius: '6px',
-            cursor: 'pointer'
-          }}>Set up my home</button>
+            textDecoration: 'none'
+          }}>Guides</a>
+          <a href="/about" style={{
+            color: 'rgba(248,244,238,0.65)',
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: '13px',
+            padding: '6px 11px',
+            borderRadius: '6px',
+            textDecoration: 'none'
+          }}>About</a>
+          {loggedIn ? (
+            <a href="/dashboard" style={{
+              background: '#C47B2B',
+              color: '#fff',
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: '13px',
+              fontWeight: 500,
+              padding: '6px 14px',
+              borderRadius: '6px',
+              textDecoration: 'none'
+            }}>My Home</a>
+          ) : (
+            <a href="/signup" style={{
+              background: '#C47B2B',
+              color: '#fff',
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: '13px',
+              fontWeight: 500,
+              padding: '6px 14px',
+              borderRadius: '6px',
+              textDecoration: 'none'
+            }}>Set up my home</a>
+          )}
         </div>
       </nav>
 
@@ -95,18 +125,18 @@ export default function Home() {
             Built entirely on the homeowner&apos;s side of the table.
           </p>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button style={{
-              background: '#C47B2B', color: '#fff', border: 'none',
+            <a href={ctaHref} style={{
+              background: '#C47B2B', color: '#fff',
               padding: '12px 24px', borderRadius: '10px',
               fontFamily: "'DM Sans', sans-serif", fontSize: '14px',
-              fontWeight: 500, cursor: 'pointer'
-            }}>Set up my home</button>
-            <button style={{
+              fontWeight: 500, textDecoration: 'none', display: 'inline-block'
+            }}>{loggedIn ? 'Go to my home' : 'Set up my home'}</a>
+            <a href="/guides" style={{
               background: 'none', border: '1px solid rgba(248,244,238,0.25)',
               color: 'rgba(248,244,238,0.8)', padding: '11px 22px',
               borderRadius: '10px', fontFamily: "'DM Sans', sans-serif",
-              fontSize: '14px', cursor: 'pointer'
-            }}>Browse guides</button>
+              fontSize: '14px', textDecoration: 'none', display: 'inline-block'
+            }}>Browse guides</a>
           </div>
           <p style={{
             marginTop: '14px', fontSize: '11px',
@@ -147,26 +177,28 @@ export default function Home() {
           }}>Three steps to knowing your home</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
             {[
-              { n: '01', title: 'Set up your home', desc: 'Enter your address, home details, and system ages. Takes under 5 minutes.', tag: 'Free forever' },
-              { n: '02', title: 'Get your score', desc: 'See your home health score across 4 dimensions. Know what needs attention.', tag: 'Live score' },
-              { n: '03', title: 'Log jobs & share', desc: 'Record contractor work. Share anonymously to help your neighbors.', tag: 'Community' }
+              { n: '01', title: 'Set up your home', desc: 'Enter your address, home details, and system ages. Takes under 5 minutes.', tag: 'Free forever', href: ctaHref },
+              { n: '02', title: 'Get your score', desc: 'See your home health score across 4 dimensions. Know what needs attention.', tag: 'Live score', href: ctaHref },
+              { n: '03', title: 'Log jobs & share', desc: 'Record contractor work. Share anonymously to help your neighbors.', tag: 'Community', href: '/log' }
             ].map(step => (
-              <div key={step.n} style={{
-                background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
-                borderRadius: '16px', padding: '24px 20px'
-              }}>
+              <a key={step.n} href={step.href} style={{ textDecoration: 'none' }}>
                 <div style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontSize: '32px', color: '#EAF2EC', lineHeight: 1, marginBottom: '14px'
-                }}>{step.n}</div>
-                <h3 style={{ fontSize: '15px', fontWeight: 500, marginBottom: '6px' }}>{step.title}</h3>
-                <p style={{ fontSize: '13px', color: '#8A8A82', lineHeight: 1.6 }}>{step.desc}</p>
-                <div style={{
-                  marginTop: '14px', display: 'inline-block',
-                  background: '#EAF2EC', color: '#3D7A5A',
-                  fontSize: '10px', fontWeight: 500, padding: '3px 9px', borderRadius: '20px'
-                }}>{step.tag}</div>
-              </div>
+                  background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
+                  borderRadius: '16px', padding: '24px 20px'
+                }}>
+                  <div style={{
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    fontSize: '32px', color: '#EAF2EC', lineHeight: 1, marginBottom: '14px'
+                  }}>{step.n}</div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 500, marginBottom: '6px', color: '#1A1A18' }}>{step.title}</h3>
+                  <p style={{ fontSize: '13px', color: '#8A8A82', lineHeight: 1.6 }}>{step.desc}</p>
+                  <div style={{
+                    marginTop: '14px', display: 'inline-block',
+                    background: '#EAF2EC', color: '#3D7A5A',
+                    fontSize: '10px', fontWeight: 500, padding: '3px 9px', borderRadius: '20px'
+                  }}>{step.tag}</div>
+                </div>
+              </a>
             ))}
           </div>
         </div>
@@ -195,16 +227,18 @@ export default function Home() {
               { icon: '🌿', name: 'Landscaping', desc: 'Drainage, grading, upkeep' },
               { icon: '🪵', name: 'Deck', desc: 'Inspection, sealing, repairs' }
             ].map(sys => (
-              <div key={sys.name} style={{
-                background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
-                borderTop: '3px solid #6AAF8A',
-                borderRadius: '16px', padding: '20px 16px 16px',
-                cursor: 'pointer', textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '28px', marginBottom: '10px' }}>{sys.icon}</div>
-                <h4 style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>{sys.name}</h4>
-                <p style={{ fontSize: '11px', color: '#8A8A82', lineHeight: 1.4 }}>{sys.desc}</p>
-              </div>
+              <a key={sys.name} href="/guides" style={{ textDecoration: 'none' }}>
+                <div style={{
+                  background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
+                  borderTop: '3px solid #6AAF8A',
+                  borderRadius: '16px', padding: '20px 16px 16px',
+                  cursor: 'pointer', textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '28px', marginBottom: '10px' }}>{sys.icon}</div>
+                  <h4 style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px', color: '#1A1A18' }}>{sys.name}</h4>
+                  <p style={{ fontSize: '11px', color: '#8A8A82', lineHeight: 1.4 }}>{sys.desc}</p>
+                </div>
+              </a>
             ))}
           </div>
         </div>
@@ -227,12 +261,12 @@ export default function Home() {
                 A live 0–100 score across system risk, maintenance history,
                 value protection, and seasonal readiness.
               </p>
-              <button style={{
+              <a href={ctaHref} style={{
                 marginTop: '20px', background: '#C47B2B', color: '#fff',
-                border: 'none', padding: '11px 22px', borderRadius: '10px',
+                padding: '11px 22px', borderRadius: '10px',
                 fontFamily: "'DM Sans', sans-serif", fontSize: '14px',
-                fontWeight: 500, cursor: 'pointer'
-              }}>Get my score</button>
+                fontWeight: 500, textDecoration: 'none', display: 'inline-block'
+              }}>{loggedIn ? 'Go to my home' : 'Get my score'}</a>
             </div>
             <div style={{ position: 'relative', width: '90px', height: '90px', flexShrink: 0 }}>
               <svg width="90" height="90" style={{ transform: 'rotate(-90deg)' }}>
@@ -252,10 +286,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer style={{
-        background: '#1E3A2F', padding: '32px',
-        textAlign: 'center'
-      }}>
+      <footer style={{ background: '#1E3A2F', padding: '32px', textAlign: 'center' }}>
         <div style={{
           fontFamily: "'Playfair Display', Georgia, serif",
           fontSize: '18px', color: '#F8F4EE', marginBottom: '8px'

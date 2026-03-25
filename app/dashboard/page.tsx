@@ -59,15 +59,19 @@ export default function Dashboard() {
         justifyContent: 'space-between', padding: '0 28px', height: '58px',
         position: 'sticky', top: 0, zIndex: 200
       }}>
-        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '21px', color: '#F8F4EE' }}>
+        <a href="/" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '21px', color: '#F8F4EE', textDecoration: 'none' }}>
           Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.5)' }}>{user?.email}</span>
+        </a>
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <a href="/log" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Contractor Log</a>
+          <a href="/neighbors" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Neighbors</a>
+          <a href="/guides" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Guides</a>
+          <a href="/report" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Report Card</a>
           <button onClick={handleLogout} style={{
             background: 'none', border: '1px solid rgba(248,244,238,0.2)',
             color: 'rgba(248,244,238,0.7)', fontFamily: "'DM Sans', sans-serif",
-            fontSize: '13px', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer'
+            fontSize: '13px', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer',
+            marginLeft: '8px'
           }}>Sign out</button>
         </div>
       </nav>
@@ -100,12 +104,11 @@ export default function Dashboard() {
             <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.6, maxWidth: '400px', margin: '0 auto 24px' }}>
               Tell us about your home to get your health score, seasonal checklist, and personalized recommendations.
             </p>
-            <button onClick={() => window.location.href = '/onboarding'} style={{
-              background: '#C47B2B', color: '#fff', border: 'none',
-              padding: '12px 28px', borderRadius: '10px',
-              fontFamily: "'DM Sans', sans-serif", fontSize: '14px',
-              fontWeight: 500, cursor: 'pointer'
-            }}>Set up my home</button>
+            <a href="/onboarding" style={{
+              display: 'inline-block', background: '#C47B2B', color: '#fff',
+              textDecoration: 'none', padding: '12px 28px', borderRadius: '10px',
+              fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: 500
+            }}>Set up my home</a>
           </div>
         )}
 
@@ -150,6 +153,11 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
+            <a href="/report" style={{
+              background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none',
+              padding: '10px 18px', borderRadius: '10px', fontSize: '13px',
+              fontWeight: 500, flexShrink: 0
+            }}>View report card</a>
           </div>
         )}
 
