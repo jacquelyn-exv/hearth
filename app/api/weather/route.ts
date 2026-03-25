@@ -96,7 +96,7 @@ export async function GET(request: Request) {
 
   try {
     // Geocode
-    const query = city ? `${city} ${state}`.trim() : zip
+    const query = zip ? `${zip} USA` : `${city} ${state}`.trim()
     const geoRes = await fetch(
       `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`
     )
