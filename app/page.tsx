@@ -15,158 +15,237 @@ export default function Home() {
       {/* Hero */}
       <section style={{
         background: '#1E3A2F',
-        padding: '72px 32px 80px',
+        padding: '80px 32px 88px',
         position: 'relative',
         overflow: 'hidden'
       }}>
         <div style={{
           position: 'absolute', top: '-80px', right: '-60px',
-          width: '380px', height: '380px',
-          background: 'radial-gradient(circle, rgba(196,123,43,0.16) 0%, transparent 68%)',
+          width: '500px', height: '500px',
+          background: 'radial-gradient(circle, rgba(196,123,43,0.14) 0%, transparent 68%)',
           pointerEvents: 'none'
         }} />
-        <div style={{ maxWidth: '620px', position: 'relative', zIndex: 1 }}>
+        <div style={{
+          position: 'absolute', bottom: '-100px', left: '-80px',
+          width: '400px', height: '400px',
+          background: 'radial-gradient(circle, rgba(106,175,138,0.08) 0%, transparent 68%)',
+          pointerEvents: 'none'
+        }} />
+        <div style={{ maxWidth: '680px', position: 'relative', zIndex: 1 }}>
           <div style={{
-            fontSize: '10px', fontWeight: 500, letterSpacing: '2px',
-            textTransform: 'uppercase', color: '#6AAF8A', marginBottom: '16px'
-          }}>Homeowner Intelligence</div>
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            background: 'rgba(106,175,138,0.15)', borderRadius: '20px',
+            padding: '6px 14px', marginBottom: '24px'
+          }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#6AAF8A' }} />
+            <span style={{ fontSize: '12px', color: '#6AAF8A', fontWeight: 500 }}>Free for homeowners</span>
+          </div>
           <h1 style={{
             fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(34px, 5vw, 54px)',
-            lineHeight: 1.12,
+            fontSize: 'clamp(40px, 6vw, 64px)',
+            lineHeight: 1.08,
             color: '#F8F4EE',
-            marginBottom: '20px',
+            marginBottom: '24px',
             fontWeight: 400
           }}>
-            The information advantage<br />
-            <em style={{ color: '#C47B2B', fontStyle: 'italic' }}>your home deserves.</em>
+            Your home,<br />
+            <em style={{ color: '#C47B2B', fontStyle: 'italic' }}>fully understood.</em>
           </h1>
           <p style={{
-            fontSize: '16px',
-            color: 'rgba(248,244,238,0.68)',
-            lineHeight: 1.7,
-            marginBottom: '32px',
-            maxWidth: '480px',
+            fontSize: '17px',
+            color: 'rgba(248,244,238,0.7)',
+            lineHeight: 1.75,
+            marginBottom: '36px',
+            maxWidth: '540px',
             fontWeight: 300
           }}>
-            Real pricing. Trusted contractors. Your home&apos;s health score.
-            Built entirely on the homeowner&apos;s side of the table.
+            The one place to track your home&apos;s health, find trusted contractors, see what your neighbors paid, and build a complete record of everything you&apos;ve done to your home.
           </p>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <a href="/signup" style={{
               background: '#C47B2B', color: '#fff',
-              padding: '12px 24px', borderRadius: '10px',
-              fontFamily: "'DM Sans', sans-serif", fontSize: '14px',
+              padding: '14px 28px', borderRadius: '10px',
+              fontFamily: "'DM Sans', sans-serif", fontSize: '15px',
               fontWeight: 500, textDecoration: 'none', display: 'inline-block'
             }}>Set up my home</a>
-            <a href="/guides" style={{
+            <a href="/neighbors" style={{
               background: 'none', border: '1px solid rgba(248,244,238,0.25)',
-              color: 'rgba(248,244,238,0.8)', padding: '11px 22px',
+              color: 'rgba(248,244,238,0.85)', padding: '13px 26px',
               borderRadius: '10px', fontFamily: "'DM Sans', sans-serif",
-              fontSize: '14px', textDecoration: 'none', display: 'inline-block'
-            }}>Browse guides</a>
+              fontSize: '15px', textDecoration: 'none', display: 'inline-block'
+            }}>Browse neighbor reviews</a>
           </div>
-          <p style={{
-            marginTop: '14px', fontSize: '11px',
-            color: 'rgba(248,244,238,0.35)'
-          }}>Free for homeowners. Always.</p>
         </div>
       </section>
 
-      {/* Trust strip */}
-      <div style={{
-        background: '#EDE8E0', borderBottom: '1px solid rgba(30,58,47,0.11)',
-        padding: '12px 32px', display: 'flex', gap: '28px', flexWrap: 'wrap'
-      }}>
-        {[
-          '13 years of home services expertise',
-          'Community-verified contractor data',
-          'Real pricing from real homeowners',
-          'Never sells your data'
-        ].map(item => (
-          <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: '#4A4A44' }}>
-            <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#6AAF8A', flexShrink: 0 }} />
-            {item}
-          </div>
-        ))}
-      </div>
-
-      {/* How it works */}
-      <section style={{ padding: '56px 32px' }}>
+      {/* 4 Pillars */}
+      <section style={{ padding: '72px 32px', background: '#fff' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{
-            fontSize: '10px', fontWeight: 500, letterSpacing: '2px',
-            textTransform: 'uppercase', color: '#3D7A5A', marginBottom: '10px'
-          }}>How it works</div>
-          <h2 style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 400,
-            marginBottom: '32px', lineHeight: 1.2
-          }}>Three steps to knowing your home</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#3D7A5A', marginBottom: '12px' }}>What Hearth does</div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 400, color: '#1E3A2F', lineHeight: 1.2 }}>
+              Everything your home needs.<br />In one place.
+            </h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
             {[
-              { n: '01', title: 'Set up your home', desc: 'Enter your address, home details, and system ages. Takes under 5 minutes.', tag: 'Free forever', href: '/signup' },
-              { n: '02', title: 'Get your score', desc: 'See your home health score across 4 dimensions. Know what needs attention.', tag: 'Live score', href: '/signup' },
-              { n: '03', title: 'Log jobs & share', desc: 'Record contractor work. Share anonymously to help your neighbors.', tag: 'Community', href: '/log' }
-            ].map(step => (
-              <a key={step.n} href={step.href} style={{ textDecoration: 'none' }}>
+              {
+                icon: '📊',
+                color: '#EAF2EC',
+                iconColor: '#3D7A5A',
+                title: 'Home Health Score',
+                desc: 'A live score across every major system in your home — so you know exactly what needs attention and what can wait.',
+                tag: 'Live & personalized'
+              },
+              {
+                icon: '📋',
+                color: '#FBF0DC',
+                iconColor: '#C47B2B',
+                title: 'Contractor Log',
+                desc: 'Every job, every price, every warranty. Your home\'s complete maintenance history — organized and always there when you need it.',
+                tag: 'Your permanent record'
+              },
+              {
+                icon: '👥',
+                color: '#E6F2F8',
+                iconColor: '#3A7CA8',
+                title: 'Neighbor Network',
+                desc: 'Real contractor prices from real homeowners in your area. No paid placements. No fake reviews. Just verified data.',
+                tag: 'Community-verified'
+              },
+              {
+                icon: '📖',
+                color: '#F5EAE7',
+                iconColor: '#8B3A2A',
+                title: 'Home Guides',
+                desc: 'Expert guidance on every system — when to repair, when to replace, what things should cost. Written from years inside the industry.',
+                tag: 'Expert editorial'
+              },
+            ].map(pillar => (
+              <div key={pillar.title} style={{
+                background: '#F8F4EE', borderRadius: '16px', padding: '28px 24px',
+                border: '1px solid rgba(30,58,47,0.08)'
+              }}>
                 <div style={{
-                  background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
-                  borderRadius: '16px', padding: '24px 20px'
-                }}>
-                  <div style={{
-                    fontFamily: "'Playfair Display', Georgia, serif",
-                    fontSize: '32px', color: '#EAF2EC', lineHeight: 1, marginBottom: '14px'
-                  }}>{step.n}</div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 500, marginBottom: '6px', color: '#1A1A18' }}>{step.title}</h3>
-                  <p style={{ fontSize: '13px', color: '#8A8A82', lineHeight: 1.6 }}>{step.desc}</p>
-                  <div style={{
-                    marginTop: '14px', display: 'inline-block',
-                    background: '#EAF2EC', color: '#3D7A5A',
-                    fontSize: '10px', fontWeight: 500, padding: '3px 9px', borderRadius: '20px'
-                  }}>{step.tag}</div>
-                </div>
-              </a>
+                  width: '48px', height: '48px', borderRadius: '12px',
+                  background: pillar.color, display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: '22px', marginBottom: '18px'
+                }}>{pillar.icon}</div>
+                <h3 style={{ fontSize: '16px', fontWeight: 500, color: '#1E3A2F', marginBottom: '10px' }}>{pillar.title}</h3>
+                <p style={{ fontSize: '13px', color: '#8A8A82', lineHeight: 1.7, marginBottom: '16px' }}>{pillar.desc}</p>
+                <span style={{
+                  fontSize: '11px', fontWeight: 500, padding: '3px 10px',
+                  borderRadius: '20px', background: pillar.color, color: pillar.iconColor
+                }}>{pillar.tag}</span>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Neighbor Network feature band */}
-      <section style={{ padding: '0 32px 56px' }}>
+      {/* How it works */}
+      <section style={{ padding: '72px 32px', background: '#F8F4EE' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#3D7A5A', marginBottom: '12px' }}>Getting started</div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 400, color: '#1E3A2F' }}>
+              Up and running in under 2 minutes.
+            </h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0', position: 'relative' }}>
+            {/* Connector line */}
+            <div style={{ position: 'absolute', top: '32px', left: '16.6%', right: '16.6%', height: '2px', background: 'rgba(30,58,47,0.1)', zIndex: 0 }} />
+
+            {[
+              {
+                step: '1',
+                icon: '🏠',
+                title: 'Tell us about your home',
+                desc: 'Enter your address and year built. We\'ll pre-fill the rest.'
+              },
+              {
+                step: '2',
+                icon: '📊',
+                title: 'Get your health score',
+                desc: 'See your home\'s live score across all four dimensions instantly.'
+              },
+              {
+                step: '3',
+                icon: '📋',
+                title: 'Build your home record',
+                desc: 'Log jobs, track warranties, share with neighbors over time.'
+              }
+            ].map((step, i) => (
+              <div key={step.step} style={{ textAlign: 'center', padding: '0 24px', position: 'relative', zIndex: 1 }}>
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '50%',
+                  background: '#1E3A2F', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: '26px', margin: '0 auto 20px',
+                  border: '4px solid #F8F4EE', boxShadow: '0 0 0 2px rgba(30,58,47,0.15)'
+                }}>{step.icon}</div>
+                <div style={{
+                  fontSize: '10px', fontWeight: 500, letterSpacing: '1.5px',
+                  textTransform: 'uppercase', color: '#C47B2B', marginBottom: '8px'
+                }}>Step {step.step}</div>
+                <h3 style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '8px' }}>{step.title}</h3>
+                <p style={{ fontSize: '13px', color: '#8A8A82', lineHeight: 1.65 }}>{step.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '48px' }}>
+            <a href="/signup" style={{
+              display: 'inline-block', background: '#1E3A2F', color: '#F8F4EE',
+              textDecoration: 'none', padding: '13px 32px', borderRadius: '10px',
+              fontSize: '14px', fontWeight: 500
+            }}>Get started — it&apos;s free</a>
+          </div>
+        </div>
+      </section>
+
+      {/* Neighbor Network feature */}
+      <section style={{ padding: '72px 32px', background: '#fff' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{
-            background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
-            borderRadius: '16px', padding: '36px 32px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: '28px', flexWrap: 'wrap'
+            background: '#1E3A2F', borderRadius: '20px', padding: '48px',
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'center'
           }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#3D7A5A', marginBottom: '10px' }}>Community</div>
-              <h3 style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: '24px', color: '#1E3A2F', fontWeight: 400, marginBottom: '10px'
-              }}>See what your neighbors paid</h3>
-              <p style={{ fontSize: '13px', color: '#8A8A82', maxWidth: '400px', lineHeight: 1.7, marginBottom: '20px' }}>
-                Real contractor prices from real homeowners in your area. No paid placements. No fake reviews. Just verified data from people who actually hired them.
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#6AAF8A', marginBottom: '14px' }}>Neighbor Network</div>
+              <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(24px, 3vw, 34px)', color: '#F8F4EE', fontWeight: 400, marginBottom: '16px', lineHeight: 1.2 }}>
+                See what your neighbors actually paid.
+              </h2>
+              <p style={{ fontSize: '14px', color: 'rgba(248,244,238,0.65)', lineHeight: 1.75, marginBottom: '28px' }}>
+                Every review is tied to a real logged job from a verified homeowner. No contractors paying for placement. No anonymous tips. Just honest data from people in your area.
               </p>
               <a href="/neighbors" style={{
-                display: 'inline-block', background: '#1E3A2F', color: '#F8F4EE',
-                textDecoration: 'none', padding: '11px 22px', borderRadius: '10px',
-                fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: 500
-              }}>Browse neighbor reviews</a>
+                display: 'inline-block', background: '#C47B2B', color: '#fff',
+                textDecoration: 'none', padding: '12px 24px', borderRadius: '10px',
+                fontSize: '14px', fontWeight: 500
+              }}>Browse reviews in your area</a>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', flexShrink: 0, maxWidth: '280px' }}>
+            <div style={{ display: 'grid', gap: '12px' }}>
               {[
-                { icon: '⭐', label: 'Verified reviews', desc: 'Tied to real logged jobs' },
-                { icon: '💰', label: 'Real pricing', desc: 'What they actually paid' },
-                { icon: '🔒', label: 'Anonymous', desc: 'Names never shown' },
-                { icon: '📍', label: 'Local', desc: 'Filter by your zip code' },
-              ].map(item => (
-                <div key={item.label} style={{ background: '#F8F4EE', borderRadius: '10px', padding: '14px' }}>
-                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>{item.icon}</div>
-                  <div style={{ fontSize: '12px', fontWeight: 500, color: '#1A1A18', marginBottom: '2px' }}>{item.label}</div>
-                  <div style={{ fontSize: '11px', color: '#8A8A82' }}>{item.desc}</div>
+                { company: 'Smith Roofing Co.', system: 'Roof', price: '$12,400', stars: 5, tag: 'Would refer', color: '#EAF2EC', textColor: '#3D7A5A' },
+                { company: 'Blue Ridge HVAC', system: 'HVAC', price: '$3,200', stars: 4, tag: 'Quality work', color: '#EAF2EC', textColor: '#3D7A5A' },
+                { company: 'Thompson Creek', system: 'Gutters', price: '$5,000', stars: 5, tag: 'On time · Clean', color: '#EAF2EC', textColor: '#3D7A5A' },
+              ].map(review => (
+                <div key={review.company} style={{
+                  background: 'rgba(255,255,255,0.06)', borderRadius: '12px',
+                  padding: '14px 16px', border: '1px solid rgba(255,255,255,0.08)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: '#F8F4EE' }}>{review.company}</div>
+                      <div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.45)', marginTop: '2px' }}>{review.system}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 500, color: '#F8F4EE' }}>{review.price}</div>
+                      <div style={{ fontSize: '12px', color: '#C47B2B' }}>{'★'.repeat(review.stars)}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: 'rgba(106,175,138,0.2)', color: '#6AAF8A' }}>{review.tag}</span>
                 </div>
               ))}
             </div>
@@ -175,37 +254,34 @@ export default function Home() {
       </section>
 
       {/* Systems grid */}
-      <section style={{ padding: '56px 32px', background: '#fff' }}>
+      <section style={{ padding: '72px 32px', background: '#F8F4EE' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{
-            fontSize: '10px', fontWeight: 500, letterSpacing: '2px',
-            textTransform: 'uppercase', color: '#3D7A5A', marginBottom: '10px'
-          }}>Home systems</div>
-          <h2 style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 400,
-            marginBottom: '32px', lineHeight: 1.2
-          }}>Every system. Every guide.</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '14px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#3D7A5A', marginBottom: '12px' }}>Home guides</div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 3.5vw, 38px)', fontWeight: 400, color: '#1E3A2F' }}>
+              Every system. Every guide.
+            </h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
             {[
-              { icon: '🏠', name: 'Roof', desc: 'Lifespan, warning signs, costs' },
-              { icon: '🌡️', name: 'HVAC', desc: 'Maintenance, replacement, pricing' },
-              { icon: '💧', name: 'Plumbing', desc: 'Pipe types, red flags, repairs' },
-              { icon: '⚡', name: 'Electrical', desc: 'Panel age, safety, upgrades' },
-              { icon: '🪟', name: 'Windows', desc: 'Seals, efficiency, replacement' },
-              { icon: '🔥', name: 'Water Heater', desc: 'Lifespan, flush, replacement' },
-              { icon: '🌿', name: 'Landscaping', desc: 'Drainage, grading, upkeep' },
-              { icon: '🪵', name: 'Deck', desc: 'Inspection, sealing, repairs' }
+              { icon: '🏠', name: 'Roof', desc: 'Lifespan & costs' },
+              { icon: '🌡️', name: 'HVAC', desc: 'Maintenance & pricing' },
+              { icon: '💧', name: 'Plumbing', desc: 'Pipes & red flags' },
+              { icon: '⚡', name: 'Electrical', desc: 'Panel age & safety' },
+              { icon: '🪟', name: 'Windows', desc: 'Seals & replacement' },
+              { icon: '🔥', name: 'Water Heater', desc: 'Repair vs. replace' },
+              { icon: '🌿', name: 'Landscaping', desc: 'Drainage & grading' },
+              { icon: '🪵', name: 'Deck', desc: 'Inspection & sealing' }
             ].map(sys => (
               <a key={sys.name} href="/guides" style={{ textDecoration: 'none' }}>
                 <div style={{
-                  background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
+                  background: '#fff', border: '1px solid rgba(30,58,47,0.09)',
                   borderTop: '3px solid #6AAF8A',
-                  borderRadius: '16px', padding: '20px 16px 16px',
-                  cursor: 'pointer', textAlign: 'center'
+                  borderRadius: '14px', padding: '18px 14px 14px',
+                  textAlign: 'center', transition: 'box-shadow 0.2s'
                 }}>
-                  <div style={{ fontSize: '28px', marginBottom: '10px' }}>{sys.icon}</div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 500, marginBottom: '4px', color: '#1A1A18' }}>{sys.name}</h4>
+                  <div style={{ fontSize: '26px', marginBottom: '8px' }}>{sys.icon}</div>
+                  <h4 style={{ fontSize: '13px', fontWeight: 500, marginBottom: '3px', color: '#1A1A18' }}>{sys.name}</h4>
                   <p style={{ fontSize: '11px', color: '#8A8A82', lineHeight: 1.4 }}>{sys.desc}</p>
                 </div>
               </a>
@@ -214,65 +290,65 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Score band */}
-      <section style={{ padding: '56px 32px' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      {/* Score CTA */}
+      <section style={{ padding: '72px 32px', background: '#fff' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <div style={{
-            background: '#1E3A2F', borderRadius: '16px', padding: '36px 32px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: '28px', flexWrap: 'wrap'
+            background: '#1E3A2F', borderRadius: '20px', padding: '56px 48px',
+            textAlign: 'center', position: 'relative', overflow: 'hidden'
           }}>
-            <div>
-              <h3 style={{
+            <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(196,123,43,0.15) 0%, transparent 68%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ position: 'relative', width: '100px', height: '100px', margin: '0 auto 28px' }}>
+                <svg width="100" height="100" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="10" />
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#6AAF8A" strokeWidth="10"
+                    strokeDasharray="251" strokeDashoffset="63" strokeLinecap="round" />
+                </svg>
+                <div style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontSize: '26px', color: '#F8F4EE', fontWeight: 600
+                }}>74</div>
+              </div>
+              <h2 style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: '24px', color: '#F8F4EE', fontWeight: 400, marginBottom: '8px'
-              }}>What&apos;s your home health score?</h3>
-              <p style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)', maxWidth: '360px' }}>
-                A live 0–100 score across system risk, maintenance history,
-                value protection, and seasonal readiness.
+                fontSize: 'clamp(24px, 3.5vw, 36px)', color: '#F8F4EE',
+                fontWeight: 400, marginBottom: '14px', lineHeight: 1.2
+              }}>What&apos;s your home health score?</h2>
+              <p style={{ fontSize: '15px', color: 'rgba(248,244,238,0.6)', maxWidth: '420px', margin: '0 auto 32px', lineHeight: 1.7 }}>
+                A live 0–100 score across system risk, maintenance history, value protection, and seasonal readiness. Free for every homeowner.
               </p>
               <a href="/signup" style={{
-                marginTop: '20px', background: '#C47B2B', color: '#fff',
-                padding: '11px 22px', borderRadius: '10px',
-                fontFamily: "'DM Sans', sans-serif", fontSize: '14px',
-                fontWeight: 500, textDecoration: 'none', display: 'inline-block'
-              }}>Get my score</a>
-            </div>
-            <div style={{ position: 'relative', width: '90px', height: '90px', flexShrink: 0 }}>
-              <svg width="90" height="90" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx="45" cy="45" r="36" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
-                <circle cx="45" cy="45" r="36" fill="none" stroke="#6AAF8A" strokeWidth="8"
-                  strokeDasharray="226" strokeDashoffset="57" strokeLinecap="round" />
-              </svg>
-              <div style={{
-                position: 'absolute', top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: '22px', color: '#F8F4EE', fontWeight: 600
-              }}>74</div>
+                display: 'inline-block', background: '#C47B2B', color: '#fff',
+                textDecoration: 'none', padding: '14px 32px', borderRadius: '10px',
+                fontFamily: "'DM Sans', sans-serif", fontSize: '15px', fontWeight: 500
+              }}>Get my score — it&apos;s free</a>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer style={{ background: '#1E3A2F', padding: '32px', textAlign: 'center' }}>
-        <div style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
-          fontSize: '18px', color: '#F8F4EE', marginBottom: '8px'
-        }}>Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span></div>
-        <p style={{ fontSize: '12px', color: 'rgba(248,244,238,0.4)', marginBottom: '12px' }}>
-          Know your home. Own your home.
-        </p>
-        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          {[
-            { label: 'Guides', href: '/guides' },
-            { label: 'Neighbor Network', href: '/neighbors' },
-            { label: 'About', href: '/about' },
-            { label: 'Sign up', href: '/signup' },
-          ].map(link => (
-            <a key={link.label} href={link.href} style={{ fontSize: '12px', color: 'rgba(248,244,238,0.45)', textDecoration: 'none' }}>{link.label}</a>
-          ))}
+      <footer style={{ background: '#1E3A2F', padding: '40px 32px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+          <div>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#F8F4EE', marginBottom: '6px' }}>
+              Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span>
+            </div>
+            <p style={{ fontSize: '12px', color: 'rgba(248,244,238,0.35)' }}>Know your home. Own your home.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+            {[
+              { label: 'Guides', href: '/guides' },
+              { label: 'Neighbor Network', href: '/neighbors' },
+              { label: 'About', href: '/about' },
+              { label: 'Sign up', href: '/signup' },
+            ].map(link => (
+              <a key={link.label} href={link.href} style={{ fontSize: '13px', color: 'rgba(248,244,238,0.45)', textDecoration: 'none' }}>{link.label}</a>
+            ))}
+          </div>
         </div>
       </footer>
     </main>
