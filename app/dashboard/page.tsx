@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import Nav from '@/components/Nav'
 
@@ -33,6 +33,23 @@ const SYSTEM_MATERIALS: Record<string, string[]> = {
   water_heater: ['Tank (gas)', 'Tank (electric)', 'Tankless (gas)', 'Tankless (electric)'],
   plumbing: ['Copper', 'PVC / CPVC', 'PEX', 'Galvanized steel', 'Mixed / Unknown'],
 }
+
+const DOC_CATEGORIES = [
+  { key: 'warranty', label: 'Warranties', icon: '🛡️', color: '#EAF2EC', textColor: '#3D7A5A' },
+  { key: 'permit', label: 'Permits & Inspections', icon: '📋', color: '#E6F2F8', textColor: '#3A7CA8' },
+  { key: 'manual', label: 'Appliance Manuals', icon: '📖', color: '#FBF0DC', textColor: '#C47B2B' },
+  { key: 'insurance', label: 'Insurance Summary', icon: '🏛️', color: '#F5EAE7', textColor: '#8B3A2A' },
+  { key: 'invoice', label: 'Invoices & Quotes', icon: '🧾', color: '#EAF2EC', textColor: '#3D7A5A' },
+  { key: 'hoa', label: 'HOA Documents', icon: '🏘️', color: '#F0EEF8', textColor: '#5A4A8A' },
+  { key: 'inspection', label: 'Inspection Reports', icon: '🔍', color: '#FBF0DC', textColor: '#C47B2B' },
+  { key: 'other', label: 'Other', icon: '📁', color: '#F5F5F5', textColor: '#8A8A82' },
+]
+
+const DOC_SYSTEMS = [
+  'Roof', 'Siding', 'Windows', 'Doors', 'Gutters', 'Deck',
+  'Driveway', 'Fencing', 'HVAC', 'Water Heater', 'Electrical',
+  'Plumbing', 'Sump Pump', 'Chimney', 'Whole Home', 'Other'
+]
 
 function getCondition(sys: any) {
   if (sys.storm_damage_unaddressed || sys.known_issues) {
@@ -125,6 +142,7 @@ export default function Dashboard() {
   const [score, setScore] = useState<any>(null)
   const [tasks, setTasks] = useState<any[]>([])
   const [members, setMembers] = useState<any[]>([])
+  const [docs, setDocs] = useState<any[]>([])
   const [communityScore, setCommunityScore] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
@@ -143,15 +161,34 @@ export default function Dashboard() {
   const [newTaskDue, setNewTaskDue] = useState('')
   const [newTaskAssigned, setNewTaskAssigned] = useState('')
   const [propertyMenuOpen, setPropertyMenuOpen] = useState<string | null>(null)
+  const [showClaimedModal, setShowClaimedModal] = useState(false)
+
+  // Document state
+  const [showUploadForm, setShowUploadForm] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadName, setUploadName] = useState('')
+  const [uploadDesc, setUploadDesc] = useState('')
+  const [uploadCategory, setUploadCategory] = useState('other')
+  const [uploadSystem, setUploadSystem] = useState('')
+  const [uploadExpires, setUploadExpires] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [docFilter, setDocFilter] = useState('all')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadHomeData = async (homeId: string) => {
-    const [{ data: detailData }, { data: systemData }, { data: jobData }, { data: scoreData }, { data: taskData }, { data: memberData }] = await Promise.all([
+    const [
+      { data: detailData }, { data: systemData }, { data: jobData },
+      { data: scoreData }, { data: taskData }, { data: memberData },
+      { data: docData }
+    ] = await Promise.all([
       supabase.from('home_details').select('*').eq('home_id', homeId).single(),
       supabase.from('home_systems').select('*').eq('home_id', homeId),
       supabase.from('contractor_jobs').select('*').eq('home_id', homeId).order('job_date', { ascending: false }),
       supabase.from('health_scores').select('*').eq('home_id', homeId).order('calculated_at', { ascending: false }).limit(1),
       supabase.from('home_tasks').select('*').eq('home_id', homeId).order('created_at', { ascending: false }),
-      supabase.from('home_members').select('*').eq('home_id', homeId).eq('status', 'active')
+      supabase.from('home_members').select('*').eq('home_id', homeId).eq('status', 'active'),
+      supabase.from('home_documents').select('*').eq('home_id', homeId).order('created_at', { ascending: false })
     ])
     setDetails(detailData)
     setSystems(systemData || [])
@@ -159,6 +196,7 @@ export default function Dashboard() {
     if (scoreData && scoreData.length > 0) setScore(scoreData[0])
     setTasks(taskData || [])
     setMembers(memberData || [])
+    setDocs(docData || [])
   }
 
   useEffect(() => {
@@ -188,10 +226,14 @@ export default function Dashboard() {
 
         await loadHomeData(primaryHome.id)
 
-        // Load community score
         await supabase.rpc('recalculate_community_score', { p_user_id: user.id })
         const { data: csData } = await supabase.from('community_scores').select('*').eq('user_id', user.id).single()
         if (csData) setCommunityScore(csData)
+
+        if (typeof window !== 'undefined' && window.location.search.includes('claimed=true')) {
+          setShowClaimedModal(true)
+          window.history.replaceState({}, '', '/dashboard')
+        }
       } else {
         window.location.replace('/onboarding')
         return
@@ -203,15 +245,9 @@ export default function Dashboard() {
 
   const switchHome = async (selectedHome: any) => {
     setHome(selectedHome)
-    setSystems([])
-    setJobs([])
-    setTasks([])
-    setScore(null)
-    setDetails(null)
-    setMembers([])
-    setWeather(null)
-    setWeatherLoading(true)
-    setLoading(true)
+    setSystems([]); setJobs([]); setTasks([]); setScore(null)
+    setDetails(null); setMembers([]); setDocs([])
+    setWeather(null); setWeatherLoading(true); setLoading(true)
 
     if (selectedHome.city || selectedHome.zip) {
       fetch(`/api/weather?city=${encodeURIComponent(selectedHome.city || '')}&state=${encodeURIComponent(selectedHome.state || '')}&zip=${encodeURIComponent(selectedHome.zip || '')}`)
@@ -230,7 +266,6 @@ export default function Dashboard() {
     await supabase.from('homes').update({ is_primary: false }).eq('user_id', user.id)
     await supabase.from('homes').update({ is_primary: true }).eq('id', homeId)
     setAllHomes(prev => prev.map(h => ({ ...h, is_primary: h.id === homeId })))
-    if (home.id === homeId) setHome((prev: any) => ({ ...prev, is_primary: true }))
     setPropertyMenuOpen(null)
   }
 
@@ -344,13 +379,69 @@ export default function Dashboard() {
     setTasks(prev => prev.filter(t => t.id !== taskId))
   }
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+    if (!allowed.includes(f.type)) { setUploadError('Only PDF, JPG, and PNG files are accepted.'); return }
+    if (f.size > 10 * 1024 * 1024) { setUploadError('File must be under 10MB.'); return }
+    setUploadError('')
+    setUploadFile(f)
+    if (!uploadName) setUploadName(f.name.replace(/\.[^/.]+$/, ''))
+  }
+
+  const handleUpload = async () => {
+    if (!uploadFile || !uploadName.trim()) { setUploadError('Please select a file and enter a name.'); return }
+    setUploading(true)
+    setUploadError('')
+    try {
+      const ext = uploadFile.name.split('.').pop()
+      const filePath = `${user.id}/${home.id}/${Date.now()}.${ext}`
+      const { error: uploadErr } = await supabase.storage.from('home-documents').upload(filePath, uploadFile, { contentType: uploadFile.type })
+      if (uploadErr) throw uploadErr
+      const { data: doc } = await supabase.from('home_documents').insert({
+        home_id: home.id, user_id: user.id,
+        name: uploadName.trim(), description: uploadDesc.trim() || null,
+        category: uploadCategory, system_type: uploadSystem || null,
+        file_path: filePath, file_size: uploadFile.size, file_type: uploadFile.type,
+        expires_at: uploadExpires || null,
+      }).select().single()
+      if (doc) setDocs(prev => [doc, ...prev])
+      setUploadFile(null); setUploadName(''); setUploadDesc('')
+      setUploadCategory('other'); setUploadSystem(''); setUploadExpires('')
+      setShowUploadForm(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (e: any) {
+      setUploadError(e.message)
+    }
+    setUploading(false)
+  }
+
+  const handleDownload = async (doc: any) => {
+    const { data } = await supabase.storage.from('home-documents').createSignedUrl(doc.file_path, 60)
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+  }
+
+  const handleDeleteDoc = async (doc: any) => {
+    if (!window.confirm(`Delete "${doc.name}"? This cannot be undone.`)) return
+    await supabase.storage.from('home-documents').remove([doc.file_path])
+    await supabase.from('home_documents').delete().eq('id', doc.id)
+    setDocs(prev => prev.filter(d => d.id !== doc.id))
+  }
+
   const handleDeleteAccount = async () => {
-    if (!window.confirm('Are you sure you want to delete your account? This will permanently delete all your homes, systems, contractor jobs, and health scores. This cannot be undone.')) return
+    if (!window.confirm('Are you sure you want to delete your account? This cannot be undone.')) return
     if (!window.confirm('Last chance — this is permanent and cannot be reversed.')) return
     setDeletingAccount(true)
     const { error } = await supabase.rpc('delete_user_account')
     if (error) { alert('Error deleting account: ' + error.message); setDeletingAccount(false) }
     else { await supabase.auth.signOut(); window.location.href = '/' }
+  }
+
+  const formatSize = (bytes: number) => {
+    if (!bytes) return ''
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   if (loading) return (
@@ -360,8 +451,8 @@ export default function Dashboard() {
   )
 
   const scoreValue = score?.total_score || 0
-  const tabs = ['overview', 'systems', 'log', 'report']
-  const tabLabels: Record<string, string> = { overview: 'Overview', systems: 'Systems', log: 'Contractor Log', report: 'Report Card' }
+  const tabs = ['overview', 'systems', 'log', 'report', 'documents']
+  const tabLabels: Record<string, string> = { overview: 'Overview', systems: 'Systems', log: 'Contractor Log', report: 'Report Card', documents: 'Documents' }
   const alertSystems = systems.filter(s => ['Inspect', 'Priority'].includes(getCondition(s).label))
   const firstName = user?.email?.split('@')[0]?.split('.')[0]
   const displayName = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1) : 'there'
@@ -369,44 +460,21 @@ export default function Dashboard() {
   const customTasks = tasks.filter(t => t.status !== 'done')
   const doneTasks = tasks.filter(t => t.status === 'done')
   const communityLevel = getCommunityLevel(communityScore?.total_points || 0)
+  const expiringDocs = docs.filter(d => {
+    if (!d.expires_at) return false
+    const days = Math.ceil((new Date(d.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    return days <= 90 && days > 0
+  })
+  const filteredDocs = docs.filter(d => docFilter === 'all' || d.category === docFilter)
+  const docsByCategory = DOC_CATEGORIES.map(cat => ({
+    ...cat, docs: filteredDocs.filter(d => d.category === cat.key)
+  })).filter(cat => cat.docs.length > 0)
 
   const scoreDetails = [
-    {
-      label: 'Systems',
-      icon: '🏠',
-      value: score?.system_risk_score || 0,
-      insight: score?.system_risk_score >= 80 ? 'All systems in good shape' : score?.system_risk_score >= 60 ? 'A few systems to watch' : 'Systems need attention',
-      action: 'View systems',
-      href: '#systems',
-      onClick: () => setActiveTab('systems')
-    },
-    {
-      label: 'Maintenance',
-      icon: '🔧',
-      value: score?.maintenance_score || 0,
-      insight: score?.maintenance_score >= 70 ? 'Great maintenance history' : score?.maintenance_score >= 50 ? 'Log more jobs to improve' : 'Start logging contractor jobs',
-      action: 'Log a job',
-      href: '/log',
-      onClick: null
-    },
-    {
-      label: 'Value',
-      icon: '💰',
-      value: score?.value_protection_score || 0,
-      insight: score?.value_protection_score >= 70 ? 'Home value well protected' : 'See what affects your value',
-      action: 'View report',
-      href: '/report',
-      onClick: null
-    },
-    {
-      label: 'Seasonal',
-      icon: '🌿',
-      value: score?.seasonal_readiness_score || 0,
-      insight: score?.seasonal_readiness_score >= 70 ? 'Ready for the season' : 'Check your seasonal to-do list',
-      action: 'View tasks',
-      href: '#tasks',
-      onClick: () => setActiveTab('overview')
-    },
+    { label: 'Systems', icon: '🏠', value: score?.system_risk_score || 0, insight: score?.system_risk_score >= 80 ? 'All systems in good shape' : score?.system_risk_score >= 60 ? 'A few systems to watch' : 'Systems need attention', action: 'View systems', onClick: () => setActiveTab('systems') },
+    { label: 'Maintenance', icon: '🔧', value: score?.maintenance_score || 0, insight: score?.maintenance_score >= 70 ? 'Great maintenance history' : 'Log more jobs to improve', action: 'Log a job', href: '/log' },
+    { label: 'Value', icon: '💰', value: score?.value_protection_score || 0, insight: score?.value_protection_score >= 70 ? 'Home value well protected' : 'See what affects your value', action: 'View report', onClick: () => setActiveTab('report') },
+    { label: 'Seasonal', icon: '🌿', value: score?.seasonal_readiness_score || 0, insight: score?.seasonal_readiness_score >= 70 ? 'Ready for the season' : 'Check your seasonal to-do list', action: 'View tasks', onClick: () => setActiveTab('overview') },
   ]
 
   const inputStyle = {
@@ -426,52 +494,34 @@ export default function Dashboard() {
           <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(248,244,238,0.45)', marginBottom: '4px' }}>Welcome back</div>
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#F8F4EE', fontWeight: 400 }}>{displayName}</div>
 
-          {/* Property switcher pills */}
           {allHomes.length > 0 && (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px', alignItems: 'center' }}>
               {allHomes.map(h => (
                 <div key={h.id} style={{ position: 'relative' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
-                    <button
-                      onClick={() => switchHome(h)}
-                      style={{
-                        background: h.id === home?.id ? '#C47B2B' : 'rgba(248,244,238,0.1)',
-                        border: `1px solid ${h.id === home?.id ? '#C47B2B' : 'rgba(248,244,238,0.2)'}`,
-                        borderRight: 'none',
-                        color: h.id === home?.id ? '#fff' : 'rgba(248,244,238,0.7)',
-                        padding: '6px 12px',
-                        borderRadius: '20px 0 0 20px',
-                        fontSize: '13px', cursor: 'pointer',
-                        fontFamily: "'DM Sans', sans-serif",
-                        fontWeight: h.id === home?.id ? 500 : 400,
-                        display: 'flex', alignItems: 'center', gap: '6px'
-                      }}
-                    >
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <button onClick={() => switchHome(h)} style={{
+                      background: h.id === home?.id ? '#C47B2B' : 'rgba(248,244,238,0.1)',
+                      border: `1px solid ${h.id === home?.id ? '#C47B2B' : 'rgba(248,244,238,0.2)'}`,
+                      borderRight: 'none', color: h.id === home?.id ? '#fff' : 'rgba(248,244,238,0.7)',
+                      padding: '6px 12px', borderRadius: '20px 0 0 20px',
+                      fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                      fontWeight: h.id === home?.id ? 500 : 400, display: 'flex', alignItems: 'center', gap: '6px'
+                    }}>
                       {h.is_primary && <span style={{ fontSize: '10px' }}>⭐</span>}
                       {h.status === 'for_transfer' && <span style={{ fontSize: '10px' }}>🔑</span>}
                       {h.address}{h.city ? `, ${h.city}` : ''}
                     </button>
-                    <button
-                      onClick={() => setPropertyMenuOpen(propertyMenuOpen === h.id ? null : h.id)}
-                      style={{
-                        background: h.id === home?.id ? '#B36B20' : 'rgba(248,244,238,0.08)',
-                        border: `1px solid ${h.id === home?.id ? '#C47B2B' : 'rgba(248,244,238,0.2)'}`,
-                        color: h.id === home?.id ? '#fff' : 'rgba(248,244,238,0.7)',
-                        padding: '6px 8px',
-                        borderRadius: '0 20px 20px 0',
-                        fontSize: '11px', cursor: 'pointer',
-                        fontFamily: "'DM Sans', sans-serif",
-                      }}
-                    >•••</button>
+                    <button onClick={() => setPropertyMenuOpen(propertyMenuOpen === h.id ? null : h.id)} style={{
+                      background: h.id === home?.id ? '#B36B20' : 'rgba(248,244,238,0.08)',
+                      border: `1px solid ${h.id === home?.id ? '#C47B2B' : 'rgba(248,244,238,0.2)'}`,
+                      color: h.id === home?.id ? '#fff' : 'rgba(248,244,238,0.7)',
+                      padding: '6px 8px', borderRadius: '0 20px 20px 0',
+                      fontSize: '11px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                    }}>•••</button>
                   </div>
 
                   {propertyMenuOpen === h.id && (
-                    <div style={{
-                      position: 'absolute', top: '36px', left: 0, background: '#fff',
-                      borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-                      border: '1px solid rgba(30,58,47,0.11)', overflow: 'hidden',
-                      zIndex: 300, minWidth: '220px'
-                    }}>
+                    <div style={{ position: 'absolute', top: '36px', left: 0, background: '#fff', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid rgba(30,58,47,0.11)', overflow: 'hidden', zIndex: 300, minWidth: '220px' }}>
                       {!h.is_primary && (
                         <button onClick={() => setPrimaryHome(h.id)} style={{ display: 'block', width: '100%', padding: '11px 16px', background: 'none', border: 'none', borderBottom: '1px solid rgba(30,58,47,0.06)', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", color: '#1E3A2F' }}>
                           ⭐ Set as primary residence
@@ -483,33 +533,25 @@ export default function Dashboard() {
                         </button>
                       )}
                       {h.status === 'for_transfer' && (
-                        <div style={{ padding: '11px 16px', fontSize: '12px', color: '#8A8A82', borderBottom: '1px solid rgba(30,58,47,0.06)' }}>
-                          🔑 Awaiting new owner
-                        </div>
+                        <div style={{ padding: '11px 16px', fontSize: '12px', color: '#8A8A82', borderBottom: '1px solid rgba(30,58,47,0.06)' }}>🔑 Awaiting new owner</div>
                       )}
-                      <button onClick={() => setPropertyMenuOpen(null)} style={{ display: 'block', width: '100%', padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", color: '#8A8A82' }}>
-                        Cancel
-                      </button>
+                      <button onClick={() => setPropertyMenuOpen(null)} style={{ display: 'block', width: '100%', padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", color: '#8A8A82' }}>Cancel</button>
                     </div>
                   )}
                 </div>
               ))}
-              <a href="/onboarding" style={{
-                background: 'none', border: '1px dashed rgba(248,244,238,0.25)',
-                color: 'rgba(248,244,238,0.5)', padding: '6px 14px', borderRadius: '20px',
-                fontSize: '13px', textDecoration: 'none', fontFamily: "'DM Sans', sans-serif"
-              }}>+ Add property</a>
+              <a href="/onboarding" style={{ background: 'none', border: '1px dashed rgba(248,244,238,0.25)', color: 'rgba(248,244,238,0.5)', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', textDecoration: 'none', fontFamily: "'DM Sans', sans-serif" }}>+ Add property</a>
             </div>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '2px' }}>
+        <div style={{ display: 'flex', gap: '2px', overflowX: 'auto' }}>
           {tabs.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
               background: 'none', border: 'none',
               color: activeTab === tab ? '#F8F4EE' : 'rgba(248,244,238,0.5)',
               fontFamily: "'DM Sans', sans-serif", fontSize: '13px',
-              padding: '9px 14px 13px', cursor: 'pointer',
+              padding: '9px 14px 13px', cursor: 'pointer', whiteSpace: 'nowrap',
               borderBottom: activeTab === tab ? '2px solid #C47B2B' : '2px solid transparent',
               fontWeight: activeTab === tab ? 500 : 400,
               position: 'relative', bottom: '-1px', transition: 'color 0.2s'
@@ -520,6 +562,7 @@ export default function Dashboard() {
 
       <div style={{ padding: '24px 28px 48px', maxWidth: '1100px', margin: '0 auto' }}>
 
+        {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '20px', alignItems: 'start' }}>
             <div>
@@ -533,7 +576,7 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Redesigned Score Section */}
+              {/* Score */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
                 <div style={{ padding: '20px 22px', display: 'flex', alignItems: 'center', gap: '20px', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>
                   <div style={{ width: '72px', height: '72px', flexShrink: 0, position: 'relative' }}>
@@ -551,13 +594,9 @@ export default function Dashboard() {
                     <p style={{ fontSize: '12px', color: '#8A8A82' }}>Home health score · Tap a category below to take action</p>
                   </div>
                 </div>
-
                 {scoreDetails.map((dim, i) => (
-                  <div
-                    key={dim.label}
-                    style={{ padding: '12px 22px', borderBottom: i < scoreDetails.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
-                    onClick={() => dim.onClick ? dim.onClick() : window.location.href = dim.href}
-                  >
+                  <div key={dim.label} style={{ padding: '12px 22px', borderBottom: i < scoreDetails.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                    onClick={() => dim.onClick ? dim.onClick() : dim.href ? window.location.href = dim.href : null}>
                     <div style={{ fontSize: '20px', width: '28px', flexShrink: 0 }}>{dim.icon}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
@@ -565,9 +604,9 @@ export default function Dashboard() {
                         <span style={{ fontSize: '13px', fontWeight: 600, color: dim.value >= 80 ? '#3D7A5A' : dim.value >= 60 ? '#C47B2B' : '#9B2C2C' }}>{dim.value}</span>
                       </div>
                       <div style={{ height: '6px', background: '#EDE8E0', borderRadius: '3px', marginBottom: '4px' }}>
-                        <div style={{ width: `${dim.value}%`, height: '100%', background: dim.value >= 80 ? '#3D7A5A' : dim.value >= 60 ? '#C47B2B' : '#9B2C2C', borderRadius: '3px', transition: 'width 0.5s ease' }} />
+                        <div style={{ width: `${dim.value}%`, height: '100%', background: dim.value >= 80 ? '#3D7A5A' : dim.value >= 60 ? '#C47B2B' : '#9B2C2C', borderRadius: '3px' }} />
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: '11px', color: '#8A8A82' }}>{dim.insight}</span>
                         <span style={{ fontSize: '11px', color: '#3D7A5A', fontWeight: 500 }}>{dim.action} →</span>
                       </div>
@@ -624,7 +663,7 @@ export default function Dashboard() {
                   </div>
                 ))}
 
-                {smartTasks.map((item) => (
+                {smartTasks.map(item => (
                   <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '13px 20px', borderBottom: '1px solid rgba(30,58,47,0.06)' }}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, background: item.urgency === 'high' ? '#FDECEA' : item.urgency === 'medium' ? '#FBF0DC' : '#EAF2EC' }}>
                       {item.source === 'smart' ? '🧠' : '📋'}
@@ -692,7 +731,6 @@ export default function Dashboard() {
                     </div>
                     <div style={{ marginLeft: 'auto', fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', color: '#C47B2B', fontWeight: 600 }}>{communityScore.total_points}</div>
                   </div>
-
                   {communityLevel.nextPoints && (
                     <div style={{ marginBottom: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(248,244,238,0.5)', marginBottom: '4px' }}>
@@ -700,14 +738,10 @@ export default function Dashboard() {
                         <span>{communityLevel.nextPoints} pts to {communityLevel.next}</span>
                       </div>
                       <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
-                        <div style={{
-                          width: `${Math.min(100, (communityScore.total_points / communityLevel.nextPoints) * 100)}%`,
-                          height: '100%', background: '#C47B2B', borderRadius: '3px', transition: 'width 0.5s ease'
-                        }} />
+                        <div style={{ width: `${Math.min(100, (communityScore.total_points / communityLevel.nextPoints) * 100)}%`, height: '100%', background: '#C47B2B', borderRadius: '3px' }} />
                       </div>
                     </div>
                   )}
-
                   <div style={{ display: 'grid', gap: '6px' }}>
                     {[
                       { label: 'Home set up', pts: 50, done: communityScore.total_points >= 50 },
@@ -722,7 +756,6 @@ export default function Dashboard() {
                       </div>
                     ))}
                   </div>
-
                   <a href="/neighbors" style={{ display: 'block', marginTop: '12px', background: 'rgba(248,244,238,0.1)', border: '1px solid rgba(248,244,238,0.15)', color: 'rgba(248,244,238,0.8)', textAlign: 'center', padding: '8px', borderRadius: '8px', fontSize: '12px', textDecoration: 'none', fontFamily: "'DM Sans', sans-serif" }}>
                     View your neighbor contributions →
                   </a>
@@ -746,9 +779,7 @@ export default function Dashboard() {
                           <div style={{ fontSize: '12px', color: '#8A8A82' }}>{home?.city}, {home?.state} · {weather.desc}</div>
                         </div>
                       </div>
-                      <div style={{ fontSize: '12px', color: '#7A4A10', background: '#FBF0DC', padding: '9px 16px', borderTop: '1px solid rgba(196,123,43,0.14)' }}>
-                        {weather.tip}
-                      </div>
+                      <div style={{ fontSize: '12px', color: '#7A4A10', background: '#FBF0DC', padding: '9px 16px', borderTop: '1px solid rgba(196,123,43,0.14)' }}>{weather.tip}</div>
                     </>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px' }}>
@@ -773,13 +804,10 @@ export default function Dashboard() {
                     <button onClick={() => setShowStormDetail(!showStormDetail)} style={{ background: 'none', border: '1px solid rgba(122,74,16,0.3)', color: '#7A4A10', fontSize: '12px', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
                       {showStormDetail ? 'Hide inspection guide' : 'What to check →'}
                     </button>
-
                     {showStormDetail && weather.inspectionGuides && (
                       <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(196,123,43,0.2)' }}>
                         <div style={{ fontSize: '12px', fontWeight: 500, color: '#7A4A10', marginBottom: '8px' }}>Self-inspect checklist — you are in control</div>
-                        <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '12px', lineHeight: 1.6 }}>
-                          Check these yourself first before calling anyone. A legitimate inspector will never pressure you into same-day decisions.
-                        </div>
+                        <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '12px', lineHeight: 1.6 }}>Check these yourself first. A legitimate inspector will never pressure you into same-day decisions.</div>
                         {weather.inspectionGuides.map((guide: any, i: number) => (
                           <div key={i} style={{ background: '#fff', borderRadius: '8px', padding: '10px 12px', marginBottom: '8px' }}>
                             <div style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F', marginBottom: '4px' }}>{guide.what}</div>
@@ -787,13 +815,9 @@ export default function Dashboard() {
                           </div>
                         ))}
                         <div style={{ background: '#EAF2EC', borderRadius: '8px', padding: '10px 12px', marginTop: '10px' }}>
-                          <div style={{ fontSize: '11px', color: '#3D7A5A', lineHeight: 1.6 }}>
-                            💡 <strong>Insurance tip:</strong> Document everything with photos before any repairs. Contact your insurance company before hiring a contractor.
-                          </div>
+                          <div style={{ fontSize: '11px', color: '#3D7A5A', lineHeight: 1.6 }}>💡 <strong>Insurance tip:</strong> Document everything with photos before any repairs. Contact your insurer before hiring a contractor.</div>
                         </div>
-                        <button onClick={() => window.location.href = '/log'} style={{ marginTop: '10px', width: '100%', background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                          Log an inspection when ready →
-                        </button>
+                        <button onClick={() => window.location.href = '/log'} style={{ marginTop: '10px', width: '100%', background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Log an inspection when ready →</button>
                       </div>
                     )}
                   </div>
@@ -813,7 +837,6 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-
                 {!editingHome ? (
                   <div>
                     {[
@@ -838,21 +861,15 @@ export default function Dashboard() {
                         <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{stat.value}</span>
                       </div>
                     ))}
-                    <button onClick={startEditHome} style={{ marginTop: '12px', width: '100%', background: '#F8F4EE', border: '1px dashed rgba(30,58,47,0.2)', color: '#8A8A82', fontSize: '12px', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                      + Add missing details
-                    </button>
+                    <button onClick={startEditHome} style={{ marginTop: '12px', width: '100%', background: '#F8F4EE', border: '1px dashed rgba(30,58,47,0.2)', color: '#8A8A82', fontSize: '12px', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>+ Add missing details</button>
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gap: '10px' }}>
                     {[
-                      { label: 'Address', key: 'address' },
-                      { label: 'City', key: 'city' },
-                      { label: 'State', key: 'state' },
-                      { label: 'ZIP', key: 'zip' },
-                      { label: 'Year built', key: 'year_built' },
-                      { label: 'Square footage', key: 'sqft' },
-                      { label: 'Bedrooms', key: 'bedrooms' },
-                      { label: 'Bathrooms', key: 'bathrooms' },
+                      { label: 'Address', key: 'address' }, { label: 'City', key: 'city' },
+                      { label: 'State', key: 'state' }, { label: 'ZIP', key: 'zip' },
+                      { label: 'Year built', key: 'year_built' }, { label: 'Square footage', key: 'sqft' },
+                      { label: 'Bedrooms', key: 'bedrooms' }, { label: 'Bathrooms', key: 'bathrooms' },
                     ].map(field => (
                       <div key={field.key}>
                         <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>{field.label}</label>
@@ -873,12 +890,9 @@ export default function Dashboard() {
                     ))}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       {[
-                        { label: 'Pool', key: 'pool' },
-                        { label: 'HOA', key: 'hoa' },
-                        { label: 'Fireplace', key: 'has_fireplace' },
-                        { label: 'Sump pump', key: 'has_sump_pump' },
-                        { label: 'Irrigation', key: 'has_irrigation' },
-                        { label: 'Generator', key: 'has_generator' },
+                        { label: 'Pool', key: 'pool' }, { label: 'HOA', key: 'hoa' },
+                        { label: 'Fireplace', key: 'has_fireplace' }, { label: 'Sump pump', key: 'has_sump_pump' },
+                        { label: 'Irrigation', key: 'has_irrigation' }, { label: 'Generator', key: 'has_generator' },
                       ].map(cb => (
                         <label key={cb.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
                           <input type="checkbox" checked={homeEdits[cb.key] || false} onChange={e => setHomeEdits((prev: any) => ({ ...prev, [cb.key]: e.target.checked }))} style={{ accentColor: '#1E3A2F' }} />
@@ -897,11 +911,14 @@ export default function Dashboard() {
                   { label: '+ Log a contractor job', href: '/log' },
                   { label: '+ Add another property', href: '/onboarding' },
                   { label: '👥 Browse neighbor reviews', href: '/neighbors' },
-                  { label: '📄 View report card', href: '/report' },
+                  { label: '📄 View report card', onClick: () => setActiveTab('report') },
+                  { label: '📂 Document vault', onClick: () => setActiveTab('documents') },
                   { label: '📖 Browse guides', href: '/guides' },
                   { label: '🔑 Claim a home', href: '/claim' },
                 ].map(action => (
-                  <a key={action.label} href={action.href} style={{ display: 'block', padding: '9px 0', fontSize: '13px', color: '#1E3A2F', textDecoration: 'none', borderBottom: '1px solid rgba(30,58,47,0.07)' }}>{action.label}</a>
+                  action.href
+                    ? <a key={action.label} href={action.href} style={{ display: 'block', padding: '9px 0', fontSize: '13px', color: '#1E3A2F', textDecoration: 'none', borderBottom: '1px solid rgba(30,58,47,0.07)' }}>{action.label}</a>
+                    : <button key={action.label} onClick={action.onClick} style={{ display: 'block', width: '100%', padding: '9px 0', fontSize: '13px', color: '#1E3A2F', background: 'none', border: 'none', borderBottom: '1px solid rgba(30,58,47,0.07)', cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans', sans-serif" }}>{action.label}</button>
                 ))}
               </div>
 
@@ -916,12 +933,9 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Danger zone */}
               <div style={{ background: '#fff', border: '1px solid rgba(155,44,44,0.15)', borderRadius: '16px', padding: '18px' }}>
                 <h4 style={{ fontSize: '13px', fontWeight: 500, color: '#9B2C2C', marginBottom: '8px' }}>Danger zone</h4>
-                <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>
-                  Deleting your account permanently removes all your homes, systems, contractor jobs, and health scores. This cannot be undone.
-                </p>
+                <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>Deleting your account permanently removes all your homes, systems, contractor jobs, and health scores.</p>
                 <button onClick={handleDeleteAccount} disabled={deletingAccount} style={{ background: 'none', border: '1px solid rgba(155,44,44,0.3)', color: '#9B2C2C', fontSize: '12px', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", width: '100%' }}>
                   {deletingAccount ? 'Deleting...' : 'Delete my account'}
                 </button>
@@ -948,7 +962,6 @@ export default function Dashboard() {
               const lifespan = SYSTEM_LIFESPANS[sys.system_type] || 20
               const pct = age ? Math.min(100, Math.round((age / lifespan) * 100)) : 0
               const isEditing = editingSystemId === sys.id
-
               return (
                 <div key={sys.id} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px 22px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
@@ -956,9 +969,7 @@ export default function Dashboard() {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <h4 style={{ fontSize: '15px', fontWeight: 500 }}>
-                            {sys.system_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()).replace('Hvac', 'HVAC')}
-                          </h4>
+                          <h4 style={{ fontSize: '15px', fontWeight: 500 }}>{sys.system_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()).replace('Hvac', 'HVAC')}</h4>
                           <span style={{ fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: condition.bg, color: condition.textColor }}>{condition.label}</span>
                           {sys.ever_replaced && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>Replaced {sys.replacement_year || ''}</span>}
                           {sys.under_warranty && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', background: '#E6F2F8', color: '#3A7CA8' }}>Under warranty</span>}
@@ -973,7 +984,6 @@ export default function Dashboard() {
                           </div>
                         )}
                       </div>
-
                       {!isEditing ? (
                         <>
                           <div style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '8px' }}>
@@ -984,8 +994,7 @@ export default function Dashboard() {
                           {age && (
                             <div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#8A8A82', marginBottom: '4px' }}>
-                                <span>Lifespan used</span>
-                                <span>{pct}% of ~{lifespan} years</span>
+                                <span>Lifespan used</span><span>{pct}% of ~{lifespan} years</span>
                               </div>
                               <div style={{ height: '6px', background: '#EDE8E0', borderRadius: '3px' }}>
                                 <div style={{ width: `${pct}%`, height: '100%', background: condition.color, borderRadius: '3px' }} />
@@ -1012,16 +1021,13 @@ export default function Dashboard() {
                           </div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
-                              <input type="checkbox" checked={systemEdits.ever_replaced} onChange={e => setSystemEdits((p: any) => ({ ...p, ever_replaced: e.target.checked }))} style={{ accentColor: '#1E3A2F' }} />
-                              Ever replaced?
+                              <input type="checkbox" checked={systemEdits.ever_replaced} onChange={e => setSystemEdits((p: any) => ({ ...p, ever_replaced: e.target.checked }))} style={{ accentColor: '#1E3A2F' }} /> Ever replaced?
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
-                              <input type="checkbox" checked={systemEdits.under_warranty} onChange={e => setSystemEdits((p: any) => ({ ...p, under_warranty: e.target.checked }))} style={{ accentColor: '#1E3A2F' }} />
-                              Under warranty
+                              <input type="checkbox" checked={systemEdits.under_warranty} onChange={e => setSystemEdits((p: any) => ({ ...p, under_warranty: e.target.checked }))} style={{ accentColor: '#1E3A2F' }} /> Under warranty
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
-                              <input type="checkbox" checked={systemEdits.storm_damage_unaddressed} onChange={e => setSystemEdits((p: any) => ({ ...p, storm_damage_unaddressed: e.target.checked }))} style={{ accentColor: '#1E3A2F' }} />
-                              Storm damage?
+                              <input type="checkbox" checked={systemEdits.storm_damage_unaddressed} onChange={e => setSystemEdits((p: any) => ({ ...p, storm_damage_unaddressed: e.target.checked }))} style={{ accentColor: '#1E3A2F' }} /> Storm damage?
                             </label>
                           </div>
                           {systemEdits.ever_replaced && (
@@ -1065,9 +1071,7 @@ export default function Dashboard() {
                       <p style={{ fontSize: '13px', color: '#8A8A82' }}>{job.service_description} · {job.job_date}</p>
                       {job.tags && job.tags.length > 0 && (
                         <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
-                          {job.tags.map((tag: string) => (
-                            <span key={tag} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>{tag}</span>
-                          ))}
+                          {job.tags.map((tag: string) => <span key={tag} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>{tag}</span>)}
                         </div>
                       )}
                     </div>
@@ -1085,19 +1089,186 @@ export default function Dashboard() {
 
         {/* REPORT TAB */}
         {activeTab === 'report' && (
-          <ReportCardInline
-            home={home}
-            details={details}
-            systems={systems}
-            jobs={jobs}
-            score={score}
-          />
+          <ReportCardInline home={home} details={details} systems={systems} jobs={jobs} score={score} onTabChange={setActiveTab} />
+        )}
+
+        {/* DOCUMENTS TAB */}
+        {activeTab === 'documents' && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div>
+                <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Document Vault</h2>
+                <p style={{ fontSize: '13px', color: '#8A8A82' }}>{docs.length} document{docs.length !== 1 ? 's' : ''} · Transfers with your home</p>
+              </div>
+              <button onClick={() => setShowUploadForm(!showUploadForm)} style={{ background: '#C47B2B', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>+ Upload</button>
+            </div>
+
+            {/* Privacy notice */}
+            <div style={{ background: '#EAF2EC', border: '1px solid rgba(61,122,90,0.2)', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '14px', flexShrink: 0 }}>🔒</span>
+              <div style={{ fontSize: '12px', color: '#3D7A5A', lineHeight: 1.6 }}>
+                <strong>Private and secure.</strong> Only you and approved co-owners can access these documents. Only upload home-related files — warranties, permits, manuals. Do not upload documents with personal financial, tax, or identity information.
+              </div>
+            </div>
+
+            {/* Expiring soon */}
+            {expiringDocs.length > 0 && (
+              <div style={{ background: '#FBF0DC', border: '1px solid rgba(196,123,43,0.2)', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10', marginBottom: '6px' }}>⚠️ {expiringDocs.length} document{expiringDocs.length > 1 ? 's' : ''} expiring within 90 days</div>
+                {expiringDocs.map(d => {
+                  const days = Math.ceil((new Date(d.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                  return <div key={d.id} style={{ fontSize: '12px', color: '#8A8A82' }}>{d.name} — expires in {days} days</div>
+                })}
+              </div>
+            )}
+
+            {/* Upload form */}
+            {showUploadForm && (
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '22px', marginBottom: '20px' }}>
+                <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F', marginBottom: '16px' }}>Upload a document</h3>
+
+                <div onClick={() => fileInputRef.current?.click()} style={{ border: '2px dashed rgba(30,58,47,0.2)', borderRadius: '12px', padding: '24px', textAlign: 'center', cursor: 'pointer', background: uploadFile ? '#EAF2EC' : '#F8F4EE', marginBottom: '14px' }}>
+                  <div style={{ fontSize: '28px', marginBottom: '6px' }}>{uploadFile ? '✅' : '📎'}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>{uploadFile ? uploadFile.name : 'Click to select a file'}</div>
+                  <div style={{ fontSize: '12px', color: '#8A8A82' }}>{uploadFile ? formatSize(uploadFile.size) : 'PDF, JPG, or PNG · Max 10MB'}</div>
+                  <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleFileSelect} style={{ display: 'none' }} />
+                </div>
+
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Document name *</label>
+                    <input value={uploadName} onChange={e => setUploadName(e.target.value)} style={inputStyle} placeholder="e.g. Roof warranty 2021" />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Description (optional)</label>
+                    <input value={uploadDesc} onChange={e => setUploadDesc(e.target.value)} style={inputStyle} placeholder="e.g. 10-year workmanship warranty from ABC Roofing" />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Category *</label>
+                      <select value={uploadCategory} onChange={e => setUploadCategory(e.target.value)} style={inputStyle}>
+                        {DOC_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Related system (optional)</label>
+                      <select value={uploadSystem} onChange={e => setUploadSystem(e.target.value)} style={inputStyle}>
+                        <option value="">None</option>
+                        {DOC_SYSTEMS.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Expiration date (optional — for warranties)</label>
+                    <input type="date" value={uploadExpires} onChange={e => setUploadExpires(e.target.value)} style={inputStyle} />
+                  </div>
+                </div>
+
+                {uploadError && (
+                  <div style={{ background: '#FDECEA', color: '#9B2C2C', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginTop: '12px' }}>{uploadError}</div>
+                )}
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
+                  <button onClick={handleUpload} disabled={uploading || !uploadFile} style={{ flex: 2, background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '10px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: uploading || !uploadFile ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: uploading || !uploadFile ? 0.6 : 1 }}>
+                    {uploading ? 'Uploading...' : 'Upload document'}
+                  </button>
+                  <button onClick={() => { setShowUploadForm(false); setUploadFile(null); setUploadError('') }} style={{ flex: 1, background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#8A8A82', padding: '10px', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {/* Category filter pills */}
+            {docs.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                <button onClick={() => setDocFilter('all')} style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '12px', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", background: docFilter === 'all' ? '#1E3A2F' : '#fff', color: docFilter === 'all' ? '#F8F4EE' : '#1E3A2F', outline: '1px solid rgba(30,58,47,0.15)' }}>
+                  All ({docs.length})
+                </button>
+                {DOC_CATEGORIES.filter(c => docs.some(d => d.category === c.key)).map(cat => (
+                  <button key={cat.key} onClick={() => setDocFilter(cat.key)} style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '12px', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", background: docFilter === cat.key ? cat.textColor : cat.color, color: docFilter === cat.key ? '#fff' : cat.textColor, outline: `1px solid ${cat.textColor}33` }}>
+                    {cat.icon} {cat.label} ({docs.filter(d => d.category === cat.key).length})
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Empty state */}
+            {docs.length === 0 && !showUploadForm && (
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
+                <div style={{ fontSize: '44px', marginBottom: '14px' }}>📂</div>
+                <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>No documents yet</h3>
+                <p style={{ fontSize: '13px', color: '#8A8A82', lineHeight: 1.7, maxWidth: '380px', margin: '0 auto 20px' }}>
+                  Store warranties, permits, inspection reports, and manuals here. They transfer automatically when you pass ownership of your home.
+                </p>
+                <button onClick={() => setShowUploadForm(true)} style={{ background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '11px 22px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                  Upload your first document
+                </button>
+              </div>
+            )}
+
+            {/* Documents by category */}
+            {docsByCategory.map(cat => (
+              <div key={cat.key} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px' }}>
+                <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(30,58,47,0.08)', display: 'flex', alignItems: 'center', gap: '10px', background: cat.color }}>
+                  <span style={{ fontSize: '16px' }}>{cat.icon}</span>
+                  <h4 style={{ fontSize: '13px', fontWeight: 500, color: cat.textColor }}>{cat.label}</h4>
+                  <span style={{ fontSize: '11px', color: cat.textColor, opacity: 0.7, marginLeft: 'auto' }}>{cat.docs.length} file{cat.docs.length !== 1 ? 's' : ''}</span>
+                </div>
+                {cat.docs.map((doc: any, i: number) => {
+                  const isPdf = doc.file_type === 'application/pdf'
+                  const isImage = doc.file_type?.startsWith('image/')
+                  const isExpiring = doc.expires_at && Math.ceil((new Date(doc.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 90
+                  return (
+                    <div key={doc.id} style={{ padding: '12px 20px', borderBottom: i < cat.docs.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ fontSize: '20px', flexShrink: 0 }}>{isPdf ? '📄' : isImage ? '🖼️' : '📎'}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{doc.name}</span>
+                          {doc.system_type && <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: '#EDE8E0', color: '#8A8A82' }}>{doc.system_type}</span>}
+                          {isExpiring && <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: '#FBF0DC', color: '#C47B2B' }}>⏰ Expiring soon</span>}
+                        </div>
+                        {doc.description && <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '2px' }}>{doc.description}</div>}
+                        <div style={{ fontSize: '11px', color: '#8A8A82' }}>
+                          {formatSize(doc.file_size)}
+                          {doc.expires_at && ` · Expires ${new Date(doc.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                          {` · Added ${new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                        <button onClick={() => handleDownload(doc)} style={{ background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+                          {isImage ? 'View' : 'Download'}
+                        </button>
+                        <button onClick={() => handleDeleteDoc(doc)} style={{ background: 'none', border: '1px solid rgba(155,44,44,0.2)', color: '#9B2C2C', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Delete</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         )}
       </div>
+
+      {/* Claimed home modal */}
+      {showClaimedModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '36px', width: '100%', maxWidth: '480px', textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔑</div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#1E3A2F', marginBottom: '10px' }}>This home is now yours</h2>
+            <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.7, marginBottom: '24px' }}>
+              You now have full access to this home&apos;s complete history. Would you like to update the home details and set your own tasks now?
+            </p>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <button onClick={() => { setShowClaimedModal(false); startEditHome() }} style={{ background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '12px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Update home details now</button>
+              <button onClick={() => setShowClaimedModal(false)} style={{ background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#1E3A2F', padding: '12px', borderRadius: '10px', fontSize: '14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>I&apos;ll do it later</button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
-function ReportCardInline({ home, details, systems, jobs, score }: any) {
+
+function ReportCardInline({ home, details, systems, jobs, score, onTabChange }: any) {
   const [copied, setCopied] = useState(false)
 
   const scoreValue = score?.total_score || 0
@@ -1105,35 +1276,21 @@ function ReportCardInline({ home, details, systems, jobs, score }: any) {
   const alertSystems = systems.filter((s: any) => ['Inspect', 'Priority'].includes(getCondition(s).label))
 
   const scoreDetails = [
-    { label: 'System Risk', icon: '🏠', value: score?.system_risk_score || 0, weight: '35%', insight: score?.system_risk_score >= 80 ? 'All systems in good shape' : score?.system_risk_score >= 60 ? 'A few systems to watch' : 'Systems need attention' },
-    { label: 'Maintenance', icon: '🔧', value: score?.maintenance_score || 0, weight: '30%', insight: score?.maintenance_score >= 70 ? 'Strong maintenance history' : 'Log more jobs to improve' },
+    { label: 'System Risk', icon: '🏠', value: score?.system_risk_score || 0, weight: '35%', insight: score?.system_risk_score >= 80 ? 'All systems in good shape' : score?.system_risk_score >= 60 ? 'A few systems to watch' : 'Systems need attention', onClick: () => onTabChange('systems') },
+    { label: 'Maintenance', icon: '🔧', value: score?.maintenance_score || 0, weight: '30%', insight: score?.maintenance_score >= 70 ? 'Strong maintenance history' : 'Log more jobs to improve', href: '/log' },
     { label: 'Value Protection', icon: '💰', value: score?.value_protection_score || 0, weight: '20%', insight: score?.value_protection_score >= 70 ? 'Home value well protected' : 'Address flagged systems before selling' },
-    { label: 'Seasonal Readiness', icon: '🌿', value: score?.seasonal_readiness_score || 0, weight: '15%', insight: score?.seasonal_readiness_score >= 70 ? 'Ready for the season' : 'Review seasonal checklist' },
+    { label: 'Seasonal Readiness', icon: '🌿', value: score?.seasonal_readiness_score || 0, weight: '15%', insight: score?.seasonal_readiness_score >= 70 ? 'Ready for the season' : 'Review seasonal checklist', onClick: () => onTabChange('overview') },
   ]
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.origin + '/report')
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const handleEmail = () => {
-    const subject = encodeURIComponent(`Home Report Card — ${home?.address}`)
-    const body = encodeURIComponent(`Home report card for ${home?.address}\nHealth Score: ${scoreValue}\n\nView full report: ${window.location.origin}/report`)
-    window.location.href = `mailto:?subject=${subject}&body=${body}`
-  }
 
   return (
     <div>
       {/* Share bar */}
       <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '12px', padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        <div style={{ fontSize: '13px', color: '#8A8A82' }}>
-          {home?.address} · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-        </div>
+        <div style={{ fontSize: '13px', color: '#8A8A82' }}>{home?.address} · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {[
-            { label: copied ? '✓ Copied!' : '🔗 Copy link', onClick: handleCopyLink },
-            { label: '✉️ Email', onClick: handleEmail },
+            { label: copied ? '✓ Copied!' : '🔗 Copy link', onClick: () => { navigator.clipboard.writeText(window.location.origin + '/report'); setCopied(true); setTimeout(() => setCopied(false), 2000) } },
+            { label: '✉️ Email', onClick: () => { window.location.href = `mailto:?subject=${encodeURIComponent('Home Report Card — ' + home?.address)}&body=${encodeURIComponent('View my home report card: ' + window.location.origin + '/report')}` } },
             { label: '🖨️ Print', onClick: () => window.print() },
             { label: '↗️ Full page', onClick: () => window.open('/report', '_blank') },
           ].map(btn => (
@@ -1149,15 +1306,9 @@ function ReportCardInline({ home, details, systems, jobs, score }: any) {
           <div>
             <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#6AAF8A', marginBottom: '6px' }}>Home Report Card</div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(18px, 3vw, 26px)', color: '#F8F4EE', fontWeight: 400, marginBottom: '4px' }}>{home?.address}</h2>
-            <p style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)', marginBottom: '16px' }}>
-              {home?.city}{home?.state ? `, ${home.state}` : ''} · Built {home?.year_built}
-            </p>
+            <p style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)', marginBottom: '16px' }}>{home?.city}{home?.state ? `, ${home.state}` : ''} · Built {home?.year_built}</p>
             <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              {[
-                { label: 'Age', value: age ? `${age}yr` : '—' },
-                { label: 'Jobs', value: jobs.length },
-                { label: 'Systems', value: systems.length },
-              ].map(stat => (
+              {[{ label: 'Age', value: age ? `${age}yr` : '—' }, { label: 'Jobs', value: jobs.length }, { label: 'Systems', value: systems.length }].map(stat => (
                 <div key={stat.label}>
                   <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', color: '#F8F4EE', fontWeight: 600 }}>{stat.value}</div>
                   <div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.5)', marginTop: '2px' }}>{stat.label}</div>
@@ -1168,10 +1319,7 @@ function ReportCardInline({ home, details, systems, jobs, score }: any) {
           <div style={{ position: 'relative', width: '80px', height: '80px', flexShrink: 0 }}>
             <svg width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
               <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="10" />
-              <circle cx="40" cy="40" r="32" fill="none"
-                stroke={scoreValue >= 80 ? '#6AAF8A' : scoreValue >= 60 ? '#C47B2B' : '#E57373'}
-                strokeWidth="10" strokeDasharray="201"
-                strokeDashoffset={201 - (201 * scoreValue / 100)} strokeLinecap="round" />
+              <circle cx="40" cy="40" r="32" fill="none" stroke={scoreValue >= 80 ? '#6AAF8A' : scoreValue >= 60 ? '#C47B2B' : '#E57373'} strokeWidth="10" strokeDasharray="201" strokeDashoffset={201 - (201 * scoreValue / 100)} strokeLinecap="round" />
             </svg>
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
               <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', color: '#F8F4EE', fontWeight: 600, lineHeight: 1 }}>{scoreValue}</div>
@@ -1191,9 +1339,11 @@ function ReportCardInline({ home, details, systems, jobs, score }: any) {
       <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>
           <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F' }}>Health Score Breakdown</h3>
+          <p style={{ fontSize: '12px', color: '#8A8A82', marginTop: '3px' }}>What&apos;s driving your {scoreValue} score — tap to take action</p>
         </div>
         {scoreDetails.map((dim, i) => (
-          <div key={dim.label} style={{ padding: '14px 20px', borderBottom: i < scoreDetails.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div key={dim.label} style={{ padding: '14px 20px', borderBottom: i < scoreDetails.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none', display: 'flex', alignItems: 'center', gap: '12px', cursor: dim.onClick || dim.href ? 'pointer' : 'default' }}
+            onClick={() => dim.onClick ? dim.onClick() : dim.href ? window.location.href = dim.href : null}>
             <div style={{ fontSize: '20px', width: '26px', flexShrink: 0 }}>{dim.icon}</div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
@@ -1232,9 +1382,7 @@ function ReportCardInline({ home, details, systems, jobs, score }: any) {
                   <span style={{ fontSize: '10px', fontWeight: 500, padding: '1px 6px', borderRadius: '20px', background: condition.bg, color: condition.textColor }}>{condition.label}</span>
                   {sys.ever_replaced && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>Replaced {sys.replacement_year}</span>}
                 </div>
-                <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '4px' }}>
-                  {sys.material && `${sys.material} · `}{sysAge ? `${sysAge}yr old` : 'Year unknown'}
-                </div>
+                <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '4px' }}>{sys.material && `${sys.material} · `}{sysAge ? `${sysAge}yr old` : 'Year unknown'}</div>
                 {sysAge !== null && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ flex: 1, height: '4px', background: '#EDE8E0', borderRadius: '2px' }}>
