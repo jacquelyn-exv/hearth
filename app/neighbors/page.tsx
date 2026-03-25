@@ -62,9 +62,8 @@ export default function Neighbors() {
       }
 
       const { data } = await supabase
-        .from('contractor_jobs')
+        .from('public_contractor_jobs')
         .select('*')
-        .eq('is_shared', true)
         .order('created_at', { ascending: false })
 
       setJobs(data || [])

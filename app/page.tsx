@@ -337,6 +337,8 @@ export default function Home() {
               { label: 'Guides', href: '/guides' },
               { label: 'Neighbor Network', href: '/neighbors' },
               { label: 'About', href: '/about' },
+              { label: 'Privacy Policy', href: '/privacy' },
+              { label: 'Terms of Service', href: '/terms' },
               { label: 'Sign up', href: '/signup' },
             ].map(link => (
               <a key={link.label} href={link.href} style={{ fontSize: '13px', color: 'rgba(248,244,238,0.45)', textDecoration: 'none' }}>{link.label}</a>
