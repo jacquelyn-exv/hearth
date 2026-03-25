@@ -5,13 +5,24 @@ import { supabase } from '@/lib/supabase'
 
 export default function Nav() {
   const [user, setUser] = useState<any>(null)
+  const [role, setRole] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      if (user) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single()
+        setRole(roleData?.role || 'homeowner')
+      }
       setLoading(false)
-    })
+    }
+    load()
   }, [])
 
   const handleLogout = async () => {
@@ -52,6 +63,9 @@ export default function Nav() {
 
         {user ? (
           <>
+            {role === 'admin' && (
+              <a href="/admin" style={{ ...linkStyle, color: '#C47B2B' }}>Admin</a>
+            )}
             <a href="/dashboard" style={linkStyle}>My Home</a>
             <a href="/log" style={linkStyle}>Contractor Log</a>
             <a href="/report" style={linkStyle}>Report Card</a>
