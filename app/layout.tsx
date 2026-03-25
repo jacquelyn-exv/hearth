@@ -6,12 +6,15 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
   display: "swap",
+  style: ["normal", "italic"],
+  weight: ["400", "600"],
 });
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-dm-sans",
   display: "swap",
+  weight: ["300", "400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -25,10 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${playfair.variable} ${dmSans.variable}`}>
-        {children}
-      </body>
+    <html lang="en" className={`${playfair.variable} ${dmSans.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }
