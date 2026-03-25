@@ -123,6 +123,12 @@ export default function ContractorLog() {
 
     if (!error && data) {
       setJobs(prev => [data, ...prev])
+      // Recalculate health score
+      await fetch('/api/recalculate-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ home_id: home.id })
+      })
       setShowModal(false)
       resetForm()
     }

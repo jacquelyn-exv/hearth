@@ -209,6 +209,18 @@ export default function Dashboard() {
       age_years: age,
     }).eq('id', sysId).select().single()
     if (updated) setSystems(prev => prev.map(s => s.id === sysId ? updated : s))
+    
+    // Recalculate health score
+    const { data: newScore } = await supabase.rpc('recalculate_health_score', { p_home_id: home.id })
+    if (newScore) {
+      const { data: updatedScore } = await supabase
+        .from('health_scores')
+        .select('*')
+        .eq('home_id', home.id)
+        .single()
+      if (updatedScore) setScore(updatedScore)
+    }
+
     setEditingSystemId(null)
     setSaving(false)
   }
