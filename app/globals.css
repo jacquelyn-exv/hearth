@@ -20,3 +20,43 @@ a {
 button {
   font-family: 'DM Sans', system-ui, sans-serif;
 }
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  /* Hero two-column → single column */
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Dashboard two-column → single column */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hide score visualization on mobile */
+  .hero-score-viz {
+    display: none !important;
+  }
+
+  /* Nav overflow fix */
+  nav {
+    flex-wrap: wrap !important;
+    height: auto !important;
+    padding: 12px 16px !important;
+    gap: 8px !important;
+  }
+
+  /* Padding reductions */
+  section {
+    padding: 40px 16px !important;
+  }
+
+  /* Neighbor Network grid */
+  .neighbors-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Onboarding form */
+  .onboarding-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

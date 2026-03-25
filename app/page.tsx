@@ -32,7 +32,7 @@ export default function Home() {
           pointerEvents: 'none'
         }} />
 
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+        <div className="hero-grid" style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
 
           {/* Left — copy */}
           <div>
@@ -82,7 +82,7 @@ export default function Home() {
           </div>
 
           {/* Right — score visualization */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="hero-score-viz" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ position: 'relative', width: '320px', height: '320px' }}>
 
               <div style={{
