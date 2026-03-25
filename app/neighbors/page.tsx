@@ -115,21 +115,7 @@ export default function Neighbors() {
   return (
     <main style={{ background: '#F8F4EE', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
       {/* Nav */}
-      <nav style={{ background: '#1E3A2F', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', height: '58px', position: 'sticky', top: 0, zIndex: 200 }}>
-        <a href="/" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '21px', color: '#F8F4EE', textDecoration: 'none' }}>
-          Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span>
-        </a>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {user ? (
-            <a href="/dashboard" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Dashboard</a>
-          ) : (
-            <>
-              <a href="/login" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Sign in</a>
-              <a href="/signup" style={{ background: '#C47B2B', color: '#fff', fontSize: '13px', textDecoration: 'none', padding: '6px 14px', borderRadius: '6px', fontWeight: 500 }}>Set up my home</a>
-            </>
-          )}
-        </div>
-      </nav>
+      <Nav />
 
       {/* Header */}
       <div style={{ background: '#1E3A2F', padding: '40px 28px 48px' }}>

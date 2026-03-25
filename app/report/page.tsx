@@ -93,19 +93,7 @@ export default function ReportCard() {
   return (
     <main style={{ background: '#F8F4EE', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
       {/* Nav */}
-      <nav style={{ background: '#1E3A2F', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', height: '58px', position: 'sticky', top: 0, zIndex: 200 }}>
-        <a href="/dashboard" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '21px', color: '#F8F4EE', textDecoration: 'none' }}>
-          Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span>
-        </a>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button onClick={() => window.print()} style={{
-            background: 'none', border: '1px solid rgba(248,244,238,0.25)',
-            color: 'rgba(248,244,238,0.8)', padding: '6px 14px', borderRadius: '6px',
-            fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-          }}>Print / Save PDF</button>
-          <a href="/dashboard" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none' }}>Dashboard</a>
-        </div>
-      </nav>
+      <Nav />
 
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 28px 64px' }}>
 
