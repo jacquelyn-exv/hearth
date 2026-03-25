@@ -57,67 +57,59 @@ function getSmartTasks(systems: any[], score: any, weather: any): any[] {
   const isWinter = month === 11 || month <= 1
   const isSummer = month >= 5 && month <= 7
 
-  // Storm-based tasks
   if (weather?.recentStorm) {
-    weather.recentStorm.systems.forEach((sys: string) => {
-      tasks.push({
-        id: `storm-${sys}`,
-        title: `Inspect ${sys.replace(/_/g, ' ')} after ${weather.recentStorm.label.toLowerCase()}`,
-        description: `A ${weather.recentStorm.label.toLowerCase()} was recorded on ${new Date(weather.recentStorm.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}. Check for damage before filing any insurance claims.`,
-        source: 'smart',
-        status: 'todo',
-        system_type: sys,
-        urgency: 'high'
-      })
+    const systemList = weather.recentStorm.systems.map((s: string) => s.replace(/_/g, ' ')).join(', ')
+    tasks.push({
+      id: 'storm-event',
+      title: `Walk your property after the ${weather.recentStorm.label.toLowerCase()}`,
+      description: `Recorded ${new Date(weather.recentStorm.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}. Check these areas: ${systemList}. Document anything with photos before calling anyone.`,
+      source: 'smart', status: 'todo', system_type: null, urgency: 'high'
     })
   }
 
-  // System age-based tasks
-  systems.forEach(sys => {
-    const condition = getCondition(sys)
-    if (condition.label === 'Inspect' || condition.label === 'Priority') {
-      tasks.push({
-        id: `age-${sys.id}`,
-        title: `Schedule ${sys.system_type.replace(/_/g, ' ')} inspection`,
-        description: `Your ${sys.system_type.replace(/_/g, ' ')} is approaching or past its expected lifespan. Get an assessment before it becomes an emergency.`,
-        source: 'smart',
-        status: 'todo',
-        system_type: sys.system_type,
-        urgency: condition.label === 'Inspect' ? 'high' : 'medium'
-      })
-    }
-  })
+  const criticalSystems = systems
+    .filter(s => getCondition(s).label === 'Inspect' || getCondition(s).label === 'Priority')
+    .sort((a, b) => {
+      const order: Record<string, number> = { Inspect: 0, Priority: 1 }
+      return order[getCondition(a).label] - order[getCondition(b).label]
+    })
 
-  // Seasonal tasks
+  if (criticalSystems.length > 0) {
+    const sys = criticalSystems[0]
+    const condition = getCondition(sys)
+    tasks.push({
+      id: `age-${sys.id}`,
+      title: `Get your ${sys.system_type.replace(/_/g, ' ')} assessed`,
+      description: `${criticalSystems.length > 1 ? `Your ${sys.system_type.replace(/_/g, ' ')} is the most urgent of ${criticalSystems.length} systems nearing end of lifespan.` : `Your ${sys.system_type.replace(/_/g, ' ')} is approaching or past its expected lifespan.`} Get a quote before it becomes an emergency.`,
+      source: 'smart', status: 'todo', system_type: sys.system_type,
+      urgency: condition.label === 'Inspect' ? 'high' : 'medium'
+    })
+  }
+
   if (isSpring) {
     tasks.push(
-      { id: 'spring-gutters', title: 'Clean gutters and downspouts', description: 'Remove winter debris and check for damage from ice and snow.', source: 'seasonal', status: 'todo', system_type: 'gutters', urgency: 'medium' },
-      { id: 'spring-hvac', title: 'Schedule HVAC tune-up', description: 'Before cooling season — change filters and have the system checked.', source: 'seasonal', status: 'todo', system_type: 'hvac', urgency: 'medium' },
-      { id: 'spring-deck', title: 'Inspect and seal deck', description: 'Check for loose boards, rot, and apply sealant if needed.', source: 'seasonal', status: 'todo', system_type: 'deck', urgency: 'low' },
-      { id: 'spring-windows', title: 'Check window and door seals', description: 'Look for gaps in caulking and weatherstripping after winter.', source: 'seasonal', status: 'todo', system_type: 'windows', urgency: 'low' }
+      { id: 'spring-1', title: 'Clean gutters and check drainage', description: 'Remove winter debris and make sure downspouts are directing water away from your foundation.', source: 'seasonal', status: 'todo', system_type: 'gutters', urgency: 'medium' },
+      { id: 'spring-2', title: 'Schedule HVAC tune-up before summer', description: 'Change filters and have the system checked before the cooling season starts.', source: 'seasonal', status: 'todo', system_type: 'hvac', urgency: 'medium' }
     )
   }
   if (isFall) {
     tasks.push(
-      { id: 'fall-gutters', title: 'Clean gutters before winter', description: 'Remove leaves and debris to prevent ice dams and water damage.', source: 'seasonal', status: 'todo', system_type: 'gutters', urgency: 'medium' },
-      { id: 'fall-hvac', title: 'Service heating system', description: 'Schedule a furnace or heat pump tune-up before cold weather.', source: 'seasonal', status: 'todo', system_type: 'hvac', urgency: 'high' },
-      { id: 'fall-pipes', title: 'Winterize outdoor plumbing', description: 'Shut off and drain outdoor faucets and irrigation systems.', source: 'seasonal', status: 'todo', system_type: 'plumbing', urgency: 'medium' }
+      { id: 'fall-1', title: 'Clean gutters before winter', description: 'Leaves and debris cause ice dams and water damage. Best done before first freeze.', source: 'seasonal', status: 'todo', system_type: 'gutters', urgency: 'medium' },
+      { id: 'fall-2', title: 'Service heating system', description: 'Schedule a furnace or heat pump tune-up before cold weather arrives.', source: 'seasonal', status: 'todo', system_type: 'hvac', urgency: 'high' }
     )
   }
   if (isWinter) {
     tasks.push(
-      { id: 'winter-pipes', title: 'Check pipes in unheated spaces', description: 'Insulate exposed pipes in basement, garage, and crawl spaces.', source: 'seasonal', status: 'todo', system_type: 'plumbing', urgency: 'high' },
-      { id: 'winter-roof', title: 'Monitor roof for ice dams', description: 'After heavy snow, check for ice buildup at roof edges.', source: 'seasonal', status: 'todo', system_type: 'roof', urgency: 'medium' }
+      { id: 'winter-1', title: 'Check pipes in unheated spaces', description: 'Insulate exposed pipes in basement, garage, and crawl spaces to prevent freezing.', source: 'seasonal', status: 'todo', system_type: 'plumbing', urgency: 'high' }
     )
   }
   if (isSummer) {
     tasks.push(
-      { id: 'summer-ac', title: 'Check AC performance', description: 'Test cooling efficiency and change filters if needed.', source: 'seasonal', status: 'todo', system_type: 'hvac', urgency: 'low' },
-      { id: 'summer-roof', title: 'Inspect roof and attic ventilation', description: 'Summer heat can accelerate shingle deterioration. Check ventilation.', source: 'seasonal', status: 'todo', system_type: 'roof', urgency: 'low' }
+      { id: 'summer-1', title: 'Check AC performance and filters', description: 'Test cooling efficiency and replace filters if needed before peak heat.', source: 'seasonal', status: 'todo', system_type: 'hvac', urgency: 'low' }
     )
   }
 
-  return tasks
+  return tasks.slice(0, 4)
 }
 
 export default function Dashboard() {
@@ -142,8 +134,6 @@ export default function Dashboard() {
   const [weatherLoading, setWeatherLoading] = useState(true)
   const [showStormDetail, setShowStormDetail] = useState(false)
   const [showPropertySwitcher, setShowPropertySwitcher] = useState(false)
-
-  // Task state
   const [showAddTask, setShowAddTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskDesc, setNewTaskDesc] = useState('')
@@ -210,24 +200,15 @@ export default function Dashboard() {
 
   const startEditHome = () => {
     setHomeEdits({
-      address: home?.address || '',
-      city: home?.city || '',
-      state: home?.state || '',
-      zip: home?.zip || '',
-      year_built: home?.year_built || '',
-      home_type: home?.home_type || 'single_family',
-      sqft: home?.sqft || '',
-      bedrooms: details?.bedrooms || '',
-      bathrooms: details?.bathrooms || '',
-      basement: details?.basement || 'none',
-      garage: details?.garage || 'none',
-      pool: details?.pool || false,
-      hoa: details?.hoa || false,
-      has_fireplace: details?.has_fireplace || false,
-      has_sump_pump: details?.has_sump_pump || false,
-      has_irrigation: details?.has_irrigation || false,
-      has_generator: details?.has_generator || false,
-      lot_size: details?.lot_size || '',
+      address: home?.address || '', city: home?.city || '',
+      state: home?.state || '', zip: home?.zip || '',
+      year_built: home?.year_built || '', home_type: home?.home_type || 'single_family',
+      sqft: home?.sqft || '', bedrooms: details?.bedrooms || '',
+      bathrooms: details?.bathrooms || '', basement: details?.basement || 'none',
+      garage: details?.garage || 'none', pool: details?.pool || false,
+      hoa: details?.hoa || false, has_fireplace: details?.has_fireplace || false,
+      has_sump_pump: details?.has_sump_pump || false, has_irrigation: details?.has_irrigation || false,
+      has_generator: details?.has_generator || false, lot_size: details?.lot_size || '',
     })
     setEditingHome(true)
   }
@@ -291,7 +272,6 @@ export default function Dashboard() {
       const { data: updatedScore } = await supabase.from('health_scores').select('*').eq('home_id', home.id).single()
       if (updatedScore) setScore(updatedScore)
     }
-
     setEditingSystemId(null)
     setSaving(false)
   }
@@ -300,14 +280,10 @@ export default function Dashboard() {
     if (!newTaskTitle.trim()) return
     const { data: { user: u } } = await supabase.auth.getUser()
     const { data } = await supabase.from('home_tasks').insert({
-      home_id: home.id,
-      created_by: u!.id,
+      home_id: home.id, created_by: u!.id,
       assigned_to: newTaskAssigned || null,
-      title: newTaskTitle,
-      description: newTaskDesc || null,
-      source: 'custom',
-      status: 'todo',
-      due_date: newTaskDue || null,
+      title: newTaskTitle, description: newTaskDesc || null,
+      source: 'custom', status: 'todo', due_date: newTaskDue || null,
     }).select().single()
     if (data) setTasks(prev => [data, ...prev])
     setNewTaskTitle(''); setNewTaskDesc(''); setNewTaskDue(''); setNewTaskAssigned('')
@@ -316,10 +292,9 @@ export default function Dashboard() {
 
   const updateTaskStatus = async (taskId: string, status: string) => {
     await supabase.from('home_tasks').update({
-      status,
-      completed_at: status === 'done' ? new Date().toISOString() : null
+      status, completed_at: status === 'done' ? new Date().toISOString() : null
     }).eq('id', taskId)
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status, completed_at: status === 'done' ? new Date().toISOString() : null } : t))
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t))
   }
 
   const deleteTask = async (taskId: string) => {
@@ -364,53 +339,28 @@ export default function Dashboard() {
     <main style={{ background: '#F8F4EE', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
       <Nav />
 
-      {/* Dashboard header */}
       <div style={{ background: '#1E3A2F', padding: '28px 28px 0' }}>
         <div style={{ paddingBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(248,244,238,0.45)', marginBottom: '4px' }}>Welcome back</div>
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#F8F4EE', fontWeight: 400 }}>{displayName}</div>
 
-          {/* Property switcher */}
           <div style={{ position: 'relative', display: 'inline-block', marginTop: '4px' }}>
-            <button
-              onClick={() => setShowPropertySwitcher(!showPropertySwitcher)}
-              style={{ background: 'none', border: 'none', cursor: allHomes.length > 1 ? 'pointer' : 'default', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
+            <button onClick={() => setShowPropertySwitcher(!showPropertySwitcher)} style={{ background: 'none', border: 'none', cursor: allHomes.length > 1 ? 'pointer' : 'default', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)' }}>
                 {home?.address}{home?.city ? `, ${home.city}` : ''}{home?.state ? `, ${home.state}` : ''}
               </span>
-              {allHomes.length > 1 && (
-                <span style={{ fontSize: '11px', color: 'rgba(248,244,238,0.4)' }}>▾</span>
-              )}
+              {allHomes.length > 1 && <span style={{ fontSize: '11px', color: 'rgba(248,244,238,0.4)' }}>▾</span>}
             </button>
 
             {showPropertySwitcher && allHomes.length > 1 && (
-              <div style={{
-                position: 'absolute', top: '28px', left: 0, background: '#fff',
-                borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-                border: '1px solid rgba(30,58,47,0.11)', overflow: 'hidden',
-                zIndex: 300, minWidth: '280px'
-              }}>
+              <div style={{ position: 'absolute', top: '28px', left: 0, background: '#fff', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid rgba(30,58,47,0.11)', overflow: 'hidden', zIndex: 300, minWidth: '280px' }}>
                 {allHomes.map(h => (
-                  <button
-                    key={h.id}
-                    onClick={() => switchHome(h)}
-                    style={{
-                      display: 'block', width: '100%', padding: '12px 16px',
-                      background: h.id === home?.id ? '#F8F4EE' : '#fff',
-                      border: 'none', borderBottom: '1px solid rgba(30,58,47,0.06)',
-                      cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans', sans-serif"
-                    }}
-                  >
+                  <button key={h.id} onClick={() => switchHome(h)} style={{ display: 'block', width: '100%', padding: '12px 16px', background: h.id === home?.id ? '#F8F4EE' : '#fff', border: 'none', borderBottom: '1px solid rgba(30,58,47,0.06)', cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans', sans-serif" }}>
                     <div style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{h.address}</div>
                     <div style={{ fontSize: '11px', color: '#8A8A82' }}>{h.city}{h.state ? `, ${h.state}` : ''}</div>
                   </button>
                 ))}
-                <a href="/onboarding" style={{
-                  display: 'block', padding: '12px 16px', fontSize: '13px',
-                  color: '#3D7A5A', textDecoration: 'none', fontWeight: 500,
-                  borderTop: '1px solid rgba(30,58,47,0.08)'
-                }}>+ Add another property</a>
+                <a href="/onboarding" style={{ display: 'block', padding: '12px 16px', fontSize: '13px', color: '#3D7A5A', textDecoration: 'none', fontWeight: 500, borderTop: '1px solid rgba(30,58,47,0.08)' }}>+ Add another property</a>
               </div>
             )}
           </div>
@@ -433,11 +383,9 @@ export default function Dashboard() {
 
       <div style={{ padding: '24px 28px 48px', maxWidth: '1100px', margin: '0 auto' }}>
 
-        {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '20px', alignItems: 'start' }}>
             <div>
-              {/* Alert banner */}
               {alertSystems.length > 0 && (
                 <div style={{ background: '#FDECEA', border: '1px solid rgba(139,58,42,0.2)', borderRadius: '12px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
@@ -476,17 +424,13 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Unified Tasks + Checklist */}
+              {/* Home To-Do */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
                 <div style={{ background: '#1E3A2F', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <h4 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '16px', color: '#F8F4EE', fontWeight: 400 }}>Home To-Do</h4>
-                  <button
-                    onClick={() => setShowAddTask(!showAddTask)}
-                    style={{ background: 'rgba(248,244,238,0.1)', border: '1px solid rgba(248,244,238,0.2)', color: '#F8F4EE', fontSize: '12px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-                  >+ Add task</button>
+                  <button onClick={() => setShowAddTask(!showAddTask)} style={{ background: 'rgba(248,244,238,0.1)', border: '1px solid rgba(248,244,238,0.2)', color: '#F8F4EE', fontSize: '12px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>+ Add task</button>
                 </div>
 
-                {/* Add task form */}
                 {showAddTask && (
                   <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(30,58,47,0.08)', background: '#F8F4EE' }}>
                     <div style={{ display: 'grid', gap: '10px' }}>
@@ -509,7 +453,6 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Custom tasks */}
                 {customTasks.map(task => (
                   <div key={task.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '13px 20px', borderBottom: '1px solid rgba(30,58,47,0.06)' }}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, background: '#EAF2EC' }}>✏️</div>
@@ -519,11 +462,7 @@ export default function Dashboard() {
                       {task.due_date && <div style={{ fontSize: '11px', color: '#C47B2B' }}>Due {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                      <select
-                        value={task.status}
-                        onChange={e => updateTaskStatus(task.id, e.target.value)}
-                        style={{ fontSize: '11px', padding: '3px 6px', borderRadius: '6px', border: '1px solid rgba(30,58,47,0.2)', background: '#fff', fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' }}
-                      >
+                      <select value={task.status} onChange={e => updateTaskStatus(task.id, e.target.value)} style={{ fontSize: '11px', padding: '3px 6px', borderRadius: '6px', border: '1px solid rgba(30,58,47,0.2)', background: '#fff', fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' }}>
                         <option value="todo">To do</option>
                         <option value="in_progress">In progress</option>
                         <option value="done">Done ✓</option>
@@ -533,11 +472,10 @@ export default function Dashboard() {
                   </div>
                 ))}
 
-                {/* Smart recommendations */}
-                {smartTasks.slice(0, 4).map((item, i) => (
+                {smartTasks.map((item) => (
                   <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '13px 20px', borderBottom: '1px solid rgba(30,58,47,0.06)' }}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, background: item.urgency === 'high' ? '#FDECEA' : item.urgency === 'medium' ? '#FBF0DC' : '#EAF2EC' }}>
-                      {item.source === 'smart' ? '🧠' : item.urgency === 'high' ? '🌡️' : item.urgency === 'medium' ? '📋' : '🌿'}
+                      {item.source === 'smart' ? '🧠' : '📋'}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '14px', marginBottom: '2px' }}>{item.title}</div>
@@ -551,11 +489,10 @@ export default function Dashboard() {
 
                 {customTasks.length === 0 && smartTasks.length === 0 && (
                   <div style={{ padding: '24px', textAlign: 'center', color: '#8A8A82', fontSize: '13px' }}>
-                    No tasks right now — add your own or they'll appear based on your home data.
+                    No tasks right now — add your own or they&apos;ll appear based on your home data.
                   </div>
                 )}
 
-                {/* Done tasks collapsed */}
                 {doneTasks.length > 0 && (
                   <div style={{ padding: '10px 20px', background: '#F8F4EE', borderTop: '1px solid rgba(30,58,47,0.06)' }}>
                     <div style={{ fontSize: '12px', color: '#8A8A82' }}>✓ {doneTasks.length} completed task{doneTasks.length !== 1 ? 's' : ''}</div>
@@ -592,7 +529,6 @@ export default function Dashboard() {
 
             {/* Sidebar */}
             <div>
-              {/* Weather + Storm */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden' }}>
                   {weatherLoading ? (
@@ -623,18 +559,14 @@ export default function Dashboard() {
 
                 {weather?.recentStorm && (
                   <div style={{ background: '#FBF0DC', border: '1px solid rgba(196,123,43,0.2)', borderRadius: '12px', padding: '14px 16px', marginTop: '10px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10', marginBottom: '3px' }}>
-                      ⚠️ {weather.recentStorm.label} recorded
-                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10', marginBottom: '3px' }}>⚠️ {weather.recentStorm.label} recorded</div>
                     <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '6px' }}>
                       {new Date(weather.recentStorm.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                       {weather.recentStorm.windspeed > 0 && ` · ${Math.round(weather.recentStorm.windspeed)} mph winds`}
                     </div>
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '10px' }}>
                       {weather.recentStorm.systems.map((s: string) => (
-                        <span key={s} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: 'rgba(196,123,43,0.15)', color: '#7A4A10', textTransform: 'capitalize' }}>
-                          {s.replace(/_/g, ' ')}
-                        </span>
+                        <span key={s} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: 'rgba(196,123,43,0.15)', color: '#7A4A10', textTransform: 'capitalize' }}>{s.replace(/_/g, ' ')}</span>
                       ))}
                     </div>
                     <button onClick={() => setShowStormDetail(!showStormDetail)} style={{ background: 'none', border: '1px solid rgba(122,74,16,0.3)', color: '#7A4A10', fontSize: '12px', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
@@ -771,7 +703,6 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              {/* Sponsored - hidden until live sponsorship */}
               {SHOW_SPONSORED && (
                 <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px' }}>
                   <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#8A8A82', padding: '6px 14px', background: '#EDE8E0', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>Sponsored</div>
@@ -789,12 +720,9 @@ export default function Dashboard() {
                 <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>
                   Deleting your account permanently removes all your homes, systems, contractor jobs, and health scores. This cannot be undone.
                 </p>
-                <button onClick={handleDeleteAccount} disabled={deletingAccount} style={{
-                  background: 'none', border: '1px solid rgba(155,44,44,0.3)',
-                  color: '#9B2C2C', fontSize: '12px', padding: '8px 14px',
-                  borderRadius: '8px', cursor: 'pointer',
-                  fontFamily: "'DM Sans', sans-serif", width: '100%'
-                }}>{deletingAccount ? 'Deleting...' : 'Delete my account'}</button>
+                <button onClick={handleDeleteAccount} disabled={deletingAccount} style={{ background: 'none', border: '1px solid rgba(155,44,44,0.3)', color: '#9B2C2C', fontSize: '12px', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", width: '100%' }}>
+                  {deletingAccount ? 'Deleting...' : 'Delete my account'}
+                </button>
               </div>
             </div>
           </div>
