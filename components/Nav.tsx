@@ -43,8 +43,7 @@ export default function Nav() {
         fontFamily: "'Playfair Display', Georgia, serif",
         fontSize: '21px', color: '#F8F4EE', textDecoration: 'none', flexShrink: 0
       }}>
-        Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span>
-      </a>
+        H<span style={{ color: '#C47B2B' }}>e</span>arth         </a>
 
       <div style={{ display: 'flex', gap: '2px', alignItems: 'center', flexWrap: 'wrap' }}>
         <a href="/guides" style={linkStyle}>Guides</a>
