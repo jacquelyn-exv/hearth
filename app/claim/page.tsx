@@ -55,8 +55,8 @@ export default function ClaimHome() {
       p_message: message[home.id] || null
     })
 
-    if (!error) {
-      setRequested(prev => [...prev, home.id])
+      if (!error) {
+      window.location.href = '/dashboard?claimed=true'
     }
     setRequesting(null)
   }

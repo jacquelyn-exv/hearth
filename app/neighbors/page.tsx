@@ -226,7 +226,7 @@ export default function Neighbors() {
               {jobs.length === 0 ? 'Be the first to share a contractor review.' : 'Try adjusting your search or filters.'}
             </p>
             {user && (
-              <a href="/log" style={{ display: 'inline-block', background: '#C47B2B', color: '#fff', textDecoration: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 500 }}>Log and share a job</a>
+              <a href={user ? '/log' : '/signup'} style={{ display: 'inline-block', background: '#C47B2B', color: '#fff', textDecoration: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 500 }}>Log and share a job</a>
             )}
           </div>
         ) : (

@@ -1085,16 +1085,208 @@ export default function Dashboard() {
 
         {/* REPORT TAB */}
         {activeTab === 'report' && (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '40px', marginBottom: '16px' }}>📄</div>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '10px' }}>Your Home Report Card</h2>
-            <p style={{ fontSize: '14px', color: '#8A8A82', marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
-              View your full report card with system conditions, home facts, contractor history, and buyer/seller guides.
-            </p>
-            <a href="/report" style={{ display: 'inline-block', background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none', padding: '12px 28px', borderRadius: '10px', fontSize: '14px', fontWeight: 500 }}>View full report card</a>
-          </div>
+          <ReportCardInline
+            home={home}
+            details={details}
+            systems={systems}
+            jobs={jobs}
+            score={score}
+          />
         )}
       </div>
     </main>
+  )
+}
+function ReportCardInline({ home, details, systems, jobs, score }: any) {
+  const [copied, setCopied] = useState(false)
+
+  const scoreValue = score?.total_score || 0
+  const age = home?.year_built ? new Date().getFullYear() - home.year_built : null
+  const alertSystems = systems.filter((s: any) => ['Inspect', 'Priority'].includes(getCondition(s).label))
+
+  const scoreDetails = [
+    { label: 'System Risk', icon: '🏠', value: score?.system_risk_score || 0, weight: '35%', insight: score?.system_risk_score >= 80 ? 'All systems in good shape' : score?.system_risk_score >= 60 ? 'A few systems to watch' : 'Systems need attention' },
+    { label: 'Maintenance', icon: '🔧', value: score?.maintenance_score || 0, weight: '30%', insight: score?.maintenance_score >= 70 ? 'Strong maintenance history' : 'Log more jobs to improve' },
+    { label: 'Value Protection', icon: '💰', value: score?.value_protection_score || 0, weight: '20%', insight: score?.value_protection_score >= 70 ? 'Home value well protected' : 'Address flagged systems before selling' },
+    { label: 'Seasonal Readiness', icon: '🌿', value: score?.seasonal_readiness_score || 0, weight: '15%', insight: score?.seasonal_readiness_score >= 70 ? 'Ready for the season' : 'Review seasonal checklist' },
+  ]
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.origin + '/report')
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleEmail = () => {
+    const subject = encodeURIComponent(`Home Report Card — ${home?.address}`)
+    const body = encodeURIComponent(`Home report card for ${home?.address}\nHealth Score: ${scoreValue}\n\nView full report: ${window.location.origin}/report`)
+    window.location.href = `mailto:?subject=${subject}&body=${body}`
+  }
+
+  return (
+    <div>
+      {/* Share bar */}
+      <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '12px', padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+        <div style={{ fontSize: '13px', color: '#8A8A82' }}>
+          {home?.address} · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {[
+            { label: copied ? '✓ Copied!' : '🔗 Copy link', onClick: handleCopyLink },
+            { label: '✉️ Email', onClick: handleEmail },
+            { label: '🖨️ Print', onClick: () => window.print() },
+            { label: '↗️ Full page', onClick: () => window.open('/report', '_blank') },
+          ].map(btn => (
+            <button key={btn.label} onClick={btn.onClick} style={{ background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#1E3A2F', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>{btn.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Hero */}
+      <div style={{ background: '#1E3A2F', borderRadius: '16px', padding: '28px 32px', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(196,123,43,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#6AAF8A', marginBottom: '6px' }}>Home Report Card</div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(18px, 3vw, 26px)', color: '#F8F4EE', fontWeight: 400, marginBottom: '4px' }}>{home?.address}</h2>
+            <p style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)', marginBottom: '16px' }}>
+              {home?.city}{home?.state ? `, ${home.state}` : ''} · Built {home?.year_built}
+            </p>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              {[
+                { label: 'Age', value: age ? `${age}yr` : '—' },
+                { label: 'Jobs', value: jobs.length },
+                { label: 'Systems', value: systems.length },
+              ].map(stat => (
+                <div key={stat.label}>
+                  <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', color: '#F8F4EE', fontWeight: 600 }}>{stat.value}</div>
+                  <div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.5)', marginTop: '2px' }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ position: 'relative', width: '80px', height: '80px', flexShrink: 0 }}>
+            <svg width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="10" />
+              <circle cx="40" cy="40" r="32" fill="none"
+                stroke={scoreValue >= 80 ? '#6AAF8A' : scoreValue >= 60 ? '#C47B2B' : '#E57373'}
+                strokeWidth="10" strokeDasharray="201"
+                strokeDashoffset={201 - (201 * scoreValue / 100)} strokeLinecap="round" />
+            </svg>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', color: '#F8F4EE', fontWeight: 600, lineHeight: 1 }}>{scoreValue}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {alertSystems.length > 0 && (
+        <div style={{ background: '#FDECEA', border: '1px solid rgba(139,58,42,0.2)', borderRadius: '12px', padding: '14px 20px', marginBottom: '20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 500, color: '#9B2C2C', marginBottom: '2px' }}>⚠️ {alertSystems.length} system{alertSystems.length > 1 ? 's' : ''} need attention</div>
+          <div style={{ fontSize: '12px', color: '#7A3A2A' }}>{alertSystems.map((s: any) => s.system_type.replace(/_/g, ' ')).join(', ')}</div>
+        </div>
+      )}
+
+      {/* Score Breakdown */}
+      <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>
+          <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F' }}>Health Score Breakdown</h3>
+        </div>
+        {scoreDetails.map((dim, i) => (
+          <div key={dim.label} style={{ padding: '14px 20px', borderBottom: i < scoreDetails.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ fontSize: '20px', width: '26px', flexShrink: 0 }}>{dim.icon}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                <div>
+                  <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{dim.label}</span>
+                  <span style={{ fontSize: '11px', color: '#8A8A82', marginLeft: '6px' }}>{dim.weight}</span>
+                </div>
+                <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 600, color: dim.value >= 80 ? '#3D7A5A' : dim.value >= 60 ? '#C47B2B' : '#9B2C2C' }}>{dim.value}</span>
+              </div>
+              <div style={{ height: '6px', background: '#EDE8E0', borderRadius: '3px', marginBottom: '4px' }}>
+                <div style={{ width: `${dim.value}%`, height: '100%', background: dim.value >= 80 ? '#3D7A5A' : dim.value >= 60 ? '#C47B2B' : '#9B2C2C', borderRadius: '3px' }} />
+              </div>
+              <div style={{ fontSize: '11px', color: '#8A8A82' }}>{dim.insight}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Systems */}
+      <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>
+          <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F' }}>System Condition</h3>
+        </div>
+        {systems.map((sys: any, i: number) => {
+          const condition = getCondition(sys)
+          const effectiveYear = sys.replacement_year || sys.install_year
+          const sysAge = effectiveYear ? new Date().getFullYear() - effectiveYear : null
+          const lifespan = SYSTEM_LIFESPANS[sys.system_type] || 20
+          const pct = sysAge ? Math.min(100, Math.round((sysAge / lifespan) * 100)) : 0
+          return (
+            <div key={sys.id} style={{ padding: '12px 20px', borderBottom: i < systems.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '18px', width: '24px', flexShrink: 0 }}>{SYSTEM_ICONS[sys.system_type] || '🔧'}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{sys.system_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()).replace('Hvac', 'HVAC')}</span>
+                  <span style={{ fontSize: '10px', fontWeight: 500, padding: '1px 6px', borderRadius: '20px', background: condition.bg, color: condition.textColor }}>{condition.label}</span>
+                  {sys.ever_replaced && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>Replaced {sys.replacement_year}</span>}
+                </div>
+                <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '4px' }}>
+                  {sys.material && `${sys.material} · `}{sysAge ? `${sysAge}yr old` : 'Year unknown'}
+                </div>
+                {sysAge !== null && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, height: '4px', background: '#EDE8E0', borderRadius: '2px' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: condition.color, borderRadius: '2px' }} />
+                    </div>
+                    <span style={{ fontSize: '10px', color: '#8A8A82', flexShrink: 0 }}>{pct}%</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Contractor History */}
+      {jobs.length > 0 && (
+        <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>
+            <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F' }}>Contractor History</h3>
+          </div>
+          {jobs.map((job: any, i: number) => (
+            <div key={job.id} style={{ padding: '12px 20px', borderBottom: i < jobs.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none', display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F', marginBottom: '2px' }}>{job.company_name}</div>
+                <div style={{ fontSize: '12px', color: '#8A8A82' }}>{job.service_description}{job.job_date ? ` · ${new Date(job.job_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : ''}</div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F' }}>{job.final_price ? `$${Number(job.final_price).toLocaleString()}` : '—'}</div>
+                <div style={{ color: '#C47B2B', fontSize: '11px' }}>{'★'.repeat(job.quality_rating)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Buyers / Sellers */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+        {[
+          { emoji: '🏠', title: 'For Buyers', color: '#3D7A5A', items: ['Request maintenance records before closing', 'Flag systems past 80% of expected lifespan', 'Use deferred maintenance as negotiation leverage', 'Ask for contractor warranties on recent work', 'Get independent inspection of flagged systems'] },
+          { emoji: '🔑', title: 'For Sellers', color: '#C47B2B', items: ['Address Inspect and Priority items before listing', 'Document all recent contractor work', 'Share this report card with serious buyers', 'Systems in Good condition are a selling advantage', 'Recent maintenance history builds buyer confidence'] }
+        ].map(section => (
+          <div key={section.title} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderTop: `3px solid ${section.color}`, borderRadius: '14px', padding: '18px' }}>
+            <div style={{ fontSize: '24px', marginBottom: '8px' }}>{section.emoji}</div>
+            <h4 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '16px', fontWeight: 400, color: '#1E3A2F', marginBottom: '12px' }}>{section.title}</h4>
+            {section.items.map(item => (
+              <div key={item} style={{ display: 'flex', gap: '6px', marginBottom: '6px', fontSize: '12px', color: '#4A4A44', lineHeight: 1.5 }}>
+                <span style={{ color: section.color, flexShrink: 0 }}>✓</span>{item}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }

@@ -42,7 +42,7 @@ export default function Privacy() {
     },
     {
       title: 'Contact us',
-      body: `If you have questions about this Privacy Policy or how we handle your data, please contact us at privacy@hearthome.co.`
+      body: `If you have questions about this Privacy Policy or how we handle your data, please contact us at jacquelyn@exp-ventures.com.`
     },
   ]
 
