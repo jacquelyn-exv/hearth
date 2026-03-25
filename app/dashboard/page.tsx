@@ -99,17 +99,20 @@ function getSmartTasks(systems: any[], score: any, weather: any): any[] {
     )
   }
   if (isWinter) {
-    tasks.push(
-      { id: 'winter-1', title: 'Check pipes in unheated spaces', description: 'Insulate exposed pipes in basement, garage, and crawl spaces to prevent freezing.', source: 'seasonal', status: 'todo', system_type: 'plumbing', urgency: 'high' }
-    )
+    tasks.push({ id: 'winter-1', title: 'Check pipes in unheated spaces', description: 'Insulate exposed pipes in basement, garage, and crawl spaces to prevent freezing.', source: 'seasonal', status: 'todo', system_type: 'plumbing', urgency: 'high' })
   }
   if (isSummer) {
-    tasks.push(
-      { id: 'summer-1', title: 'Check AC performance and filters', description: 'Test cooling efficiency and replace filters if needed before peak heat.', source: 'seasonal', status: 'todo', system_type: 'hvac', urgency: 'low' }
-    )
+    tasks.push({ id: 'summer-1', title: 'Check AC performance and filters', description: 'Test cooling efficiency and replace filters if needed before peak heat.', source: 'seasonal', status: 'todo', system_type: 'hvac', urgency: 'low' })
   }
 
   return tasks.slice(0, 4)
+}
+
+function getCommunityLevel(points: number) {
+  if (points >= 1000) return { label: 'Community Champion', emoji: '🏆', next: null, nextPoints: null }
+  if (points >= 500) return { label: 'Neighborhood Expert', emoji: '🌟', next: 'Community Champion', nextPoints: 1000 }
+  if (points >= 200) return { label: 'Active Homeowner', emoji: '🏡', next: 'Neighborhood Expert', nextPoints: 500 }
+  return { label: 'New Homeowner', emoji: '🌱', next: 'Active Homeowner', nextPoints: 200 }
 }
 
 export default function Dashboard() {
@@ -122,6 +125,7 @@ export default function Dashboard() {
   const [score, setScore] = useState<any>(null)
   const [tasks, setTasks] = useState<any[]>([])
   const [members, setMembers] = useState<any[]>([])
+  const [communityScore, setCommunityScore] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [editingHome, setEditingHome] = useState(false)
@@ -133,12 +137,12 @@ export default function Dashboard() {
   const [weather, setWeather] = useState<any>(null)
   const [weatherLoading, setWeatherLoading] = useState(true)
   const [showStormDetail, setShowStormDetail] = useState(false)
-  const [showPropertySwitcher, setShowPropertySwitcher] = useState(false)
   const [showAddTask, setShowAddTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskDesc, setNewTaskDesc] = useState('')
   const [newTaskDue, setNewTaskDue] = useState('')
   const [newTaskAssigned, setNewTaskAssigned] = useState('')
+  const [propertyMenuOpen, setPropertyMenuOpen] = useState<string | null>(null)
 
   const loadHomeData = async (homeId: string) => {
     const [{ data: detailData }, { data: systemData }, { data: jobData }, { data: scoreData }, { data: taskData }, { data: memberData }] = await Promise.all([
@@ -165,14 +169,16 @@ export default function Dashboard() {
 
       const { data: homes } = await supabase
         .from('homes').select('*').eq('user_id', user.id)
+        .order('is_primary', { ascending: false })
         .order('created_at', { ascending: false })
 
       if (homes && homes.length > 0) {
         setAllHomes(homes)
-        setHome(homes[0])
+        const primaryHome = homes.find(h => h.is_primary) || homes[0]
+        setHome(primaryHome)
 
-        if (homes[0].city || homes[0].zip) {
-          fetch(`/api/weather?city=${encodeURIComponent(homes[0].city || '')}&state=${encodeURIComponent(homes[0].state || '')}&zip=${encodeURIComponent(homes[0].zip || '')}`)
+        if (primaryHome.city || primaryHome.zip) {
+          fetch(`/api/weather?city=${encodeURIComponent(primaryHome.city || '')}&state=${encodeURIComponent(primaryHome.state || '')}&zip=${encodeURIComponent(primaryHome.zip || '')}`)
             .then(r => r.json())
             .then(data => { if (!data.error) setWeather(data) })
             .finally(() => setWeatherLoading(false))
@@ -180,7 +186,12 @@ export default function Dashboard() {
           setWeatherLoading(false)
         }
 
-        await loadHomeData(homes[0].id)
+        await loadHomeData(primaryHome.id)
+
+        // Load community score
+        await supabase.rpc('recalculate_community_score', { p_user_id: user.id })
+        const { data: csData } = await supabase.from('community_scores').select('*').eq('user_id', user.id).single()
+        if (csData) setCommunityScore(csData)
       } else {
         window.location.replace('/onboarding')
         return
@@ -192,10 +203,41 @@ export default function Dashboard() {
 
   const switchHome = async (selectedHome: any) => {
     setHome(selectedHome)
-    setShowPropertySwitcher(false)
+    setSystems([])
+    setJobs([])
+    setTasks([])
+    setScore(null)
+    setDetails(null)
+    setMembers([])
+    setWeather(null)
+    setWeatherLoading(true)
     setLoading(true)
+
+    if (selectedHome.city || selectedHome.zip) {
+      fetch(`/api/weather?city=${encodeURIComponent(selectedHome.city || '')}&state=${encodeURIComponent(selectedHome.state || '')}&zip=${encodeURIComponent(selectedHome.zip || '')}`)
+        .then(r => r.json())
+        .then(data => { if (!data.error) setWeather(data) })
+        .finally(() => setWeatherLoading(false))
+    } else {
+      setWeatherLoading(false)
+    }
+
     await loadHomeData(selectedHome.id)
     setLoading(false)
+  }
+
+  const setPrimaryHome = async (homeId: string) => {
+    await supabase.from('homes').update({ is_primary: false }).eq('user_id', user.id)
+    await supabase.from('homes').update({ is_primary: true }).eq('id', homeId)
+    setAllHomes(prev => prev.map(h => ({ ...h, is_primary: h.id === homeId })))
+    if (home.id === homeId) setHome((prev: any) => ({ ...prev, is_primary: true }))
+    setPropertyMenuOpen(null)
+  }
+
+  const markForTransfer = async (homeId: string) => {
+    await supabase.from('homes').update({ status: 'for_transfer' }).eq('id', homeId)
+    setAllHomes(prev => prev.map(h => h.id === homeId ? { ...h, status: 'for_transfer' } : h))
+    setPropertyMenuOpen(null)
   }
 
   const startEditHome = () => {
@@ -326,6 +368,46 @@ export default function Dashboard() {
   const smartTasks = getSmartTasks(systems, score, weather)
   const customTasks = tasks.filter(t => t.status !== 'done')
   const doneTasks = tasks.filter(t => t.status === 'done')
+  const communityLevel = getCommunityLevel(communityScore?.total_points || 0)
+
+  const scoreDetails = [
+    {
+      label: 'Systems',
+      icon: '🏠',
+      value: score?.system_risk_score || 0,
+      insight: score?.system_risk_score >= 80 ? 'All systems in good shape' : score?.system_risk_score >= 60 ? 'A few systems to watch' : 'Systems need attention',
+      action: 'View systems',
+      href: '#systems',
+      onClick: () => setActiveTab('systems')
+    },
+    {
+      label: 'Maintenance',
+      icon: '🔧',
+      value: score?.maintenance_score || 0,
+      insight: score?.maintenance_score >= 70 ? 'Great maintenance history' : score?.maintenance_score >= 50 ? 'Log more jobs to improve' : 'Start logging contractor jobs',
+      action: 'Log a job',
+      href: '/log',
+      onClick: null
+    },
+    {
+      label: 'Value',
+      icon: '💰',
+      value: score?.value_protection_score || 0,
+      insight: score?.value_protection_score >= 70 ? 'Home value well protected' : 'See what affects your value',
+      action: 'View report',
+      href: '/report',
+      onClick: null
+    },
+    {
+      label: 'Seasonal',
+      icon: '🌿',
+      value: score?.seasonal_readiness_score || 0,
+      insight: score?.seasonal_readiness_score >= 70 ? 'Ready for the season' : 'Check your seasonal to-do list',
+      action: 'View tasks',
+      href: '#tasks',
+      onClick: () => setActiveTab('overview')
+    },
+  ]
 
   const inputStyle = {
     width: '100%', padding: '7px 10px',
@@ -344,26 +426,81 @@ export default function Dashboard() {
           <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(248,244,238,0.45)', marginBottom: '4px' }}>Welcome back</div>
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#F8F4EE', fontWeight: 400 }}>{displayName}</div>
 
-          <div style={{ position: 'relative', display: 'inline-block', marginTop: '4px' }}>
-            <button onClick={() => setShowPropertySwitcher(!showPropertySwitcher)} style={{ background: 'none', border: 'none', cursor: allHomes.length > 1 ? 'pointer' : 'default', padding: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)' }}>
-                {home?.address}{home?.city ? `, ${home.city}` : ''}{home?.state ? `, ${home.state}` : ''}
-              </span>
-              {allHomes.length > 1 && <span style={{ fontSize: '11px', color: 'rgba(248,244,238,0.4)' }}>▾</span>}
-            </button>
+          {/* Property switcher pills */}
+          {allHomes.length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px', alignItems: 'center' }}>
+              {allHomes.map(h => (
+                <div key={h.id} style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
+                    <button
+                      onClick={() => switchHome(h)}
+                      style={{
+                        background: h.id === home?.id ? '#C47B2B' : 'rgba(248,244,238,0.1)',
+                        border: `1px solid ${h.id === home?.id ? '#C47B2B' : 'rgba(248,244,238,0.2)'}`,
+                        borderRight: 'none',
+                        color: h.id === home?.id ? '#fff' : 'rgba(248,244,238,0.7)',
+                        padding: '6px 12px',
+                        borderRadius: '20px 0 0 20px',
+                        fontSize: '13px', cursor: 'pointer',
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontWeight: h.id === home?.id ? 500 : 400,
+                        display: 'flex', alignItems: 'center', gap: '6px'
+                      }}
+                    >
+                      {h.is_primary && <span style={{ fontSize: '10px' }}>⭐</span>}
+                      {h.status === 'for_transfer' && <span style={{ fontSize: '10px' }}>🔑</span>}
+                      {h.address}{h.city ? `, ${h.city}` : ''}
+                    </button>
+                    <button
+                      onClick={() => setPropertyMenuOpen(propertyMenuOpen === h.id ? null : h.id)}
+                      style={{
+                        background: h.id === home?.id ? '#B36B20' : 'rgba(248,244,238,0.08)',
+                        border: `1px solid ${h.id === home?.id ? '#C47B2B' : 'rgba(248,244,238,0.2)'}`,
+                        color: h.id === home?.id ? '#fff' : 'rgba(248,244,238,0.7)',
+                        padding: '6px 8px',
+                        borderRadius: '0 20px 20px 0',
+                        fontSize: '11px', cursor: 'pointer',
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >•••</button>
+                  </div>
 
-            {showPropertySwitcher && allHomes.length > 1 && (
-              <div style={{ position: 'absolute', top: '28px', left: 0, background: '#fff', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid rgba(30,58,47,0.11)', overflow: 'hidden', zIndex: 300, minWidth: '280px' }}>
-                {allHomes.map(h => (
-                  <button key={h.id} onClick={() => switchHome(h)} style={{ display: 'block', width: '100%', padding: '12px 16px', background: h.id === home?.id ? '#F8F4EE' : '#fff', border: 'none', borderBottom: '1px solid rgba(30,58,47,0.06)', cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans', sans-serif" }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{h.address}</div>
-                    <div style={{ fontSize: '11px', color: '#8A8A82' }}>{h.city}{h.state ? `, ${h.state}` : ''}</div>
-                  </button>
-                ))}
-                <a href="/onboarding" style={{ display: 'block', padding: '12px 16px', fontSize: '13px', color: '#3D7A5A', textDecoration: 'none', fontWeight: 500, borderTop: '1px solid rgba(30,58,47,0.08)' }}>+ Add another property</a>
-              </div>
-            )}
-          </div>
+                  {propertyMenuOpen === h.id && (
+                    <div style={{
+                      position: 'absolute', top: '36px', left: 0, background: '#fff',
+                      borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                      border: '1px solid rgba(30,58,47,0.11)', overflow: 'hidden',
+                      zIndex: 300, minWidth: '220px'
+                    }}>
+                      {!h.is_primary && (
+                        <button onClick={() => setPrimaryHome(h.id)} style={{ display: 'block', width: '100%', padding: '11px 16px', background: 'none', border: 'none', borderBottom: '1px solid rgba(30,58,47,0.06)', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", color: '#1E3A2F' }}>
+                          ⭐ Set as primary residence
+                        </button>
+                      )}
+                      {h.status !== 'for_transfer' && (
+                        <button onClick={() => markForTransfer(h.id)} style={{ display: 'block', width: '100%', padding: '11px 16px', background: 'none', border: 'none', borderBottom: '1px solid rgba(30,58,47,0.06)', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", color: '#C47B2B' }}>
+                          🔑 Mark as former property
+                        </button>
+                      )}
+                      {h.status === 'for_transfer' && (
+                        <div style={{ padding: '11px 16px', fontSize: '12px', color: '#8A8A82', borderBottom: '1px solid rgba(30,58,47,0.06)' }}>
+                          🔑 Awaiting new owner
+                        </div>
+                      )}
+                      <button onClick={() => setPropertyMenuOpen(null)} style={{ display: 'block', width: '100%', padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", color: '#8A8A82' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <a href="/onboarding" style={{
+                background: 'none', border: '1px dashed rgba(248,244,238,0.25)',
+                color: 'rgba(248,244,238,0.5)', padding: '6px 14px', borderRadius: '20px',
+                fontSize: '13px', textDecoration: 'none', fontFamily: "'DM Sans', sans-serif"
+              }}>+ Add property</a>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '2px' }}>
@@ -396,32 +533,47 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Score */}
-              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '20px' }}>
-                <div style={{ width: '80px', height: '80px', flexShrink: 0, position: 'relative' }}>
-                  <svg width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle cx="40" cy="40" r="32" fill="none" stroke="#EDE8E0" strokeWidth="8" />
-                    <circle cx="40" cy="40" r="32" fill="none" stroke="#3D7A5A" strokeWidth="8"
-                      strokeDasharray="201" strokeDashoffset={201 - (201 * scoreValue / 100)} strokeLinecap="round" />
-                  </svg>
-                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#1E3A2F', fontWeight: 600 }}>{scoreValue}</div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, marginBottom: '4px' }}>
-                    {scoreValue >= 80 ? 'Your home is in great shape' : scoreValue >= 60 ? 'Your home is doing well' : 'Your home needs attention'}
-                  </h3>
-                  <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '10px' }}>Home health score · Updated today</p>
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {[
-                      { label: 'System Risk', value: score?.system_risk_score },
-                      { label: 'Maintenance', value: score?.maintenance_score },
-                      { label: 'Value Protection', value: score?.value_protection_score },
-                      { label: 'Seasonal', value: score?.seasonal_readiness_score },
-                    ].map(pill => (
-                      <div key={pill.label} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A', border: '1px solid rgba(30,58,47,0.14)' }}>{pill.label}: {pill.value}</div>
-                    ))}
+              {/* Redesigned Score Section */}
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
+                <div style={{ padding: '20px 22px', display: 'flex', alignItems: 'center', gap: '20px', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>
+                  <div style={{ width: '72px', height: '72px', flexShrink: 0, position: 'relative' }}>
+                    <svg width="72" height="72" style={{ transform: 'rotate(-90deg)' }}>
+                      <circle cx="36" cy="36" r="28" fill="none" stroke="#EDE8E0" strokeWidth="8" />
+                      <circle cx="36" cy="36" r="28" fill="none" stroke={scoreValue >= 80 ? '#3D7A5A' : scoreValue >= 60 ? '#C47B2B' : '#9B2C2C'} strokeWidth="8"
+                        strokeDasharray="176" strokeDashoffset={176 - (176 * scoreValue / 100)} strokeLinecap="round" />
+                    </svg>
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', color: '#1E3A2F', fontWeight: 600 }}>{scoreValue}</div>
+                  </div>
+                  <div>
+                    <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, marginBottom: '2px', color: '#1E3A2F' }}>
+                      {scoreValue >= 80 ? 'Your home is in great shape' : scoreValue >= 60 ? 'Your home is doing well' : 'Your home needs attention'}
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#8A8A82' }}>Home health score · Tap a category below to take action</p>
                   </div>
                 </div>
+
+                {scoreDetails.map((dim, i) => (
+                  <div
+                    key={dim.label}
+                    style={{ padding: '12px 22px', borderBottom: i < scoreDetails.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                    onClick={() => dim.onClick ? dim.onClick() : window.location.href = dim.href}
+                  >
+                    <div style={{ fontSize: '20px', width: '28px', flexShrink: 0 }}>{dim.icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{dim.label}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: dim.value >= 80 ? '#3D7A5A' : dim.value >= 60 ? '#C47B2B' : '#9B2C2C' }}>{dim.value}</span>
+                      </div>
+                      <div style={{ height: '6px', background: '#EDE8E0', borderRadius: '3px', marginBottom: '4px' }}>
+                        <div style={{ width: `${dim.value}%`, height: '100%', background: dim.value >= 80 ? '#3D7A5A' : dim.value >= 60 ? '#C47B2B' : '#9B2C2C', borderRadius: '3px', transition: 'width 0.5s ease' }} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', color: '#8A8A82' }}>{dim.insight}</span>
+                        <span style={{ fontSize: '11px', color: '#3D7A5A', fontWeight: 500 }}>{dim.action} →</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {/* Home To-Do */}
@@ -529,6 +681,55 @@ export default function Dashboard() {
 
             {/* Sidebar */}
             <div>
+              {/* Community Score */}
+              {communityScore && (
+                <div style={{ background: '#1E3A2F', borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '28px' }}>{communityLevel.emoji}</div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: '#F8F4EE' }}>{communityLevel.label}</div>
+                      <div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)' }}>Community score</div>
+                    </div>
+                    <div style={{ marginLeft: 'auto', fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', color: '#C47B2B', fontWeight: 600 }}>{communityScore.total_points}</div>
+                  </div>
+
+                  {communityLevel.nextPoints && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(248,244,238,0.5)', marginBottom: '4px' }}>
+                        <span>{communityScore.total_points} pts</span>
+                        <span>{communityLevel.nextPoints} pts to {communityLevel.next}</span>
+                      </div>
+                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px' }}>
+                        <div style={{
+                          width: `${Math.min(100, (communityScore.total_points / communityLevel.nextPoints) * 100)}%`,
+                          height: '100%', background: '#C47B2B', borderRadius: '3px', transition: 'width 0.5s ease'
+                        }} />
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'grid', gap: '6px' }}>
+                    {[
+                      { label: 'Home set up', pts: 50, done: communityScore.total_points >= 50 },
+                      { label: 'First job logged', pts: 100, done: communityScore.first_job_logged },
+                      { label: `${communityScore.jobs_shared} jobs shared`, pts: 75, done: communityScore.jobs_shared > 0, perItem: true },
+                      { label: `${communityScore.systems_detailed} systems detailed`, pts: 25, done: communityScore.systems_detailed > 0, perItem: true },
+                    ].map(item => (
+                      <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
+                        <span style={{ color: item.done ? '#6AAF8A' : 'rgba(248,244,238,0.3)' }}>{item.done ? '✓' : '○'}</span>
+                        <span style={{ color: item.done ? 'rgba(248,244,238,0.8)' : 'rgba(248,244,238,0.4)', flex: 1 }}>{item.label}</span>
+                        <span style={{ color: '#C47B2B', fontWeight: 500 }}>+{item.pts}{item.perItem ? ' ea' : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <a href="/neighbors" style={{ display: 'block', marginTop: '12px', background: 'rgba(248,244,238,0.1)', border: '1px solid rgba(248,244,238,0.15)', color: 'rgba(248,244,238,0.8)', textAlign: 'center', padding: '8px', borderRadius: '8px', fontSize: '12px', textDecoration: 'none', fontFamily: "'DM Sans', sans-serif" }}>
+                    View your neighbor contributions →
+                  </a>
+                </div>
+              )}
+
+              {/* Weather + Storm */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden' }}>
                   {weatherLoading ? (
@@ -698,6 +899,7 @@ export default function Dashboard() {
                   { label: '👥 Browse neighbor reviews', href: '/neighbors' },
                   { label: '📄 View report card', href: '/report' },
                   { label: '📖 Browse guides', href: '/guides' },
+                  { label: '🔑 Claim a home', href: '/claim' },
                 ].map(action => (
                   <a key={action.label} href={action.href} style={{ display: 'block', padding: '9px 0', fontSize: '13px', color: '#1E3A2F', textDecoration: 'none', borderBottom: '1px solid rgba(30,58,47,0.07)' }}>{action.label}</a>
                 ))}
