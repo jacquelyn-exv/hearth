@@ -1,5 +1,6 @@
 'use client'
 
+import Nav from '@/components/Nav'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 

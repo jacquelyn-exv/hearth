@@ -1,19 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import Nav from '@/components/Nav'
 
 export default function Home() {
-  const [loggedIn, setLoggedIn] = useState(false)
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setLoggedIn(true)
-    })
-  }, [])
-
-  const ctaHref = loggedIn ? '/dashboard' : '/signup'
-
   return (
     <main style={{
       fontFamily: "'DM Sans', system-ui, sans-serif",
@@ -21,68 +10,7 @@ export default function Home() {
       minHeight: '100vh',
       color: '#1A1A18'
     }}>
-      {/* Nav */}
-      <nav style={{
-        background: '#1E3A2F',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 28px',
-        height: '58px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 200
-      }}>
-        <a href="/" style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
-          fontSize: '21px',
-          color: '#F8F4EE',
-          textDecoration: 'none'
-        }}>
-          Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span>
-        </a>
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-          <a href="/guides" style={{
-            color: 'rgba(248,244,238,0.65)',
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: '13px',
-            padding: '6px 11px',
-            borderRadius: '6px',
-            textDecoration: 'none'
-          }}>Guides</a>
-          <a href="/about" style={{
-            color: 'rgba(248,244,238,0.65)',
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: '13px',
-            padding: '6px 11px',
-            borderRadius: '6px',
-            textDecoration: 'none'
-          }}>About</a>
-          {loggedIn ? (
-            <a href="/dashboard" style={{
-              background: '#C47B2B',
-              color: '#fff',
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: '13px',
-              fontWeight: 500,
-              padding: '6px 14px',
-              borderRadius: '6px',
-              textDecoration: 'none'
-            }}>My Home</a>
-          ) : (
-            <a href="/signup" style={{
-              background: '#C47B2B',
-              color: '#fff',
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: '13px',
-              fontWeight: 500,
-              padding: '6px 14px',
-              borderRadius: '6px',
-              textDecoration: 'none'
-            }}>Set up my home</a>
-          )}
-        </div>
-      </nav>
+      <Nav />
 
       {/* Hero */}
       <section style={{
@@ -125,12 +53,12 @@ export default function Home() {
             Built entirely on the homeowner&apos;s side of the table.
           </p>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <a href={ctaHref} style={{
+            <a href="/signup" style={{
               background: '#C47B2B', color: '#fff',
               padding: '12px 24px', borderRadius: '10px',
               fontFamily: "'DM Sans', sans-serif", fontSize: '14px',
               fontWeight: 500, textDecoration: 'none', display: 'inline-block'
-            }}>{loggedIn ? 'Go to my home' : 'Set up my home'}</a>
+            }}>Set up my home</a>
             <a href="/guides" style={{
               background: 'none', border: '1px solid rgba(248,244,238,0.25)',
               color: 'rgba(248,244,238,0.8)', padding: '11px 22px',
@@ -177,8 +105,8 @@ export default function Home() {
           }}>Three steps to knowing your home</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
             {[
-              { n: '01', title: 'Set up your home', desc: 'Enter your address, home details, and system ages. Takes under 5 minutes.', tag: 'Free forever', href: ctaHref },
-              { n: '02', title: 'Get your score', desc: 'See your home health score across 4 dimensions. Know what needs attention.', tag: 'Live score', href: ctaHref },
+              { n: '01', title: 'Set up your home', desc: 'Enter your address, home details, and system ages. Takes under 5 minutes.', tag: 'Free forever', href: '/signup' },
+              { n: '02', title: 'Get your score', desc: 'See your home health score across 4 dimensions. Know what needs attention.', tag: 'Live score', href: '/signup' },
               { n: '03', title: 'Log jobs & share', desc: 'Record contractor work. Share anonymously to help your neighbors.', tag: 'Community', href: '/log' }
             ].map(step => (
               <a key={step.n} href={step.href} style={{ textDecoration: 'none' }}>
@@ -200,6 +128,48 @@ export default function Home() {
                 </div>
               </a>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Neighbor Network feature band */}
+      <section style={{ padding: '0 32px 56px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{
+            background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
+            borderRadius: '16px', padding: '36px 32px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: '28px', flexWrap: 'wrap'
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#3D7A5A', marginBottom: '10px' }}>Community</div>
+              <h3 style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: '24px', color: '#1E3A2F', fontWeight: 400, marginBottom: '10px'
+              }}>See what your neighbors paid</h3>
+              <p style={{ fontSize: '13px', color: '#8A8A82', maxWidth: '400px', lineHeight: 1.7, marginBottom: '20px' }}>
+                Real contractor prices from real homeowners in your area. No paid placements. No fake reviews. Just verified data from people who actually hired them.
+              </p>
+              <a href="/neighbors" style={{
+                display: 'inline-block', background: '#1E3A2F', color: '#F8F4EE',
+                textDecoration: 'none', padding: '11px 22px', borderRadius: '10px',
+                fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: 500
+              }}>Browse neighbor reviews</a>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', flexShrink: 0, maxWidth: '280px' }}>
+              {[
+                { icon: '⭐', label: 'Verified reviews', desc: 'Tied to real logged jobs' },
+                { icon: '💰', label: 'Real pricing', desc: 'What they actually paid' },
+                { icon: '🔒', label: 'Anonymous', desc: 'Names never shown' },
+                { icon: '📍', label: 'Local', desc: 'Filter by your zip code' },
+              ].map(item => (
+                <div key={item.label} style={{ background: '#F8F4EE', borderRadius: '10px', padding: '14px' }}>
+                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>{item.icon}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 500, color: '#1A1A18', marginBottom: '2px' }}>{item.label}</div>
+                  <div style={{ fontSize: '11px', color: '#8A8A82' }}>{item.desc}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -245,8 +215,8 @@ export default function Home() {
       </section>
 
       {/* Score band */}
-      <section style={{ padding: '0 32px 56px' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', paddingTop: '56px' }}>
+      <section style={{ padding: '56px 32px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{
             background: '#1E3A2F', borderRadius: '16px', padding: '36px 32px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -261,12 +231,12 @@ export default function Home() {
                 A live 0–100 score across system risk, maintenance history,
                 value protection, and seasonal readiness.
               </p>
-              <a href={ctaHref} style={{
+              <a href="/signup" style={{
                 marginTop: '20px', background: '#C47B2B', color: '#fff',
                 padding: '11px 22px', borderRadius: '10px',
                 fontFamily: "'DM Sans', sans-serif", fontSize: '14px',
                 fontWeight: 500, textDecoration: 'none', display: 'inline-block'
-              }}>{loggedIn ? 'Go to my home' : 'Get my score'}</a>
+              }}>Get my score</a>
             </div>
             <div style={{ position: 'relative', width: '90px', height: '90px', flexShrink: 0 }}>
               <svg width="90" height="90" style={{ transform: 'rotate(-90deg)' }}>
@@ -291,9 +261,19 @@ export default function Home() {
           fontFamily: "'Playfair Display', Georgia, serif",
           fontSize: '18px', color: '#F8F4EE', marginBottom: '8px'
         }}>Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span></div>
-        <p style={{ fontSize: '12px', color: 'rgba(248,244,238,0.4)' }}>
+        <p style={{ fontSize: '12px', color: 'rgba(248,244,238,0.4)', marginBottom: '12px' }}>
           Know your home. Own your home.
         </p>
+        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          {[
+            { label: 'Guides', href: '/guides' },
+            { label: 'Neighbor Network', href: '/neighbors' },
+            { label: 'About', href: '/about' },
+            { label: 'Sign up', href: '/signup' },
+          ].map(link => (
+            <a key={link.label} href={link.href} style={{ fontSize: '12px', color: 'rgba(248,244,238,0.45)', textDecoration: 'none' }}>{link.label}</a>
+          ))}
+        </div>
       </footer>
     </main>
   )
