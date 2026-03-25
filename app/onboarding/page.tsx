@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const PRODUCTS = [
@@ -23,6 +23,9 @@ export default function Onboarding() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [score, setScore] = useState(0)
+  const [existingHomes, setExistingHomes] = useState<any[]>([])
+  const [checkingHome, setCheckingHome] = useState(true)
+  const [addingAnother, setAddingAnother] = useState(false)
 
   // Step 1
   const [address, setAddress] = useState('')
@@ -44,6 +47,21 @@ export default function Onboarding() {
   const [planToSell, setPlanToSell] = useState('no_plans')
   const [budgetRange, setBudgetRange] = useState('1k_5k')
   const [primaryConcern, setPrimaryConcern] = useState('peace_of_mind')
+
+  useEffect(() => {
+    const check = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setCheckingHome(false); return }
+      const { data: homes } = await supabase
+        .from('homes')
+        .select('id, address, city, state')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+      setExistingHomes(homes || [])
+      setCheckingHome(false)
+    }
+    check()
+  }, [])
 
   const setInstallYear = useCallback((key: string, val: string) => {
     setInstallYears(prev => ({ ...prev, [key]: val }))
@@ -102,9 +120,7 @@ export default function Onboarding() {
       }).select().single()
       if (homeError) throw homeError
 
-      await supabase.from('home_details').insert({
-        home_id: home.id
-      })
+      await supabase.from('home_details').insert({ home_id: home.id })
 
       const lifespans: Record<string, number> = {
         roof: 27, hvac: 17, water_heater: 11, windows: 22,
@@ -120,7 +136,6 @@ export default function Onboarding() {
         const installYear = parseInt(rawInstall) || null
         const replacementYear = parseInt(rawReplaced) || null
         const effectiveYearNum = parseInt(effectiveYear) || null
-
         const age = effectiveYearNum ? new Date().getFullYear() - effectiveYearNum : null
         const lifespan = lifespans[product.key] || 20
         if (age) {
@@ -129,7 +144,6 @@ export default function Onboarding() {
           else if (pct > 0.8) systemRisk -= 8
           else if (pct > 0.6) systemRisk -= 4
         }
-
         await supabase.from('home_systems').insert({
           home_id: home.id,
           system_type: product.key,
@@ -147,9 +161,7 @@ export default function Onboarding() {
       const maintenanceScore = 40
       const valueScore = planToSell === 'within_2yr' ? 80 : planToSell === 'within_5yr' ? 70 : 60
       const seasonalScore = 75
-      const calculatedScore = Math.round(
-        systemRisk * 0.35 + maintenanceScore * 0.30 + valueScore * 0.20 + seasonalScore * 0.15
-      )
+      const calculatedScore = Math.round(systemRisk * 0.35 + maintenanceScore * 0.30 + valueScore * 0.20 + seasonalScore * 0.15)
       setScore(calculatedScore)
 
       await supabase.from('health_scores').insert({
@@ -178,7 +190,54 @@ export default function Onboarding() {
           </a>
         </div>
 
-        {step < 4 && (
+        {/* Checking state */}
+        {checkingHome && (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <p style={{ color: '#8A8A82', fontSize: '14px' }}>Checking your account...</p>
+          </div>
+        )}
+
+        {/* Existing homes screen */}
+        {!checkingHome && existingHomes.length > 0 && !addingAnother && (
+          <div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>
+              {existingHomes.length === 1 ? 'You already have a home set up' : 'Your properties'}
+            </h2>
+            <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '20px' }}>
+              {existingHomes.length === 1
+                ? 'Your home is already in your account. Go to your dashboard to update details or log contractor jobs.'
+                : 'You have multiple properties. Go to your dashboard to manage them.'}
+            </p>
+
+            <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
+              {existingHomes.map(h => (
+                <div key={h.id} style={{ background: '#F8F4EE', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F' }}>{h.address}</div>
+                    <div style={{ fontSize: '12px', color: '#8A8A82' }}>{h.city}{h.state ? `, ${h.state}` : ''}</div>
+                  </div>
+                  <a href="/dashboard" style={{ fontSize: '12px', color: '#3D7A5A', textDecoration: 'none', fontWeight: 500 }}>View →</a>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <a href="/dashboard" style={{
+                display: 'block', background: '#1E3A2F', color: '#F8F4EE',
+                textDecoration: 'none', padding: '12px', borderRadius: '10px',
+                fontSize: '14px', fontWeight: 500, textAlign: 'center'
+              }}>Go to my dashboard</a>
+              <button onClick={() => setAddingAnother(true)} style={{
+                background: 'none', border: '1px solid rgba(30,58,47,0.2)',
+                color: '#1E3A2F', padding: '12px', borderRadius: '10px',
+                fontSize: '14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
+              }}>+ Add another property</button>
+            </div>
+          </div>
+        )}
+
+        {/* Progress bar — only show during onboarding flow */}
+        {!checkingHome && (existingHomes.length === 0 || addingAnother) && step < 4 && (
           <div style={{ display: 'flex', gap: '6px', marginBottom: '28px' }}>
             {[1, 2, 3].map(s => (
               <div key={s} style={{ flex: 1, height: '4px', borderRadius: '2px', background: s <= step ? '#1E3A2F' : '#EDE8E0' }} />
@@ -191,9 +250,11 @@ export default function Onboarding() {
         )}
 
         {/* STEP 1 */}
-        {step === 1 && (
+        {!checkingHome && (existingHomes.length === 0 || addingAnother) && step === 1 && (
           <div>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Your home</h2>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>
+              {addingAnother ? 'Add another property' : 'Your home'}
+            </h2>
             <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '24px' }}>Step 1 of 3 — Just the basics to get started</p>
 
             <div style={{ display: 'grid', gap: '14px' }}>
@@ -241,7 +302,7 @@ export default function Onboarding() {
         )}
 
         {/* STEP 2 */}
-        {step === 2 && (
+        {!checkingHome && (existingHomes.length === 0 || addingAnother) && step === 2 && (
           <div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Your products</h2>
             <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '4px' }}>Step 2 of 3 — Install years are pre-filled from your build year. Update anything that&apos;s been replaced.</p>
@@ -282,7 +343,7 @@ export default function Onboarding() {
         )}
 
         {/* STEP 3 */}
-        {step === 3 && (
+        {!checkingHome && (existingHomes.length === 0 || addingAnother) && step === 3 && (
           <div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Your goals</h2>
             <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '24px' }}>Step 3 of 3 — Helps us personalize your score</p>

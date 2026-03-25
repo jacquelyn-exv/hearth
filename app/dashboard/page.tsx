@@ -443,6 +443,7 @@ export default function Dashboard() {
                 <h4 style={{ fontSize: '13px', fontWeight: 500, marginBottom: '14px' }}>Quick actions</h4>
                 {[
                   { label: '+ Log a contractor job', href: '/log' },
+                  { label: '+ Add another property', href: '/onboarding' },
                   { label: '👥 Browse neighbor reviews', href: '/neighbors' },
                   { label: '📄 View report card', href: '/report' },
                   { label: '📖 Browse guides', href: '/guides' },
