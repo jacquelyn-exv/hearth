@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Nav from '@/components/Nav'
 
-const ADMIN_EMAIL = 'jacquelyn.martin88@gmail.com'
-
 export default function Admin() {
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -42,7 +40,16 @@ export default function Admin() {
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user || user.email !== ADMIN_EMAIL) {
+            if (!user) {
+        window.location.href = '/'
+        return
+      }
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single()
+      if (roleData?.role !== 'admin') {
         window.location.href = '/'
         return
       }
