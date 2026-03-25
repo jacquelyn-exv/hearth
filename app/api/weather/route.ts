@@ -42,46 +42,16 @@ const getHomeTip = (code: number, temp: number, precip: number) => {
 }
 
 const SYSTEM_INSPECT_GUIDE: Record<string, { what: string, look_for: string }> = {
-  roof: {
-    what: 'Roof',
-    look_for: 'Missing, cracked, or dented shingles. Granules in gutters. Soft spots or sagging. Check from ground level with binoculars first — never climb unless safe to do so.'
-  },
-  siding: {
-    what: 'Siding',
-    look_for: 'Dents, cracks, holes, or displaced panels. Look for areas where siding has pulled away from the wall. Check caulking around windows and doors.'
-  },
-  windows: {
-    what: 'Windows',
-    look_for: 'Cracked or broken glass. Damaged frames or seals. Condensation between panes indicating seal failure. Check screens for tears or damage.'
-  },
-  gutters: {
-    what: 'Gutters',
-    look_for: 'Dents, separated seams, or gutters pulled away from fascia. Check downspouts are clear and directing water away from foundation.'
-  },
-  hvac: {
-    what: 'HVAC',
-    look_for: 'Dents or damage to outdoor unit fins. Debris inside or around unit. Unit should be level — settling after storms can cause tilt.'
-  },
-  fencing: {
-    what: 'Fencing',
-    look_for: 'Leaning or collapsed sections. Broken boards or pickets. Posts that have shifted. Gate hardware that no longer lines up.'
-  },
-  deck: {
-    what: 'Deck',
-    look_for: 'Loose or lifted boards. Damaged railings. Check structural posts for movement. Look for water pooling that could accelerate rot.'
-  },
-  sump_pump: {
-    what: 'Sump pump',
-    look_for: 'Test by pouring water into the pit — it should activate. Check discharge line is clear and draining away from foundation.'
-  },
-  plumbing: {
-    what: 'Plumbing',
-    look_for: 'Check exposed pipes in unheated spaces for cracks from freezing. Look for water stains on ceilings that could indicate burst pipes.'
-  },
-  electrical: {
-    what: 'Electrical',
-    look_for: 'Check GFCI outlets for tripped breakers after storms. Look for scorch marks around outlets. If you smell burning, call an electrician immediately.'
-  }
+  roof: { what: 'Roof', look_for: 'Missing, cracked, or dented shingles. Granules in gutters. Soft spots or sagging. Check from ground level with binoculars first.' },
+  siding: { what: 'Siding', look_for: 'Dents, cracks, holes, or displaced panels. Look for areas where siding has pulled away from the wall. Check caulking around windows and doors.' },
+  windows: { what: 'Windows', look_for: 'Cracked or broken glass. Damaged frames or seals. Condensation between panes indicating seal failure. Check screens for tears.' },
+  gutters: { what: 'Gutters', look_for: 'Dents, separated seams, or gutters pulled away from fascia. Check downspouts are clear and directing water away from foundation.' },
+  hvac: { what: 'HVAC', look_for: 'Dents or damage to outdoor unit fins. Debris inside or around unit. Unit should be level — settling after storms can cause tilt.' },
+  fencing: { what: 'Fencing', look_for: 'Leaning or collapsed sections. Broken boards or pickets. Posts that have shifted. Gate hardware that no longer lines up.' },
+  deck: { what: 'Deck', look_for: 'Loose or lifted boards. Damaged railings. Check structural posts for movement. Look for water pooling that could accelerate rot.' },
+  sump_pump: { what: 'Sump pump', look_for: 'Test by pouring water into the pit — it should activate. Check discharge line is clear and draining away from foundation.' },
+  plumbing: { what: 'Plumbing', look_for: 'Check exposed pipes in unheated spaces for cracks from freezing. Look for water stains on ceilings that could indicate burst pipes.' },
+  electrical: { what: 'Electrical', look_for: 'Check GFCI outlets for tripped breakers after storms. Look for scorch marks around outlets. If you smell burning, call an electrician immediately.' }
 }
 
 export async function GET(request: Request) {
@@ -95,20 +65,45 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Geocode
-    const query = zip ? `${zip} USA` : `${city} ${state}`.trim()
-    const geoRes = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`
-    )
-    const geoData = await geoRes.json()
+    let latitude: number = 0
+    let longitude: number = 0
+    let locationName = city || zip
+    let locationState = state
 
-    if (!geoData.results || geoData.results.length === 0) {
+    // Try zippopotam.us first for US zip codes
+    if (zip) {
+      try {
+        const zipRes = await fetch(`https://api.zippopotam.us/us/${zip}`)
+        if (zipRes.ok) {
+          const zipData = await zipRes.json()
+          latitude = parseFloat(zipData.places[0].latitude)
+          longitude = parseFloat(zipData.places[0].longitude)
+          locationName = zipData.places[0]['place name']
+          locationState = zipData.places[0]['state abbreviation']
+        }
+      } catch {}
+    }
+
+    // Fallback to Open-Meteo geocoding
+    if (!latitude && !longitude) {
+      const query = city ? `${city} ${state}`.trim() : zip
+      const geoRes = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`
+      )
+      const geoData = await geoRes.json()
+      if (geoData.results && geoData.results.length > 0) {
+        latitude = geoData.results[0].latitude
+        longitude = geoData.results[0].longitude
+        locationName = geoData.results[0].name
+        locationState = geoData.results[0].admin1
+      }
+    }
+
+    if (!latitude || !longitude) {
       return NextResponse.json({ error: 'Location not found' }, { status: 404 })
     }
 
-    const { latitude, longitude, name, admin1 } = geoData.results[0]
-
-    // Current weather
+    // Current weather + 30 day history
     const weatherRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,windspeed_10m,precipitation_probability&daily=weathercode,windspeed_10m_max,precipitation_sum&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto&past_days=30`
     )
@@ -131,8 +126,6 @@ export async function GET(request: Request) {
 
         if (storm) {
           const eventDate = daily.time[i]
-
-          // Check if already logged
           const { data: existing } = await supabase
             .from('storm_events')
             .select('id')
@@ -142,7 +135,6 @@ export async function GET(request: Request) {
             .limit(1)
 
           if (!existing || existing.length === 0) {
-            // Log new storm event
             await supabase.from('storm_events').insert({
               zip: zip || city,
               event_type: storm.type,
@@ -168,16 +160,12 @@ export async function GET(request: Request) {
       }
     }
 
-    // Get most recent storm for alert
     const recentStorm = stormEvents.sort((a, b) =>
       new Date(b.date).getTime() - new Date(a.date).getTime()
     )[0] || null
 
-    // Build inspection guides for affected systems
     const inspectionGuides = recentStorm
-      ? recentStorm.systems
-          .map((s: string) => SYSTEM_INSPECT_GUIDE[s])
-          .filter(Boolean)
+      ? recentStorm.systems.map((s: string) => SYSTEM_INSPECT_GUIDE[s]).filter(Boolean)
       : []
 
     return NextResponse.json({
@@ -186,8 +174,8 @@ export async function GET(request: Request) {
       emoji,
       tip: getHomeTip(current.weathercode, temp, precip),
       precip,
-      city: name,
-      state: admin1,
+      city: locationName,
+      state: locationState,
       windspeed: Math.round(current.windspeed_10m),
       recentStorm,
       inspectionGuides,
