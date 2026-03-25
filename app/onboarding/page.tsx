@@ -27,6 +27,13 @@ export default function Onboarding() {
   const [checkingHome, setCheckingHome] = useState(true)
   const [addingAnother, setAddingAnother] = useState(false)
 
+  // Address duplicate state
+  const [duplicateHome, setDuplicateHome] = useState<any>(null)
+  const [showDuplicateScreen, setShowDuplicateScreen] = useState(false)
+  const [requestingSent, setRequestingSent] = useState(false)
+  const [requestType, setRequestType] = useState('')
+  const [transferMessage, setTransferMessage] = useState('')
+
   // Step 1
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
@@ -83,7 +90,22 @@ export default function Onboarding() {
     setWarranties(prev => ({ ...prev, [key]: !prev[key] }))
   }, [])
 
-  const goToStep2 = () => {
+  const goToStep2 = async () => {
+    // Check for duplicate address
+    if (address && city && stateVal && zip) {
+      const { data: matches } = await supabase.rpc('find_home_by_address', {
+        p_address: address,
+        p_city: city,
+        p_state: stateVal,
+        p_zip: zip
+      })
+      if (matches && matches.length > 0) {
+        setDuplicateHome(matches[0])
+        setShowDuplicateScreen(true)
+        return
+      }
+    }
+
     if (yearBuilt) {
       const defaults: Record<string, string> = {}
       PRODUCTS.forEach(p => {
@@ -92,6 +114,43 @@ export default function Onboarding() {
       setInstallYears(prev => ({ ...defaults, ...prev }))
     }
     setStep(2)
+  }
+
+  const handleRequestCoOwnership = async () => {
+    setSaving(true)
+    await supabase.rpc('request_co_ownership', {
+      p_home_id: duplicateHome.home_id,
+      p_role: 'co_owner'
+    })
+    setRequestType('co_owner')
+    setRequestingSent(true)
+    setSaving(false)
+  }
+
+  const handleRequestViewOnly = async () => {
+    setSaving(true)
+    await supabase.rpc('request_co_ownership', {
+      p_home_id: duplicateHome.home_id,
+      p_role: 'viewer'
+    })
+    setRequestType('viewer')
+    setRequestingSent(true)
+    setSaving(false)
+  }
+
+  const handleRequestTransfer = async () => {
+    setSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.rpc('request_ownership_transfer', {
+      p_home_id: duplicateHome.home_id,
+      p_to_email: user.email,
+      p_initiated_by: 'buyer',
+      p_message: transferMessage || null
+    })
+    setRequestType('transfer')
+    setRequestingSent(true)
+    setSaving(false)
   }
 
   const inputStyle = {
@@ -186,7 +245,7 @@ export default function Onboarding() {
 
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <a href="/" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', color: '#1E3A2F', textDecoration: 'none' }}>
-            Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span>
+            H<em style={{ color: '#C47B2B', fontStyle: 'italic' }}>e</em>arth
           </a>
         </div>
 
@@ -197,8 +256,98 @@ export default function Onboarding() {
           </div>
         )}
 
+        {/* Duplicate address screen */}
+        {showDuplicateScreen && !requestingSent && (
+          <div>
+            <div style={{ textAlign: 'center', fontSize: '40px', marginBottom: '16px' }}>🏠</div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px', textAlign: 'center' }}>
+              This home is already in Hearth
+            </h2>
+            <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '24px', textAlign: 'center', lineHeight: 1.7 }}>
+              {address}, {city}, {stateVal} {zip} is already registered. How would you like to proceed?
+            </p>
+
+            <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ background: '#F8F4EE', borderRadius: '12px', padding: '18px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '6px' }}>I live here too</h4>
+                <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>
+                  Request co-owner access. The current owner will be notified and can approve your request. You'll have full edit access once approved.
+                </p>
+                <button onClick={handleRequestCoOwnership} disabled={saving} style={{
+                  width: '100%', background: '#1E3A2F', color: '#F8F4EE',
+                  border: 'none', padding: '10px', borderRadius: '8px',
+                  fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif"
+                }}>Request co-owner access</button>
+              </div>
+
+              <div style={{ background: '#F8F4EE', borderRadius: '12px', padding: '18px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '6px' }}>I just bought this home</h4>
+                <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>
+                  Request ownership transfer. The previous owner will be notified. If they don't respond within 30 days, ownership transfers automatically.
+                </p>
+                <textarea
+                  value={transferMessage}
+                  onChange={e => setTransferMessage(e.target.value)}
+                  placeholder="Optional: add a note to the current owner (e.g. closing date, realtor name)"
+                  style={{ ...inputStyle, minHeight: '70px', resize: 'vertical', marginBottom: '10px', fontSize: '13px' }}
+                />
+                <button onClick={handleRequestTransfer} disabled={saving} style={{
+                  width: '100%', background: '#C47B2B', color: '#fff',
+                  border: 'none', padding: '10px', borderRadius: '8px',
+                  fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif"
+                }}>Request ownership transfer</button>
+              </div>
+
+              <div style={{ background: '#F8F4EE', borderRadius: '12px', padding: '18px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '6px' }}>I just want to view this home</h4>
+                <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>
+                  Request view-only access. You can see all home details and history but cannot make changes.
+                </p>
+                <button onClick={handleRequestViewOnly} disabled={saving} style={{
+                  width: '100%', background: 'none', color: '#1E3A2F',
+                  border: '1px solid rgba(30,58,47,0.2)', padding: '10px', borderRadius: '8px',
+                  fontSize: '13px', cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif"
+                }}>Request view-only access</button>
+              </div>
+            </div>
+
+            <button onClick={() => { setShowDuplicateScreen(false); setDuplicateHome(null) }} style={{
+              width: '100%', background: 'none', border: 'none',
+              color: '#8A8A82', fontSize: '13px', cursor: 'pointer',
+              fontFamily: "'DM Sans', sans-serif", padding: '8px'
+            }}>← Go back and correct my address</button>
+          </div>
+        )}
+
+        {/* Request sent confirmation */}
+        {requestingSent && (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>
+              {requestType === 'transfer' ? '🔑' : requestType === 'co_owner' ? '🤝' : '👁️'}
+            </div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '10px' }}>
+              {requestType === 'transfer' ? 'Transfer requested' : requestType === 'co_owner' ? 'Request sent' : 'View access requested'}
+            </h2>
+            <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.7, marginBottom: '24px', maxWidth: '380px', margin: '0 auto 24px' }}>
+              {requestType === 'transfer'
+                ? 'The current owner has been notified. If they don\'t respond within 30 days, ownership transfers automatically.'
+                : requestType === 'co_owner'
+                ? 'The current owner has been notified and needs to approve your request. We\'ll let you know when they respond.'
+                : 'The current owner has been notified. Once approved you\'ll be able to view this home\'s full history.'}
+            </p>
+            <a href="/dashboard" style={{
+              display: 'block', background: '#1E3A2F', color: '#F8F4EE',
+              textDecoration: 'none', padding: '13px', borderRadius: '10px',
+              fontSize: '14px', fontWeight: 500, textAlign: 'center'
+            }}>Go to my dashboard</a>
+          </div>
+        )}
+
         {/* Existing homes screen */}
-        {!checkingHome && existingHomes.length > 0 && !addingAnother && (
+        {!checkingHome && existingHomes.length > 0 && !addingAnother && !showDuplicateScreen && !requestingSent && (
           <div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>
               {existingHomes.length === 1 ? 'You already have a home set up' : 'Your properties'}
@@ -236,8 +385,8 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* Progress bar — only show during onboarding flow */}
-        {!checkingHome && (existingHomes.length === 0 || addingAnother) && step < 4 && (
+        {/* Progress bar */}
+        {!checkingHome && (existingHomes.length === 0 || addingAnother) && !showDuplicateScreen && !requestingSent && step < 4 && (
           <div style={{ display: 'flex', gap: '6px', marginBottom: '28px' }}>
             {[1, 2, 3].map(s => (
               <div key={s} style={{ flex: 1, height: '4px', borderRadius: '2px', background: s <= step ? '#1E3A2F' : '#EDE8E0' }} />
@@ -250,7 +399,7 @@ export default function Onboarding() {
         )}
 
         {/* STEP 1 */}
-        {!checkingHome && (existingHomes.length === 0 || addingAnother) && step === 1 && (
+        {!checkingHome && (existingHomes.length === 0 || addingAnother) && !showDuplicateScreen && !requestingSent && step === 1 && (
           <div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>
               {addingAnother ? 'Add another property' : 'Your home'}
@@ -302,7 +451,7 @@ export default function Onboarding() {
         )}
 
         {/* STEP 2 */}
-        {!checkingHome && (existingHomes.length === 0 || addingAnother) && step === 2 && (
+        {!checkingHome && (existingHomes.length === 0 || addingAnother) && !showDuplicateScreen && !requestingSent && step === 2 && (
           <div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Your products</h2>
             <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '4px' }}>Step 2 of 3 — Install years are pre-filled from your build year. Update anything that&apos;s been replaced.</p>
@@ -343,7 +492,7 @@ export default function Onboarding() {
         )}
 
         {/* STEP 3 */}
-        {!checkingHome && (existingHomes.length === 0 || addingAnother) && step === 3 && (
+        {!checkingHome && (existingHomes.length === 0 || addingAnother) && !showDuplicateScreen && !requestingSent && step === 3 && (
           <div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Your goals</h2>
             <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '24px' }}>Step 3 of 3 — Helps us personalize your score</p>
