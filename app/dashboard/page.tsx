@@ -5,17 +5,40 @@ import { supabase } from '@/lib/supabase'
 
 const SYSTEM_LIFESPANS: Record<string, number> = {
   roof: 27, hvac: 17, water_heater: 11, windows: 22,
-  deck: 17, electrical: 35, plumbing: 50, siding: 30, landscaping: 20
+  deck: 17, electrical: 35, plumbing: 50, siding: 30,
+  doors: 30, gutters: 20, driveway: 25, fencing: 20,
+  chimney: 50, sump_pump: 10
 }
 
 const SYSTEM_ICONS: Record<string, string> = {
   roof: '🏠', hvac: '🌡️', water_heater: '🔥', windows: '🪟',
-  deck: '🪵', electrical: '⚡', plumbing: '💧', siding: '🏗️', landscaping: '🌿'
+  deck: '🪵', electrical: '⚡', plumbing: '💧', siding: '🏗️',
+  doors: '🚪', gutters: '🌧️', driveway: '🛣️', fencing: '🔒',
+  chimney: '🔥', sump_pump: '💦', landscaping: '🌿'
 }
 
-function getCondition(installYear: number, systemType: string) {
-  const age = new Date().getFullYear() - installYear
-  const lifespan = SYSTEM_LIFESPANS[systemType] || 20
+const SYSTEM_MATERIALS: Record<string, string[]> = {
+  roof: ['Asphalt shingle', 'Metal', 'Tile', 'Wood shake', 'Flat / TPO', 'Slate'],
+  siding: ['Vinyl', 'Fiber cement', 'Wood', 'Brick', 'Stucco', 'Aluminum'],
+  windows: ['Single pane', 'Double pane', 'Triple pane'],
+  doors: ['Fiberglass', 'Steel', 'Wood'],
+  gutters: ['Aluminum', 'Copper', 'Vinyl', 'Steel'],
+  deck: ['Pressure treated wood', 'Cedar', 'Composite', 'Concrete', 'Pavers'],
+  driveway: ['Asphalt', 'Concrete', 'Pavers', 'Gravel'],
+  fencing: ['Wood', 'Vinyl', 'Aluminum', 'Chain link'],
+  hvac: ['Central air / gas furnace', 'Heat pump', 'Mini-split', 'Boiler', 'Radiant heat'],
+  water_heater: ['Tank (gas)', 'Tank (electric)', 'Tankless (gas)', 'Tankless (electric)'],
+  plumbing: ['Copper', 'PVC / CPVC', 'PEX', 'Galvanized steel', 'Mixed / Unknown'],
+}
+
+function getCondition(sys: any) {
+  if (sys.storm_damage_unaddressed || sys.known_issues) {
+    return { label: 'Inspect', color: '#9B2C2C', bg: '#FDECEA', textColor: '#9B2C2C' }
+  }
+  const effectiveYear = sys.replacement_year || sys.install_year
+  if (!effectiveYear) return { label: 'Unknown', color: '#8A8A82', bg: '#F5F5F5', textColor: '#8A8A82' }
+  const age = new Date().getFullYear() - effectiveYear
+  const lifespan = SYSTEM_LIFESPANS[sys.system_type] || 20
   const pct = age / lifespan
   if (pct > 1) return { label: 'Inspect', color: '#9B2C2C', bg: '#FDECEA', textColor: '#9B2C2C' }
   if (pct > 0.8) return { label: 'Priority', color: '#7A4A10', bg: '#FBF0DC', textColor: '#7A4A10' }
@@ -24,20 +47,28 @@ function getCondition(installYear: number, systemType: string) {
 }
 
 const SEASONAL_ITEMS = [
-  { icon: '🌿', title: 'Check gutters and downspouts', sub: 'Spring maintenance · Roof & drainage', urgency: 'soon', color: '#di-g' },
-  { icon: '🌡️', title: 'Schedule HVAC tune-up', sub: 'Before cooling season · HVAC system', urgency: 'urgent', color: '#di-r' },
-  { icon: '🪟', title: 'Inspect window seals', sub: 'Spring checklist · Windows', urgency: 'ok', color: '#di-s' },
-  { icon: '🪵', title: 'Seal and stain deck', sub: 'Spring maintenance · Deck', urgency: 'soon', color: '#di-a' },
+  { icon: '🌿', title: 'Check gutters and downspouts', sub: 'Spring maintenance · Roof & drainage', urgency: 'soon' },
+  { icon: '🌡️', title: 'Schedule HVAC tune-up', sub: 'Before cooling season · HVAC system', urgency: 'urgent' },
+  { icon: '🪟', title: 'Inspect window seals', sub: 'Spring checklist · Windows', urgency: 'ok' },
+  { icon: '🪵', title: 'Seal and stain deck', sub: 'Spring maintenance · Deck', urgency: 'soon' },
 ]
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
   const [home, setHome] = useState<any>(null)
+  const [details, setDetails] = useState<any>(null)
   const [systems, setSystems] = useState<any[]>([])
   const [jobs, setJobs] = useState<any[]>([])
   const [score, setScore] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
+
+  // Inline editing states
+  const [editingHome, setEditingHome] = useState(false)
+  const [editingSystemId, setEditingSystemId] = useState<string | null>(null)
+  const [homeEdits, setHomeEdits] = useState<any>({})
+  const [systemEdits, setSystemEdits] = useState<any>({})
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,11 +82,13 @@ export default function Dashboard() {
 
       if (homes && homes.length > 0) {
         setHome(homes[0])
-        const [{ data: systemData }, { data: jobData }, { data: scoreData }] = await Promise.all([
+        const [{ data: detailData }, { data: systemData }, { data: jobData }, { data: scoreData }] = await Promise.all([
+          supabase.from('home_details').select('*').eq('home_id', homes[0].id).single(),
           supabase.from('home_systems').select('*').eq('home_id', homes[0].id),
           supabase.from('contractor_jobs').select('*').eq('home_id', homes[0].id).order('job_date', { ascending: false }),
           supabase.from('health_scores').select('*').eq('home_id', homes[0].id).order('calculated_at', { ascending: false }).limit(1)
         ])
+        setDetails(detailData)
         setSystems(systemData || [])
         setJobs(jobData || [])
         if (scoreData && scoreData.length > 0) setScore(scoreData[0])
@@ -63,7 +96,6 @@ export default function Dashboard() {
         window.location.replace('/onboarding')
         return
       }
-
       setLoading(false)
     }
     loadData()
@@ -72,6 +104,110 @@ export default function Dashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     window.location.href = '/'
+  }
+
+  const startEditHome = () => {
+    setHomeEdits({
+      address: home?.address || '',
+      city: home?.city || '',
+      state: home?.state || '',
+      zip: home?.zip || '',
+      year_built: home?.year_built || '',
+      home_type: home?.home_type || 'single_family',
+      sqft: home?.sqft || '',
+      bedrooms: details?.bedrooms || '',
+      bathrooms: details?.bathrooms || '',
+      basement: details?.basement || 'none',
+      garage: details?.garage || 'none',
+      pool: details?.pool || false,
+      hoa: details?.hoa || false,
+      has_fireplace: details?.has_fireplace || false,
+      has_sump_pump: details?.has_sump_pump || false,
+      has_irrigation: details?.has_irrigation || false,
+      has_generator: details?.has_generator || false,
+      lot_size: details?.lot_size || '',
+    })
+    setEditingHome(true)
+  }
+
+  const saveHome = async () => {
+    setSaving(true)
+    const { data: updatedHome } = await supabase.from('homes').update({
+      address: homeEdits.address,
+      city: homeEdits.city,
+      state: homeEdits.state,
+      zip: homeEdits.zip,
+      year_built: parseInt(homeEdits.year_built) || null,
+      home_type: homeEdits.home_type,
+      sqft: parseInt(homeEdits.sqft) || null,
+    }).eq('id', home.id).select().single()
+
+    if (updatedHome) setHome(updatedHome)
+
+    const detailUpdate = {
+      bedrooms: parseInt(homeEdits.bedrooms) || null,
+      bathrooms: parseFloat(homeEdits.bathrooms) || null,
+      basement: homeEdits.basement,
+      garage: homeEdits.garage,
+      pool: homeEdits.pool,
+      hoa: homeEdits.hoa,
+      has_fireplace: homeEdits.has_fireplace,
+      has_sump_pump: homeEdits.has_sump_pump,
+      has_irrigation: homeEdits.has_irrigation,
+      has_generator: homeEdits.has_generator,
+      lot_size: homeEdits.lot_size,
+    }
+
+    if (details) {
+      const { data: updatedDetails } = await supabase.from('home_details').update(detailUpdate).eq('home_id', home.id).select().single()
+      if (updatedDetails) setDetails(updatedDetails)
+    } else {
+      const { data: newDetails } = await supabase.from('home_details').insert({ home_id: home.id, ...detailUpdate }).select().single()
+      if (newDetails) setDetails(newDetails)
+    }
+
+    setEditingHome(false)
+    setSaving(false)
+  }
+
+  const startEditSystem = (sys: any) => {
+    setSystemEdits({
+      install_year: sys.install_year || '',
+      material: sys.material || '',
+      product_type: sys.product_type || '',
+      ever_replaced: sys.ever_replaced || false,
+      replacement_year: sys.replacement_year || '',
+      under_warranty: sys.under_warranty || false,
+      storm_damage_unaddressed: sys.storm_damage_unaddressed || false,
+      known_issues: sys.known_issues || '',
+      notes: sys.notes || '',
+    })
+    setEditingSystemId(sys.id)
+  }
+
+  const saveSystem = async (sysId: string) => {
+    setSaving(true)
+    const effectiveYear = systemEdits.replacement_year || systemEdits.install_year
+    const age = effectiveYear ? new Date().getFullYear() - parseInt(effectiveYear) : null
+
+    const { data: updated } = await supabase.from('home_systems').update({
+      install_year: parseInt(systemEdits.install_year) || null,
+      material: systemEdits.material || null,
+      product_type: systemEdits.product_type || null,
+      ever_replaced: systemEdits.ever_replaced,
+      replacement_year: parseInt(systemEdits.replacement_year) || null,
+      under_warranty: systemEdits.under_warranty,
+      storm_damage_unaddressed: systemEdits.storm_damage_unaddressed,
+      known_issues: systemEdits.known_issues || null,
+      notes: systemEdits.notes || null,
+      age_years: age,
+    }).eq('id', sysId).select().single()
+
+    if (updated) {
+      setSystems(prev => prev.map(s => s.id === sysId ? updated : s))
+    }
+    setEditingSystemId(null)
+    setSaving(false)
   }
 
   if (loading) return (
@@ -83,6 +219,18 @@ export default function Dashboard() {
   const scoreValue = score?.total_score || 0
   const tabs = ['overview', 'systems', 'log', 'report']
   const tabLabels: Record<string, string> = { overview: 'Overview', systems: 'Systems', log: 'Contractor Log', report: 'Report Card' }
+  const alertSystems = systems.filter(s => ['Inspect', 'Priority'].includes(getCondition(s).label))
+
+  const inputStyle = {
+    width: '100%', padding: '7px 10px',
+    border: '1px solid rgba(30,58,47,0.2)', borderRadius: '6px',
+    fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
+    outline: 'none', background: '#fff', color: '#1A1A18',
+    boxSizing: 'border-box' as const
+  }
+
+  const firstName = user?.email?.split('@')[0]?.split('.')[0]
+  const displayName = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1) : 'there'
 
   return (
     <main style={{ background: '#F8F4EE', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
@@ -95,7 +243,7 @@ export default function Dashboard() {
         <a href="/" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '21px', color: '#F8F4EE', textDecoration: 'none' }}>
           Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span>
         </a>
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
           <a href="/log" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Contractor Log</a>
           <a href="/neighbors" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Neighbors</a>
           <a href="/guides" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Guides</a>
@@ -111,15 +259,13 @@ export default function Dashboard() {
 
       {/* Dashboard header */}
       <div style={{ background: '#1E3A2F', padding: '28px 28px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', paddingBottom: '20px' }}>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(248,244,238,0.45)', marginBottom: '4px' }}>Welcome back</div>
-            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#F8F4EE', fontWeight: 400 }}>
-              {home?.address}
-            </div>
-            <div style={{ fontSize: '12px', color: 'rgba(248,244,238,0.5)', marginTop: '3px' }}>
-              {home?.city}, {home?.state} · Built {home?.year_built} · {home?.sqft?.toLocaleString()} sq ft · Spring 2026
-            </div>
+        <div style={{ paddingBottom: '20px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(248,244,238,0.45)', marginBottom: '4px' }}>Welcome back</div>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#F8F4EE', fontWeight: 400 }}>
+            {displayName}
+          </div>
+          <div style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)', marginTop: '3px' }}>
+            {home?.address}{home?.city ? `, ${home.city}` : ''}{home?.state ? `, ${home.state}` : ''}
           </div>
         </div>
 
@@ -146,24 +292,26 @@ export default function Dashboard() {
         {activeTab === 'overview' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '20px', alignItems: 'start' }}>
             <div>
+              {/* Alert banner */}
+              {alertSystems.length > 0 && (
+                <div style={{ background: '#FDECEA', border: '1px solid rgba(139,58,42,0.2)', borderRadius: '12px', padding: '14px 18px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#9B2C2C', marginBottom: '2px' }}>⚠️ {alertSystems.length} system{alertSystems.length > 1 ? 's' : ''} need attention</div>
+                    <div style={{ fontSize: '12px', color: '#7A3A2A' }}>{alertSystems.map(s => s.system_type.replace(/_/g, ' ')).join(', ')}</div>
+                  </div>
+                  <button onClick={() => setActiveTab('systems')} style={{ background: 'none', border: '1px solid rgba(139,58,42,0.3)', color: '#9B2C2C', fontSize: '12px', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", flexShrink: 0 }}>View →</button>
+                </div>
+              )}
+
               {/* Score row */}
-              <div style={{
-                background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
-                borderRadius: '16px', padding: '20px 22px', display: 'flex',
-                alignItems: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '20px'
-              }}>
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '20px' }}>
                 <div style={{ width: '80px', height: '80px', flexShrink: 0, position: 'relative' }}>
                   <svg width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
                     <circle cx="40" cy="40" r="32" fill="none" stroke="#EDE8E0" strokeWidth="8" />
                     <circle cx="40" cy="40" r="32" fill="none" stroke="#3D7A5A" strokeWidth="8"
                       strokeDasharray="201" strokeDashoffset={201 - (201 * scoreValue / 100)} strokeLinecap="round" />
                   </svg>
-                  <div style={{
-                    position: 'absolute', top: '50%', left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    fontFamily: "'Playfair Display', Georgia, serif",
-                    fontSize: '20px', color: '#1E3A2F', fontWeight: 600
-                  }}>{scoreValue}</div>
+                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#1E3A2F', fontWeight: 600 }}>{scoreValue}</div>
                 </div>
                 <div style={{ flex: 1 }}>
                   <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, marginBottom: '4px' }}>
@@ -177,16 +325,13 @@ export default function Dashboard() {
                       { label: 'Value Protection', value: score?.value_protection_score },
                       { label: 'Seasonal', value: score?.seasonal_readiness_score },
                     ].map(pill => (
-                      <div key={pill.label} style={{
-                        fontSize: '11px', padding: '3px 9px', borderRadius: '20px',
-                        background: '#EAF2EC', color: '#3D7A5A', border: '1px solid rgba(30,58,47,0.14)'
-                      }}>{pill.label}: {pill.value}</div>
+                      <div key={pill.label} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A', border: '1px solid rgba(30,58,47,0.14)' }}>{pill.label}: {pill.value}</div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Exterior systems grid */}
+              {/* Systems grid */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
                 <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid rgba(30,58,47,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h4 style={{ fontSize: '14px', fontWeight: 500 }}>Home Systems</h4>
@@ -194,11 +339,13 @@ export default function Dashboard() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'rgba(30,58,47,0.08)' }}>
                   {systems.slice(0, 6).map(sys => {
-                    const condition = sys.install_year ? getCondition(sys.install_year, sys.system_type) : { label: 'Unknown', color: '#8A8A82', bg: '#F5F5F5', textColor: '#8A8A82' }
+                    const condition = getCondition(sys)
                     return (
-                      <div key={sys.id} style={{ background: '#fff', padding: '16px 14px', cursor: 'pointer' }}>
+                      <div key={sys.id} style={{ background: '#fff', padding: '16px 14px', cursor: 'pointer' }} onClick={() => { setActiveTab('systems'); startEditSystem(sys) }}>
                         <div style={{ fontSize: '20px', marginBottom: '6px' }}>{SYSTEM_ICONS[sys.system_type] || '🔧'}</div>
-                        <div style={{ fontSize: '12px', fontWeight: 500, marginBottom: '3px', textTransform: 'capitalize' }}>{sys.system_type.replace('_', ' ')}</div>
+                        <div style={{ fontSize: '12px', fontWeight: 500, marginBottom: '3px' }}>
+                          {sys.system_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()).replace('Hvac', 'HVAC')}
+                        </div>
                         <div style={{ fontSize: '11px', color: condition.textColor, fontWeight: 500 }}>{condition.label}</div>
                       </div>
                     )
@@ -213,26 +360,15 @@ export default function Dashboard() {
                   <span style={{ fontSize: '12px', color: 'rgba(248,244,238,0.55)' }}>4 items</span>
                 </div>
                 {SEASONAL_ITEMS.map((item, i) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'flex-start', gap: '12px',
-                    padding: '13px 20px', borderBottom: i < SEASONAL_ITEMS.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none',
-                    cursor: 'pointer'
-                  }}>
-                    <div style={{
-                      width: '36px', height: '36px', borderRadius: '8px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '16px', flexShrink: 0,
-                      background: item.urgency === 'urgent' ? '#FDECEA' : item.urgency === 'soon' ? '#FBF0DC' : '#EAF2EC'
-                    }}>{item.icon}</div>
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '13px 20px', borderBottom: i < SEASONAL_ITEMS.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, background: item.urgency === 'urgent' ? '#FDECEA' : item.urgency === 'soon' ? '#FBF0DC' : '#EAF2EC' }}>{item.icon}</div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 400, marginBottom: '2px' }}>{item.title}</div>
+                      <div style={{ fontSize: '14px', marginBottom: '2px' }}>{item.title}</div>
                       <div style={{ fontSize: '12px', color: '#8A8A82' }}>{item.sub}</div>
                     </div>
-                    <span style={{
-                      fontSize: '10px', fontWeight: 500, padding: '3px 8px', borderRadius: '20px', flexShrink: 0,
-                      background: item.urgency === 'urgent' ? '#FDECEA' : item.urgency === 'soon' ? '#FBF0DC' : '#EAF2EC',
-                      color: item.urgency === 'urgent' ? '#9B2C2C' : item.urgency === 'soon' ? '#7A4A10' : '#3D7A5A'
-                    }}>{item.urgency === 'urgent' ? 'Do now' : item.urgency === 'soon' ? 'This season' : 'Ongoing'}</span>
+                    <span style={{ fontSize: '10px', fontWeight: 500, padding: '3px 8px', borderRadius: '20px', flexShrink: 0, background: item.urgency === 'urgent' ? '#FDECEA' : item.urgency === 'soon' ? '#FBF0DC' : '#EAF2EC', color: item.urgency === 'urgent' ? '#9B2C2C' : item.urgency === 'soon' ? '#7A4A10' : '#3D7A5A' }}>
+                      {item.urgency === 'urgent' ? 'Do now' : item.urgency === 'soon' ? 'This season' : 'Ongoing'}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -240,41 +376,145 @@ export default function Dashboard() {
 
             {/* Sidebar */}
             <div>
+              {/* Weather */}
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px' }}>
+                  <div style={{ fontSize: '32px' }}>⛅</div>
+                  <div>
+                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#1E3A2F' }}>52°</div>
+                    <div style={{ fontSize: '12px', color: '#8A8A82' }}>{home?.city}, {home?.state} · Partly cloudy</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '12px', color: '#7A4A10', background: '#FBF0DC', padding: '9px 16px', borderTop: '1px solid rgba(196,123,43,0.14)' }}>
+                  🌧 Rain expected this weekend — good time to check gutters
+                </div>
+              </div>
+
+              {/* Home summary — editable */}
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: 500 }}>Home details</h4>
+                  {!editingHome ? (
+                    <button onClick={startEditHome} style={{ background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#1E3A2F', fontSize: '12px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Edit</button>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={() => setEditingHome(false)} style={{ background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#8A8A82', fontSize: '12px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                      <button onClick={saveHome} disabled={saving} style={{ background: '#1E3A2F', border: 'none', color: '#F8F4EE', fontSize: '12px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{saving ? 'Saving...' : 'Save'}</button>
+                    </div>
+                  )}
+                </div>
+
+                {!editingHome ? (
+                  <div>
+                    {[
+                      { label: 'Address', value: home?.address },
+                      { label: 'City', value: `${home?.city || ''}${home?.state ? `, ${home.state}` : ''}${home?.zip ? ` ${home.zip}` : ''}` },
+                      { label: 'Year built', value: home?.year_built },
+                      { label: 'Home type', value: home?.home_type?.replace('_', ' ') },
+                      { label: 'Square footage', value: home?.sqft ? `${home.sqft.toLocaleString()} sq ft` : null },
+                      { label: 'Bedrooms', value: details?.bedrooms },
+                      { label: 'Bathrooms', value: details?.bathrooms },
+                      { label: 'Basement', value: details?.basement },
+                      { label: 'Garage', value: details?.garage },
+                      { label: 'Pool', value: details?.pool ? 'Yes' : null },
+                      { label: 'HOA', value: details?.hoa ? 'Yes' : null },
+                      { label: 'Fireplace', value: details?.has_fireplace ? 'Yes' : null },
+                      { label: 'Sump pump', value: details?.has_sump_pump ? 'Yes' : null },
+                      { label: 'Jobs logged', value: jobs.length },
+                      { label: 'Systems tracked', value: systems.length },
+                    ].filter(s => s.value !== null && s.value !== undefined && s.value !== '' && s.value !== 'none').map(stat => (
+                      <div key={stat.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '13px', borderBottom: '1px solid rgba(30,58,47,0.07)' }}>
+                        <span style={{ color: '#8A8A82' }}>{stat.label}</span>
+                        <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{stat.value}</span>
+                      </div>
+                    ))}
+                    <button onClick={startEditHome} style={{ marginTop: '12px', width: '100%', background: '#F8F4EE', border: '1px dashed rgba(30,58,47,0.2)', color: '#8A8A82', fontSize: '12px', padding: '8px', borderRadius: '8px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                      + Add missing details
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {[
+                      { label: 'Address', key: 'address', type: 'text' },
+                      { label: 'City', key: 'city', type: 'text' },
+                      { label: 'State', key: 'state', type: 'text' },
+                      { label: 'ZIP', key: 'zip', type: 'text' },
+                      { label: 'Year built', key: 'year_built', type: 'text' },
+                      { label: 'Square footage', key: 'sqft', type: 'text' },
+                      { label: 'Bedrooms', key: 'bedrooms', type: 'text' },
+                      { label: 'Bathrooms', key: 'bathrooms', type: 'text' },
+                    ].map(field => (
+                      <div key={field.key}>
+                        <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>{field.label}</label>
+                        <input
+                          value={homeEdits[field.key] || ''}
+                          onChange={e => setHomeEdits((prev: any) => ({ ...prev, [field.key]: e.target.value }))}
+                          style={inputStyle}
+                        />
+                      </div>
+                    ))}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Home type</label>
+                      <select value={homeEdits.home_type} onChange={e => setHomeEdits((prev: any) => ({ ...prev, home_type: e.target.value }))} style={inputStyle}>
+                        <option value="single_family">Single family</option>
+                        <option value="townhouse">Townhouse</option>
+                        <option value="condo">Condo</option>
+                        <option value="multi_family">Multi-family</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Basement</label>
+                      <select value={homeEdits.basement} onChange={e => setHomeEdits((prev: any) => ({ ...prev, basement: e.target.value }))} style={inputStyle}>
+                        <option value="none">None</option>
+                        <option value="unfinished">Unfinished</option>
+                        <option value="finished">Finished</option>
+                        <option value="partial">Partial</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Garage</label>
+                      <select value={homeEdits.garage} onChange={e => setHomeEdits((prev: any) => ({ ...prev, garage: e.target.value }))} style={inputStyle}>
+                        <option value="none">None</option>
+                        <option value="attached">Attached</option>
+                        <option value="detached">Detached</option>
+                        <option value="carport">Carport</option>
+                      </select>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      {[
+                        { label: 'Pool', key: 'pool' },
+                        { label: 'HOA', key: 'hoa' },
+                        { label: 'Fireplace', key: 'has_fireplace' },
+                        { label: 'Sump pump', key: 'has_sump_pump' },
+                        { label: 'Irrigation', key: 'has_irrigation' },
+                        { label: 'Generator', key: 'has_generator' },
+                      ].map(cb => (
+                        <label key={cb.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={homeEdits[cb.key] || false}
+                            onChange={e => setHomeEdits((prev: any) => ({ ...prev, [cb.key]: e.target.checked }))}
+                            style={{ accentColor: '#1E3A2F' }} />
+                          {cb.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Quick actions */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 500, marginBottom: '14px', color: '#1A1A18' }}>Quick actions</h4>
+                <h4 style={{ fontSize: '13px', fontWeight: 500, marginBottom: '14px' }}>Quick actions</h4>
                 {[
                   { label: '+ Log a contractor job', href: '/log' },
                   { label: '👥 Browse neighbor reviews', href: '/neighbors' },
                   { label: '📄 View report card', href: '/report' },
                   { label: '📖 Browse guides', href: '/guides' },
                 ].map(action => (
-                  <a key={action.label} href={action.href} style={{
-                    display: 'block', padding: '9px 0', fontSize: '13px',
-                    color: '#1E3A2F', textDecoration: 'none', fontWeight: 400,
-                    borderBottom: '1px solid rgba(30,58,47,0.07)'
-                  }}>{action.label}</a>
+                  <a key={action.label} href={action.href} style={{ display: 'block', padding: '9px 0', fontSize: '13px', color: '#1E3A2F', textDecoration: 'none', borderBottom: '1px solid rgba(30,58,47,0.07)' }}>{action.label}</a>
                 ))}
               </div>
 
-              {/* Home stats */}
-              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 500, marginBottom: '14px' }}>Home summary</h4>
-                {[
-                  { label: 'Year built', value: home?.year_built },
-                  { label: 'Home type', value: home?.home_type?.replace('_', ' ') },
-                  { label: 'Square footage', value: home?.sqft ? `${home.sqft.toLocaleString()} sq ft` : '—' },
-                  { label: 'Jobs logged', value: jobs.length },
-                  { label: 'Systems tracked', value: systems.length },
-                ].map(stat => (
-                  <div key={stat.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', fontSize: '13px', borderBottom: '1px solid rgba(30,58,47,0.07)' }}>
-                    <span style={{ color: '#8A8A82' }}>{stat.label}</span>
-                    <span style={{ fontWeight: 500, textTransform: 'capitalize' }}>{stat.value || '—'}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Sponsored card */}
+              {/* Sponsored */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden' }}>
                 <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#8A8A82', padding: '6px 14px', background: '#EDE8E0', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>Sponsored</div>
                 <div style={{ padding: '14px 16px' }}>
@@ -290,37 +530,110 @@ export default function Dashboard() {
         {/* SYSTEMS TAB */}
         {activeTab === 'systems' && (
           <div style={{ display: 'grid', gap: '14px' }}>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>Your Home Systems</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F' }}>Your Home Systems</h2>
+              <a href="/report" style={{ fontSize: '13px', color: '#3D7A5A', textDecoration: 'none', fontWeight: 500 }}>Full report card →</a>
+            </div>
             {systems.length === 0 ? (
               <div style={{ background: '#fff', borderRadius: '16px', padding: '40px', textAlign: 'center', border: '1px solid rgba(30,58,47,0.11)' }}>
                 <p style={{ color: '#8A8A82' }}>No systems tracked yet.</p>
               </div>
             ) : systems.map(sys => {
-              const condition = sys.install_year ? getCondition(sys.install_year, sys.system_type) : { label: 'Unknown', color: '#8A8A82', bg: '#F5F5F5', textColor: '#8A8A82' }
-              const age = sys.install_year ? new Date().getFullYear() - sys.install_year : null
+              const condition = getCondition(sys)
+              const effectiveYear = sys.replacement_year || sys.install_year
+              const age = effectiveYear ? new Date().getFullYear() - effectiveYear : null
               const lifespan = SYSTEM_LIFESPANS[sys.system_type] || 20
               const pct = age ? Math.min(100, Math.round((age / lifespan) * 100)) : 0
+              const isEditing = editingSystemId === sys.id
+
               return (
                 <div key={sys.id} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px 22px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: '28px' }}>{SYSTEM_ICONS[sys.system_type] || '🔧'}</div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: '28px', flexShrink: 0 }}>{SYSTEM_ICONS[sys.system_type] || '🔧'}</div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                        <h4 style={{ fontSize: '15px', fontWeight: 500, textTransform: 'capitalize' }}>{sys.system_type.replace('_', ' ')}</h4>
-                        <span style={{ fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: condition.bg, color: condition.textColor }}>{condition.label}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <h4 style={{ fontSize: '15px', fontWeight: 500 }}>
+                            {sys.system_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()).replace('Hvac', 'HVAC')}
+                          </h4>
+                          <span style={{ fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: condition.bg, color: condition.textColor }}>{condition.label}</span>
+                          {sys.ever_replaced && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>Replaced {sys.replacement_year || ''}</span>}
+                          {sys.under_warranty && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', background: '#E6F2F8', color: '#3A7CA8' }}>Under warranty</span>}
+                          {sys.storm_damage_unaddressed && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', background: '#FDECEA', color: '#9B2C2C' }}>⚠️ Storm damage</span>}
+                        </div>
+                        {!isEditing ? (
+                          <button onClick={() => startEditSystem(sys)} style={{ background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#1E3A2F', fontSize: '12px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", flexShrink: 0 }}>Edit</button>
+                        ) : (
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button onClick={() => setEditingSystemId(null)} style={{ background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#8A8A82', fontSize: '12px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+                            <button onClick={() => saveSystem(sys.id)} disabled={saving} style={{ background: '#1E3A2F', border: 'none', color: '#F8F4EE', fontSize: '12px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{saving ? 'Saving...' : 'Save'}</button>
+                          </div>
+                        )}
                       </div>
-                      <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '8px' }}>
-                        {age ? `${age} years old · Installed ${sys.install_year}` : 'Install year unknown'} · Expected lifespan: {lifespan} years
-                      </p>
-                      {age && (
-                        <div style={{ height: '6px', background: '#EDE8E0', borderRadius: '3px', maxWidth: '300px' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: condition.color, borderRadius: '3px' }} />
+
+                      {!isEditing ? (
+                        <>
+                          <div style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '8px' }}>
+                            {sys.material && <span>{sys.material} · </span>}
+                            {sys.product_type && <span>{sys.product_type} · </span>}
+                            {age ? `${age} years old · ${sys.ever_replaced ? `Replaced ${sys.replacement_year}` : `Installed ${sys.install_year}`}` : 'Install year unknown'}
+                          </div>
+                          {sys.known_issues && <div style={{ fontSize: '12px', color: '#8B3A2A', marginBottom: '8px' }}>⚠️ {sys.known_issues}</div>}
+                          {age && (
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#8A8A82', marginBottom: '4px' }}>
+                                <span>Lifespan used</span>
+                                <span>{pct}% of ~{lifespan} years</span>
+                              </div>
+                              <div style={{ height: '6px', background: '#EDE8E0', borderRadius: '3px' }}>
+                                <div style={{ width: `${pct}%`, height: '100%', background: condition.color, borderRadius: '3px' }} />
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div style={{ display: 'grid', gap: '10px', marginTop: '8px', paddingTop: '12px', borderTop: '1px solid rgba(30,58,47,0.08)' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Year installed</label>
+                              <input value={systemEdits.install_year} onChange={e => setSystemEdits((p: any) => ({ ...p, install_year: e.target.value }))} style={inputStyle} placeholder="e.g. 2018" />
+                            </div>
+                            {SYSTEM_MATERIALS[sys.system_type] && (
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Material / type</label>
+                                <select value={systemEdits.material} onChange={e => setSystemEdits((p: any) => ({ ...p, material: e.target.value }))} style={inputStyle}>
+                                  <option value="">Unknown</option>
+                                  {SYSTEM_MATERIALS[sys.system_type].map(m => <option key={m} value={m}>{m}</option>)}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
+                              <input type="checkbox" checked={systemEdits.ever_replaced} onChange={e => setSystemEdits((p: any) => ({ ...p, ever_replaced: e.target.checked }))} style={{ accentColor: '#1E3A2F' }} />
+                              Ever replaced?
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
+                              <input type="checkbox" checked={systemEdits.under_warranty} onChange={e => setSystemEdits((p: any) => ({ ...p, under_warranty: e.target.checked }))} style={{ accentColor: '#1E3A2F' }} />
+                              Under warranty
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
+                              <input type="checkbox" checked={systemEdits.storm_damage_unaddressed} onChange={e => setSystemEdits((p: any) => ({ ...p, storm_damage_unaddressed: e.target.checked }))} style={{ accentColor: '#1E3A2F' }} />
+                              Storm damage?
+                            </label>
+                          </div>
+                          {systemEdits.ever_replaced && (
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Year replaced</label>
+                              <input value={systemEdits.replacement_year} onChange={e => setSystemEdits((p: any) => ({ ...p, replacement_year: e.target.value }))} style={inputStyle} placeholder="e.g. 2022" />
+                            </div>
+                          )}
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Known issues or notes</label>
+                            <input value={systemEdits.known_issues} onChange={e => setSystemEdits((p: any) => ({ ...p, known_issues: e.target.value }))} style={inputStyle} placeholder="e.g. Slow drain in master bath" />
+                          </div>
                         </div>
                       )}
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', color: '#1E3A2F' }}>{age ? `${pct}%` : '—'}</div>
-                      <div style={{ fontSize: '11px', color: '#8A8A82' }}>of lifespan used</div>
                     </div>
                   </div>
                 </div>
@@ -348,10 +661,18 @@ export default function Dashboard() {
                     <div>
                       <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '3px' }}>{job.company_name}</h4>
                       <p style={{ fontSize: '13px', color: '#8A8A82' }}>{job.service_description} · {job.job_date}</p>
+                      {job.tags && job.tags.length > 0 && (
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                          {job.tags.map((tag: string) => (
+                            <span key={tag} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>{tag}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F' }}>{job.final_price ? `$${Number(job.final_price).toLocaleString()}` : '—'}</div>
                       <div style={{ color: '#C47B2B', fontSize: '12px' }}>{'★'.repeat(job.quality_rating)}</div>
+                      <div style={{ fontSize: '11px', marginTop: '2px', color: job.is_shared ? '#3D7A5A' : '#8A8A82' }}>{job.is_shared ? '✓ Shared' : 'Private'}</div>
                     </div>
                   </div>
                 ))}
@@ -365,7 +686,9 @@ export default function Dashboard() {
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <div style={{ fontSize: '40px', marginBottom: '16px' }}>📄</div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '10px' }}>Your Home Report Card</h2>
-            <p style={{ fontSize: '14px', color: '#8A8A82', marginBottom: '24px' }}>View your full report card with system conditions, contractor history, and buyer/seller guides.</p>
+            <p style={{ fontSize: '14px', color: '#8A8A82', marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
+              View your full report card with system conditions, home facts, contractor history, and buyer/seller guides.
+            </p>
             <a href="/report" style={{ display: 'inline-block', background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none', padding: '12px 28px', borderRadius: '10px', fontSize: '14px', fontWeight: 500 }}>View full report card</a>
           </div>
         )}
