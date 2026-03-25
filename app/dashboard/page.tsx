@@ -31,6 +31,9 @@ export default function Dashboard() {
           .order('calculated_at', { ascending: false })
           .limit(1)
         if (scores && scores.length > 0) setScore(scores[0])
+      } else {
+        window.location.replace('/onboarding')
+        return
       }
 
       setLoading(false)
@@ -92,74 +95,52 @@ export default function Dashboard() {
       {/* Dashboard body */}
       <div style={{ padding: '24px 28px 48px', maxWidth: '1100px', margin: '0 auto' }}>
 
-        {!home && (
-          <div style={{
-            background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
-            borderRadius: '16px', padding: '32px', textAlign: 'center', marginBottom: '24px'
-          }}>
-            <div style={{ fontSize: '40px', marginBottom: '16px' }}>🏠</div>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '10px' }}>
-              Set up your home profile
-            </h2>
-            <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.6, maxWidth: '400px', margin: '0 auto 24px' }}>
-              Tell us about your home to get your health score, seasonal checklist, and personalized recommendations.
-            </p>
-            <a href="/onboarding" style={{
-              display: 'inline-block', background: '#C47B2B', color: '#fff',
-              textDecoration: 'none', padding: '12px 28px', borderRadius: '10px',
-              fontFamily: "'DM Sans', sans-serif", fontSize: '14px', fontWeight: 500
-            }}>Set up my home</a>
-          </div>
-        )}
-
         {/* Health score */}
-        {home && (
-          <div style={{
-            background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
-            borderRadius: '16px', padding: '20px 22px', display: 'flex',
-            alignItems: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '22px'
-          }}>
-            <div style={{ width: '80px', height: '80px', flexShrink: 0, position: 'relative' }}>
-              <svg width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx="40" cy="40" r="32" fill="none" stroke="#EDE8E0" strokeWidth="8" />
-                <circle cx="40" cy="40" r="32" fill="none" stroke="#3D7A5A" strokeWidth="8"
-                  strokeDasharray="201"
-                  strokeDashoffset={201 - (201 * scoreValue / 100)}
-                  strokeLinecap="round" />
-              </svg>
-              <div style={{
-                position: 'absolute', top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: '20px', color: '#1E3A2F', fontWeight: 600
-              }}>{scoreValue}</div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, marginBottom: '4px' }}>
-                {scoreValue >= 80 ? 'Your home is in great shape' : scoreValue >= 60 ? 'Your home is doing well' : 'Your home needs attention'}
-              </h3>
-              <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '10px' }}>Home health score · Updated today</p>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {[
-                  { label: 'System Risk', value: score?.system_risk_score },
-                  { label: 'Maintenance', value: score?.maintenance_score },
-                  { label: 'Value Protection', value: score?.value_protection_score },
-                  { label: 'Seasonal', value: score?.seasonal_readiness_score },
-                ].map(pill => (
-                  <div key={pill.label} style={{
-                    fontSize: '11px', padding: '3px 9px', borderRadius: '20px',
-                    background: '#EAF2EC', color: '#3D7A5A', border: '1px solid rgba(30,58,47,0.14)'
-                  }}>{pill.label}: {pill.value}</div>
-                ))}
-              </div>
-            </div>
-            <a href="/report" style={{
-              background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none',
-              padding: '10px 18px', borderRadius: '10px', fontSize: '13px',
-              fontWeight: 500, flexShrink: 0
-            }}>View report card</a>
+        <div style={{
+          background: '#fff', border: '1px solid rgba(30,58,47,0.11)',
+          borderRadius: '16px', padding: '20px 22px', display: 'flex',
+          alignItems: 'center', gap: '20px', flexWrap: 'wrap', marginBottom: '22px'
+        }}>
+          <div style={{ width: '80px', height: '80px', flexShrink: 0, position: 'relative' }}>
+            <svg width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#EDE8E0" strokeWidth="8" />
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#3D7A5A" strokeWidth="8"
+                strokeDasharray="201"
+                strokeDashoffset={201 - (201 * scoreValue / 100)}
+                strokeLinecap="round" />
+            </svg>
+            <div style={{
+              position: 'absolute', top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: '20px', color: '#1E3A2F', fontWeight: 600
+            }}>{scoreValue}</div>
           </div>
-        )}
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, marginBottom: '4px' }}>
+              {scoreValue >= 80 ? 'Your home is in great shape' : scoreValue >= 60 ? 'Your home is doing well' : 'Your home needs attention'}
+            </h3>
+            <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '10px' }}>Home health score · Updated today</p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                { label: 'System Risk', value: score?.system_risk_score },
+                { label: 'Maintenance', value: score?.maintenance_score },
+                { label: 'Value Protection', value: score?.value_protection_score },
+                { label: 'Seasonal', value: score?.seasonal_readiness_score },
+              ].map(pill => (
+                <div key={pill.label} style={{
+                  fontSize: '11px', padding: '3px 9px', borderRadius: '20px',
+                  background: '#EAF2EC', color: '#3D7A5A', border: '1px solid rgba(30,58,47,0.14)'
+                }}>{pill.label}: {pill.value}</div>
+              ))}
+            </div>
+          </div>
+          <a href="/report" style={{
+            background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none',
+            padding: '10px 18px', borderRadius: '10px', fontSize: '13px',
+            fontWeight: 500, flexShrink: 0
+          }}>View report card</a>
+        </div>
 
         {/* Quick links */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>

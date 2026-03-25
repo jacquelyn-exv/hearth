@@ -17,7 +17,18 @@ export default function Login() {
       setError(error.message)
       setLoading(false)
     } else if (data.session) {
-      window.location.replace('/dashboard')
+      // Check if they have a home set up
+      const { data: homes } = await supabase
+        .from('homes')
+        .select('id')
+        .eq('user_id', data.session.user.id)
+        .limit(1)
+      
+      if (homes && homes.length > 0) {
+        window.location.replace('/dashboard')
+      } else {
+        window.location.replace('/onboarding')
+      }
     }
   }
 
@@ -43,7 +54,7 @@ export default function Login() {
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Sans', sans-serif", outline: 'none', background: '#fff' }}
+            style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Sans', sans-serif", outline: 'none', background: '#fff', color: '#1A1A18' }}
             placeholder="you@example.com"
           />
         </div>
@@ -55,7 +66,7 @@ export default function Login() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
-            style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Sans', sans-serif", outline: 'none', background: '#fff' }}
+            style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Sans', sans-serif", outline: 'none', background: '#fff', color: '#1A1A18' }}
             placeholder="••••••••"
           />
         </div>

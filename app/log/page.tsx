@@ -24,6 +24,7 @@ export default function ContractorLog() {
   const [wouldRefer, setWouldRefer] = useState('yes')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [notes, setNotes] = useState('')
+  const [isShared, setIsShared] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -50,6 +51,12 @@ export default function ContractorLog() {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
   }
 
+  const resetForm = () => {
+    setCompany(''); setDescription(''); setJobDate(''); setQuotedPrice('')
+    setFinalPrice(''); setRating(5); setWouldRefer('yes'); setSelectedTags([])
+    setNotes(''); setIsShared(false)
+  }
+
   const saveJob = async () => {
     if (!home) return
     setSaving(true)
@@ -66,16 +73,27 @@ export default function ContractorLog() {
       would_refer: wouldRefer,
       tags: selectedTags,
       notes,
-      is_shared: false
+      is_shared: isShared,
+      shared_radius: isShared ? 'zip' : null
     }).select().single()
 
     if (!error && data) {
       setJobs(prev => [data, ...prev])
       setShowModal(false)
-      setCompany(''); setDescription(''); setJobDate(''); setQuotedPrice('')
-      setFinalPrice(''); setRating(5); setWouldRefer('yes'); setSelectedTags([]); setNotes('')
+      resetForm()
     }
     setSaving(false)
+  }
+
+  const toggleShare = async (jobId: string, currentShared: boolean) => {
+    const { error } = await supabase
+      .from('contractor_jobs')
+      .update({ is_shared: !currentShared, shared_radius: !currentShared ? 'zip' : null })
+      .eq('id', jobId)
+
+    if (!error) {
+      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, is_shared: !currentShared } : j))
+    }
   }
 
   const inputStyle = {
@@ -97,7 +115,8 @@ export default function ContractorLog() {
           Hearth<span style={{ color: '#C47B2B', fontStyle: 'italic' }}>.</span>
         </a>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <a href="/dashboard" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none' }}>Dashboard</a>
+          <a href="/neighbors" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Neighbors</a>
+          <a href="/dashboard" style={{ color: 'rgba(248,244,238,0.65)', fontSize: '13px', textDecoration: 'none', padding: '6px 11px' }}>Dashboard</a>
         </div>
       </nav>
 
@@ -126,26 +145,40 @@ export default function ContractorLog() {
             {jobs.map(job => (
               <div key={job.id} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px 22px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <h4 style={{ fontSize: '15px', fontWeight: 500, marginBottom: '3px' }}>{job.company_name}</h4>
                     <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '8px' }}>{job.service_description} · {job.system_type}</p>
                     {job.tags && job.tags.length > 0 && (
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
                         {job.tags.map((tag: string) => (
                           <span key={tag} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>{tag}</span>
                         ))}
                       </div>
                     )}
+                    {/* Share toggle */}
+                    <button
+                      onClick={() => toggleShare(job.id, job.is_shared)}
+                      style={{
+                        background: job.is_shared ? '#EAF2EC' : '#F5F5F5',
+                        border: `1px solid ${job.is_shared ? 'rgba(30,58,47,0.2)' : 'rgba(30,58,47,0.1)'}`,
+                        color: job.is_shared ? '#3D7A5A' : '#8A8A82',
+                        fontSize: '11px', fontWeight: 500, padding: '4px 10px',
+                        borderRadius: '20px', cursor: 'pointer',
+                        fontFamily: "'DM Sans', sans-serif"
+                      }}
+                    >
+                      {job.is_shared ? '✓ Shared with community' : 'Share with neighbors'}
+                    </button>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontSize: '16px', fontWeight: 500, color: '#1E3A2F', marginBottom: '4px' }}>
-                      {job.final_price ? `$${job.final_price.toLocaleString()}` : 'No price logged'}
+                      {job.final_price ? `$${Number(job.final_price).toLocaleString()}` : 'No price logged'}
                     </div>
                     {job.quoted_price && job.final_price && job.final_price > job.quoted_price && (
-                      <div style={{ fontSize: '11px', color: '#8B3A2A' }}>Quoted: ${job.quoted_price.toLocaleString()}</div>
+                      <div style={{ fontSize: '11px', color: '#8B3A2A' }}>Quoted: ${Number(job.quoted_price).toLocaleString()}</div>
                     )}
                     <div style={{ fontSize: '11px', color: '#8A8A82', marginTop: '4px' }}>{job.job_date}</div>
-                    <div style={{ marginTop: '6px' }}>
+                    <div style={{ marginTop: '6px', color: '#C47B2B' }}>
                       {'★'.repeat(job.quality_rating)}{'☆'.repeat(5 - job.quality_rating)}
                     </div>
                   </div>
@@ -162,7 +195,7 @@ export default function ContractorLog() {
           <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
               <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F' }}>Log a job</h3>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#8A8A82' }}>×</button>
+              <button onClick={() => { setShowModal(false); resetForm() }} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#8A8A82' }}>×</button>
             </div>
 
             <div style={{ display: 'grid', gap: '16px' }}>
@@ -242,10 +275,38 @@ export default function ContractorLog() {
                 <label style={labelStyle}>Notes</label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} placeholder="Any additional details..." />
               </div>
+
+              {/* Share toggle */}
+              <div style={{ background: '#F8F4EE', borderRadius: '10px', padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ position: 'relative', width: '36px', height: '20px', flexShrink: 0, marginTop: '2px' }}>
+                  <input
+                    type="checkbox"
+                    checked={isShared}
+                    onChange={e => setIsShared(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                    id="shareToggle"
+                  />
+                  <label htmlFor="shareToggle" onClick={() => setIsShared(!isShared)} style={{
+                    position: 'absolute', inset: 0,
+                    background: isShared ? '#3D7A5A' : '#D4C9B8',
+                    borderRadius: '10px', cursor: 'pointer', transition: '0.2s'
+                  }}>
+                    <div style={{
+                      position: 'absolute', width: '14px', height: '14px',
+                      background: '#fff', borderRadius: '50%', top: '3px',
+                      left: isShared ? '19px' : '3px', transition: '0.2s'
+                    }} />
+                  </label>
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A18', marginBottom: '2px' }}>Share anonymously with neighbors</div>
+                  <div style={{ fontSize: '12px', color: '#8A8A82' }}>Your name is never shown. Only your zip code, the contractor, price, and rating are shared.</div>
+                </div>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-              <button onClick={() => setShowModal(false)} style={{
+              <button onClick={() => { setShowModal(false); resetForm() }} style={{
                 flex: 1, background: 'none', border: '1px solid rgba(30,58,47,0.2)',
                 color: '#1E3A2F', padding: '12px', borderRadius: '10px',
                 fontSize: '14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
