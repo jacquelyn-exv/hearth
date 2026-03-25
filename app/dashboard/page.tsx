@@ -68,6 +68,7 @@ export default function Dashboard() {
   const [homeEdits, setHomeEdits] = useState<any>({})
   const [systemEdits, setSystemEdits] = useState<any>({})
   const [saving, setSaving] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -198,6 +199,20 @@ export default function Dashboard() {
     setSaving(false)
   }
 
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('Are you sure you want to delete your account? This will permanently delete all your homes, systems, contractor jobs, and health scores. This cannot be undone.')) return
+    if (!window.confirm('Last chance — this is permanent and cannot be reversed.')) return
+    setDeletingAccount(true)
+    const { error } = await supabase.rpc('delete_user_account')
+    if (error) {
+      alert('Error deleting account: ' + error.message)
+      setDeletingAccount(false)
+    } else {
+      await supabase.auth.signOut()
+      window.location.href = '/'
+    }
+  }
+
   if (loading) return (
     <div style={{ background: '#F8F4EE', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', sans-serif" }}>
       <p style={{ color: '#8A8A82' }}>Loading your home...</p>
@@ -223,7 +238,6 @@ export default function Dashboard() {
     <main style={{ background: '#F8F4EE', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
       <Nav />
 
-      {/* Dashboard header */}
       <div style={{ background: '#1E3A2F', padding: '28px 28px 0' }}>
         <div style={{ paddingBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(248,244,238,0.45)', marginBottom: '4px' }}>Welcome back</div>
@@ -452,13 +466,27 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px' }}>
                 <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#8A8A82', padding: '6px 14px', background: '#EDE8E0', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>Sponsored</div>
                 <div style={{ padding: '14px 16px' }}>
                   <h5 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Is your roof ready for summer?</h5>
                   <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.5, marginBottom: '10px' }}>Free inspection from certified roofing professionals in your area.</p>
                   <button style={{ background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '8px 14px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Learn more</button>
                 </div>
+              </div>
+
+              {/* Danger zone */}
+              <div style={{ background: '#fff', border: '1px solid rgba(155,44,44,0.15)', borderRadius: '16px', padding: '18px' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: 500, color: '#9B2C2C', marginBottom: '8px' }}>Danger zone</h4>
+                <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>
+                  Deleting your account permanently removes all your homes, systems, contractor jobs, and health scores. This cannot be undone.
+                </p>
+                <button onClick={handleDeleteAccount} disabled={deletingAccount} style={{
+                  background: 'none', border: '1px solid rgba(155,44,44,0.3)',
+                  color: '#9B2C2C', fontSize: '12px', padding: '8px 14px',
+                  borderRadius: '8px', cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif", width: '100%'
+                }}>{deletingAccount ? 'Deleting...' : 'Delete my account'}</button>
               </div>
             </div>
           </div>
