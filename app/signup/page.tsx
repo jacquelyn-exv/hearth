@@ -29,8 +29,18 @@ export default function Signup() {
       return
     }
 
+    // Send welcome email
+    const name = email.split('@')[0].split('.')[0]
+    const displayName = name.charAt(0).toUpperCase() + name.slice(1)
+    fetch('/api/welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name: displayName })
+    })
+
     setSuccess(true)
     setLoading(false)
+
   }
 
   const inputStyle = {
