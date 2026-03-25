@@ -69,6 +69,9 @@ export default function Dashboard() {
   const [systemEdits, setSystemEdits] = useState<any>({})
   const [saving, setSaving] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [weather, setWeather] = useState<any>(null)
+  const [weatherLoading, setWeatherLoading] = useState(true)
+  const [showStormDetail, setShowStormDetail] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -82,6 +85,17 @@ export default function Dashboard() {
 
       if (homes && homes.length > 0) {
         setHome(homes[0])
+
+        // Fetch weather
+        if (homes[0].city || homes[0].zip) {
+          fetch(`/api/weather?city=${encodeURIComponent(homes[0].city || '')}&state=${encodeURIComponent(homes[0].state || '')}&zip=${encodeURIComponent(homes[0].zip || '')}`)
+            .then(r => r.json())
+            .then(data => { if (!data.error) setWeather(data) })
+            .finally(() => setWeatherLoading(false))
+        } else {
+          setWeatherLoading(false)
+        }
+
         const [{ data: detailData }, { data: systemData }, { data: jobData }, { data: scoreData }] = await Promise.all([
           supabase.from('home_details').select('*').eq('home_id', homes[0].id).single(),
           supabase.from('home_systems').select('*').eq('home_id', homes[0].id),
@@ -351,19 +365,89 @@ export default function Dashboard() {
 
             {/* Sidebar */}
             <div>
-              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px' }}>
-                  <div style={{ fontSize: '32px' }}>⛅</div>
-                  <div>
-                    <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#1E3A2F' }}>52°</div>
-                    <div style={{ fontSize: '12px', color: '#8A8A82' }}>{home?.city}, {home?.state} · Partly cloudy</div>
+              {/* Weather + Storm */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden' }}>
+                  {weatherLoading ? (
+                    <div style={{ padding: '18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ fontSize: '32px' }}>⛅</div>
+                      <div style={{ fontSize: '13px', color: '#8A8A82' }}>Loading weather...</div>
+                    </div>
+                  ) : weather ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px' }}>
+                        <div style={{ fontSize: '32px' }}>{weather.emoji}</div>
+                        <div>
+                          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#1E3A2F' }}>{weather.temp}°</div>
+                          <div style={{ fontSize: '12px', color: '#8A8A82' }}>{home?.city}, {home?.state} · {weather.desc}</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#7A4A10', background: '#FBF0DC', padding: '9px 16px', borderTop: '1px solid rgba(196,123,43,0.14)' }}>
+                        {weather.tip}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px' }}>
+                      <div style={{ fontSize: '32px' }}>⛅</div>
+                      <div style={{ fontSize: '13px', color: '#8A8A82' }}>Weather unavailable</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Storm alert */}
+                {weather?.recentStorm && (
+                  <div style={{ background: '#FBF0DC', border: '1px solid rgba(196,123,43,0.2)', borderRadius: '12px', padding: '14px 16px', marginTop: '10px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10', marginBottom: '3px' }}>
+                      ⚠️ {weather.recentStorm.label} recorded
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '6px' }}>
+                      {new Date(weather.recentStorm.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      {weather.recentStorm.windspeed > 0 && ` · ${Math.round(weather.recentStorm.windspeed)} mph winds`}
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                      {weather.recentStorm.systems.map((s: string) => (
+                        <span key={s} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: 'rgba(196,123,43,0.15)', color: '#7A4A10', textTransform: 'capitalize' }}>
+                          {s.replace(/_/g, ' ')}
+                        </span>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setShowStormDetail(!showStormDetail)}
+                      style={{ background: 'none', border: '1px solid rgba(122,74,16,0.3)', color: '#7A4A10', fontSize: '12px', padding: '5px 10px', borderRadius: '6px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                    >
+                      {showStormDetail ? 'Hide inspection guide' : 'What to check →'}
+                    </button>
+
+                    {showStormDetail && weather.inspectionGuides && (
+                      <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(196,123,43,0.2)' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 500, color: '#7A4A10', marginBottom: '8px' }}>Self-inspect checklist — you are in control</div>
+                        <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '12px', lineHeight: 1.6 }}>
+                          Check these yourself first before calling anyone. Most damage is visible from the ground. A legitimate inspector will never pressure you into same-day decisions.
+                        </div>
+                        {weather.inspectionGuides.map((guide: any, i: number) => (
+                          <div key={i} style={{ background: '#fff', borderRadius: '8px', padding: '10px 12px', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F', marginBottom: '4px' }}>{guide.what}</div>
+                            <div style={{ fontSize: '11px', color: '#8A8A82', lineHeight: 1.6 }}>{guide.look_for}</div>
+                          </div>
+                        ))}
+                        <div style={{ background: '#EAF2EC', borderRadius: '8px', padding: '10px 12px', marginTop: '10px' }}>
+                          <div style={{ fontSize: '11px', color: '#3D7A5A', lineHeight: 1.6 }}>
+                            💡 <strong>Insurance tip:</strong> Document everything with photos before any repairs. Contact your insurance company before hiring a contractor — they may require their own inspection first.
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => window.location.href = '/log'}
+                          style={{ marginTop: '10px', width: '100%', background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                        >
+                          Log an inspection when ready →
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div style={{ fontSize: '12px', color: '#7A4A10', background: '#FBF0DC', padding: '9px 16px', borderTop: '1px solid rgba(196,123,43,0.14)' }}>
-                  🌧 Rain expected this weekend — good time to check gutters
-                </div>
+                )}
               </div>
 
+              {/* Home details */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h4 style={{ fontSize: '13px', fontWeight: 500 }}>Home details</h4>
@@ -453,6 +537,7 @@ export default function Dashboard() {
                 )}
               </div>
 
+              {/* Quick actions */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                 <h4 style={{ fontSize: '13px', fontWeight: 500, marginBottom: '14px' }}>Quick actions</h4>
                 {[
@@ -466,6 +551,7 @@ export default function Dashboard() {
                 ))}
               </div>
 
+              {/* Sponsored */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px' }}>
                 <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#8A8A82', padding: '6px 14px', background: '#EDE8E0', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>Sponsored</div>
                 <div style={{ padding: '14px 16px' }}>
