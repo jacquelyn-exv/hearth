@@ -1,40 +1,52 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
-const PRODUCTS = [
-  { key: 'roof', icon: '🏠', label: 'Roof', materials: ['Asphalt shingle', 'Metal', 'Tile', 'Wood shake', 'Flat / TPO', 'Slate'] },
-  { key: 'siding', icon: '🏗️', label: 'Siding', materials: ['Vinyl', 'Fiber cement', 'Wood', 'Brick', 'Stucco', 'Aluminum'] },
-  { key: 'windows', icon: '🪟', label: 'Windows', materials: ['Single pane', 'Double pane', 'Triple pane'] },
-  { key: 'doors', icon: '🚪', label: 'Exterior Doors', materials: ['Fiberglass', 'Steel', 'Wood'] },
-  { key: 'gutters', icon: '🌧️', label: 'Gutters', materials: ['Aluminum', 'Copper', 'Vinyl', 'Steel'] },
-  { key: 'deck', icon: '🪵', label: 'Deck / Patio', materials: ['Pressure treated wood', 'Cedar', 'Composite', 'Concrete', 'Pavers'] },
-  { key: 'driveway', icon: '🛣️', label: 'Driveway', materials: ['Asphalt', 'Concrete', 'Pavers', 'Gravel'] },
-  { key: 'fencing', icon: '🔒', label: 'Fencing', materials: ['Wood', 'Vinyl', 'Aluminum', 'Chain link'] },
-  { key: 'hvac', icon: '🌡️', label: 'HVAC', materials: ['Central air / gas furnace', 'Heat pump', 'Mini-split', 'Boiler', 'Radiant heat'] },
-  { key: 'water_heater', icon: '🔥', label: 'Water Heater', materials: ['Tank (gas)', 'Tank (electric)', 'Tankless (gas)', 'Tankless (electric)'] },
-  { key: 'electrical', icon: '⚡', label: 'Electrical Panel', materials: [] },
-  { key: 'plumbing', icon: '💧', label: 'Plumbing', materials: ['Copper', 'PVC / CPVC', 'PEX', 'Galvanized steel', 'Mixed / Unknown'] },
+const SYSTEMS = [
+  { key: 'roof',          icon: '🏠', label: 'Roof' },
+  { key: 'hvac',          icon: '🌡️', label: 'HVAC' },
+  { key: 'water_heater',  icon: '🔥', label: 'Water Heater' },
+  { key: 'plumbing',      icon: '💧', label: 'Plumbing' },
+  { key: 'electrical',    icon: '⚡', label: 'Electrical' },
+  { key: 'windows',       icon: '🪟', label: 'Windows' },
+  { key: 'doors',         icon: '🚪', label: 'Exterior Doors' },
+  { key: 'siding',        icon: '🏗️', label: 'Siding' },
+  { key: 'gutters',       icon: '🌧️', label: 'Gutters' },
+  { key: 'deck',          icon: '🪵', label: 'Deck / Patio' },
+  { key: 'driveway',      icon: '🛣️', label: 'Driveway' },
+  { key: 'fencing',       icon: '🔒', label: 'Fencing' },
+  { key: 'sump_pump',     icon: '💦', label: 'Sump Pump' },
+  { key: 'chimney',       icon: '🔥', label: 'Chimney' },
+  { key: 'landscaping',   icon: '🌿', label: 'Landscaping' },
 ]
+
+const LIFESPANS: Record<string, number> = {
+  roof: 27, hvac: 17, water_heater: 11, windows: 22,
+  deck: 17, electrical: 35, plumbing: 50, siding: 30,
+  doors: 30, gutters: 20, driveway: 25, fencing: 20,
+  chimney: 50, sump_pump: 10, landscaping: 20,
+}
 
 export default function Onboarding() {
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [score, setScore] = useState(0)
-  const [existingHomes, setExistingHomes] = useState<any[]>([])
   const [checkingHome, setCheckingHome] = useState(true)
+  const [existingHomes, setExistingHomes] = useState<any[]>([])
   const [addingAnother, setAddingAnother] = useState(false)
 
-  // Address duplicate state
+  // Duplicate home state
   const [duplicateHome, setDuplicateHome] = useState<any>(null)
   const [showDuplicateScreen, setShowDuplicateScreen] = useState(false)
   const [requestingSent, setRequestingSent] = useState(false)
   const [requestType, setRequestType] = useState('')
   const [transferMessage, setTransferMessage] = useState('')
 
-  // Step 1
+  // Step 1 — identity + home
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
   const [stateVal, setStateVal] = useState('')
@@ -42,23 +54,26 @@ export default function Onboarding() {
   const [yearBuilt, setYearBuilt] = useState('')
   const [homeType, setHomeType] = useState('single_family')
 
-  // Step 2
-  const [installYears, setInstallYears] = useState<Record<string, string>>({})
-  const [materials, setMaterials] = useState<Record<string, string>>({})
-  const [replaced, setReplaced] = useState<Record<string, boolean>>({})
-  const [replacedYears, setReplacedYears] = useState<Record<string, string>>({})
-  const [warranties, setWarranties] = useState<Record<string, boolean>>({})
-
-  // Step 3
-  const [diyLevel, setDiyLevel] = useState(3)
-  const [planToSell, setPlanToSell] = useState('no_plans')
-  const [budgetRange, setBudgetRange] = useState('1k_5k')
-  const [primaryConcern, setPrimaryConcern] = useState('peace_of_mind')
+  // Step 2 — systems checklist
+  const [selectedSystems, setSelectedSystems] = useState<Set<string>>(new Set())
+  const [dontKnowSystems, setDontKnowSystems] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const check = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setCheckingHome(false); return }
+
+      // Load existing profile name
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('first_name, last_name')
+        .eq('user_id', user.id)
+        .single()
+      if (profile) {
+        setFirstName(profile.first_name || '')
+        setLastName(profile.last_name || '')
+      }
+
       const { data: homes } = await supabase
         .from('homes')
         .select('id, address, city, state')
@@ -70,72 +85,61 @@ export default function Onboarding() {
     check()
   }, [])
 
-  const setInstallYear = useCallback((key: string, val: string) => {
-    setInstallYears(prev => ({ ...prev, [key]: val }))
-  }, [])
-
-  const setMaterial = useCallback((key: string, val: string) => {
-    setMaterials(prev => ({ ...prev, [key]: val }))
-  }, [])
-
-  const setReplacedYear = useCallback((key: string, val: string) => {
-    setReplacedYears(prev => ({ ...prev, [key]: val }))
-  }, [])
-
-  const toggleReplaced = useCallback((key: string) => {
-    setReplaced(prev => ({ ...prev, [key]: !prev[key] }))
-  }, [])
-
-  const toggleWarranty = useCallback((key: string) => {
-    setWarranties(prev => ({ ...prev, [key]: !prev[key] }))
-  }, [])
-
-  const goToStep2 = async () => {
-    // Check for duplicate address
-    if (address && city && stateVal && zip) {
-      const { data: matches } = await supabase.rpc('find_home_by_address', {
-        p_address: address,
-        p_city: city,
-        p_state: stateVal,
-        p_zip: zip
-      })
-      if (matches && matches.length > 0) {
-        setDuplicateHome(matches[0])
-        setShowDuplicateScreen(true)
-        return
+  const toggleSystem = (key: string) => {
+    setSelectedSystems(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+        setDontKnowSystems(dk => { const d = new Set(dk); d.delete(key); return d })
+      } else {
+        next.add(key)
       }
+      return next
+    })
+  }
+
+  const toggleDontKnow = (key: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!selectedSystems.has(key)) {
+      setSelectedSystems(prev => { const next = new Set(prev); next.add(key); return next })
+    }
+    setDontKnowSystems(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const handleStep1Continue = async () => {
+    setError('')
+    if (!firstName.trim() || !lastName.trim()) { setError('Please enter your first and last name.'); return }
+    if (!address.trim() || !city.trim() || !stateVal.trim() || !zip.trim()) { setError('Please fill in your full address.'); return }
+    if (!yearBuilt.trim()) { setError('Please enter the year your home was built.'); return }
+
+    // Check for duplicate
+    const { data: matches } = await supabase.rpc('find_home_by_address', {
+      p_address: address, p_city: city, p_state: stateVal, p_zip: zip
+    })
+    if (matches && matches.length > 0) {
+      setDuplicateHome(matches[0])
+      setShowDuplicateScreen(true)
+      return
     }
 
-    if (yearBuilt) {
-      const defaults: Record<string, string> = {}
-      PRODUCTS.forEach(p => {
-        if (!installYears[p.key]) defaults[p.key] = yearBuilt
-      })
-      setInstallYears(prev => ({ ...defaults, ...prev }))
-    }
     setStep(2)
   }
 
   const handleRequestCoOwnership = async () => {
     setSaving(true)
-    await supabase.rpc('request_co_ownership', {
-      p_home_id: duplicateHome.home_id,
-      p_role: 'co_owner'
-    })
-    setRequestType('co_owner')
-    setRequestingSent(true)
-    setSaving(false)
+    await supabase.rpc('request_co_ownership', { p_home_id: duplicateHome.home_id, p_role: 'co_owner' })
+    setRequestType('co_owner'); setRequestingSent(true); setSaving(false)
   }
 
   const handleRequestViewOnly = async () => {
     setSaving(true)
-    await supabase.rpc('request_co_ownership', {
-      p_home_id: duplicateHome.home_id,
-      p_role: 'viewer'
-    })
-    setRequestType('viewer')
-    setRequestingSent(true)
-    setSaving(false)
+    await supabase.rpc('request_co_ownership', { p_home_id: duplicateHome.home_id, p_role: 'viewer' })
+    setRequestType('viewer'); setRequestingSent(true); setSaving(false)
   }
 
   const handleRequestTransfer = async () => {
@@ -143,84 +147,73 @@ export default function Onboarding() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     await supabase.rpc('request_ownership_transfer', {
-      p_home_id: duplicateHome.home_id,
-      p_to_email: user.email,
-      p_initiated_by: 'buyer',
-      p_message: transferMessage || null
+      p_home_id: duplicateHome.home_id, p_to_email: user.email,
+      p_initiated_by: 'buyer', p_message: transferMessage || null
     })
-    setRequestType('transfer')
-    setRequestingSent(true)
-    setSaving(false)
+    setRequestType('transfer'); setRequestingSent(true); setSaving(false)
   }
 
-  const inputStyle = {
-    width: '100%', padding: '9px 12px',
-    border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px',
-    fontSize: '14px', fontFamily: "'DM Sans', sans-serif",
-    outline: 'none', background: '#fff',
-    color: '#1A1A18', boxSizing: 'border-box' as const
-  }
-  const labelStyle = { display: 'block', fontSize: '12px', fontWeight: 500, color: '#1A1A18', marginBottom: '5px' }
-
-  const handleFinish = async () => {
+  const handleFinish = async (skipSystems = false) => {
     setSaving(true)
     setError('')
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { window.location.href = '/login'; return }
 
+      // Save name to user_profiles
+      await supabase.from('user_profiles').upsert({
+        user_id: user.id,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+
+      // Create home
       const { data: home, error: homeError } = await supabase.from('homes').insert({
-        user_id: user.id, address, city, state: stateVal, zip,
+        user_id: user.id,
+        address, city, state: stateVal, zip,
         year_built: parseInt(yearBuilt) || null,
         home_type: homeType,
-        diy_level: diyLevel,
-        plan_to_sell: planToSell,
-        budget_range: budgetRange
+        is_primary: existingHomes.length === 0,
       }).select().single()
       if (homeError) throw homeError
 
       await supabase.from('home_details').insert({ home_id: home.id })
 
-      const lifespans: Record<string, number> = {
-        roof: 27, hvac: 17, water_heater: 11, windows: 22,
-        deck: 17, electrical: 35, plumbing: 50, siding: 30,
-        doors: 30, gutters: 20, driveway: 25, fencing: 20
-      }
-
       let systemRisk = 100
-      for (const product of PRODUCTS) {
-        const rawInstall = installYears[product.key] || yearBuilt
-        const rawReplaced = replacedYears[product.key]
-        const effectiveYear = rawReplaced || rawInstall
-        const installYear = parseInt(rawInstall) || null
-        const replacementYear = parseInt(rawReplaced) || null
-        const effectiveYearNum = parseInt(effectiveYear) || null
-        const age = effectiveYearNum ? new Date().getFullYear() - effectiveYearNum : null
-        const lifespan = lifespans[product.key] || 20
-        if (age) {
-          const pct = age / lifespan
-          if (pct > 1) systemRisk -= 15
-          else if (pct > 0.8) systemRisk -= 8
-          else if (pct > 0.6) systemRisk -= 4
+
+      if (!skipSystems && selectedSystems.size > 0) {
+        for (const key of Array.from(selectedSystems)) {
+          const isDontKnow = dontKnowSystems.has(key)
+          const installYear = isDontKnow ? null : (parseInt(yearBuilt) || null)
+          const age = installYear ? new Date().getFullYear() - installYear : null
+          const lifespan = LIFESPANS[key] || 20
+
+          if (age) {
+            const pct = age / lifespan
+            if (pct > 1) systemRisk -= 15
+            else if (pct > 0.8) systemRisk -= 8
+            else if (pct > 0.6) systemRisk -= 4
+          }
+
+          await supabase.from('home_systems').insert({
+            home_id: home.id,
+            system_type: key,
+            install_year: installYear,
+            age_years: age,
+            not_applicable: false,
+            condition: 'unknown',
+          })
         }
-        await supabase.from('home_systems').insert({
-          home_id: home.id,
-          system_type: product.key,
-          install_year: installYear,
-          age_years: age,
-          material: materials[product.key] || null,
-          ever_replaced: replaced[product.key] || false,
-          replacement_year: replacementYear,
-          under_warranty: warranties[product.key] || false,
-          condition: 'unknown'
-        })
       }
 
       systemRisk = Math.max(0, systemRisk)
       const maintenanceScore = 40
-      const valueScore = planToSell === 'within_2yr' ? 80 : planToSell === 'within_5yr' ? 70 : 60
+      const valueScore = 60
       const seasonalScore = 75
-      const calculatedScore = Math.round(systemRisk * 0.35 + maintenanceScore * 0.30 + valueScore * 0.20 + seasonalScore * 0.15)
+      const calculatedScore = Math.round(
+        systemRisk * 0.35 + maintenanceScore * 0.30 + valueScore * 0.20 + seasonalScore * 0.15
+      )
       setScore(calculatedScore)
 
       await supabase.from('health_scores').insert({
@@ -229,135 +222,56 @@ export default function Onboarding() {
         system_risk_score: systemRisk,
         maintenance_score: maintenanceScore,
         value_protection_score: valueScore,
-        seasonal_readiness_score: seasonalScore
+        seasonal_readiness_score: seasonalScore,
       })
 
-      setStep(4)
+      await supabase.rpc('recalculate_community_score', { p_user_id: user.id })
+
+      setStep(3)
     } catch (e: any) {
       setError(e.message)
     }
     setSaving(false)
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 12px',
+    border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px',
+    fontSize: '14px', fontFamily: "'DM Sans', sans-serif",
+    outline: 'none', background: '#fff', color: '#1A1A18',
+    boxSizing: 'border-box',
+  }
+  const labelStyle: React.CSSProperties = {
+    display: 'block', fontSize: '12px', fontWeight: 500,
+    color: '#1A1A18', marginBottom: '5px'
+  }
+
+  if (checkingHome) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
+      <p style={{ color: '#8A8A82' }}>Loading...</p>
+    </div>
+  )
+
   return (
     <main style={{ background: '#F8F4EE', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif", padding: '24px' }}>
-      <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '40px', width: '100%', maxWidth: '620px', margin: '0 auto' }}>
+      <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '40px', width: '100%', maxWidth: '580px', margin: '0 auto' }}>
 
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <a href="/" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', color: '#1E3A2F', textDecoration: 'none' }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <a href="/" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', color: '#1E3A2F', textDecoration: 'none' }}>
             H<em style={{ color: '#C47B2B', fontStyle: 'italic' }}>e</em>arth
           </a>
         </div>
 
-        {/* Checking state */}
-        {checkingHome && (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <p style={{ color: '#8A8A82', fontSize: '14px' }}>Checking your account...</p>
-          </div>
-        )}
-
-        {/* Duplicate address screen */}
-        {showDuplicateScreen && !requestingSent && (
-          <div>
-            <div style={{ textAlign: 'center', fontSize: '40px', marginBottom: '16px' }}>🏠</div>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px', textAlign: 'center' }}>
-              This home is already in Hearth
-            </h2>
-            <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '24px', textAlign: 'center', lineHeight: 1.7 }}>
-              {address}, {city}, {stateVal} {zip} is already registered. How would you like to proceed?
-            </p>
-
-            <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ background: '#F8F4EE', borderRadius: '12px', padding: '18px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '6px' }}>I live here too</h4>
-                <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>
-                  Request co-owner access. The current owner will be notified and can approve your request. You'll have full edit access once approved.
-                </p>
-                <button onClick={handleRequestCoOwnership} disabled={saving} style={{
-                  width: '100%', background: '#1E3A2F', color: '#F8F4EE',
-                  border: 'none', padding: '10px', borderRadius: '8px',
-                  fontSize: '13px', fontWeight: 500, cursor: 'pointer',
-                  fontFamily: "'DM Sans', sans-serif"
-                }}>Request co-owner access</button>
-              </div>
-
-              <div style={{ background: '#F8F4EE', borderRadius: '12px', padding: '18px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '6px' }}>I just bought this home</h4>
-                <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>
-                  Request ownership transfer. The previous owner will be notified. If they don't respond within 30 days, ownership transfers automatically.
-                </p>
-                <textarea
-                  value={transferMessage}
-                  onChange={e => setTransferMessage(e.target.value)}
-                  placeholder="Optional: add a note to the current owner (e.g. closing date, realtor name)"
-                  style={{ ...inputStyle, minHeight: '70px', resize: 'vertical', marginBottom: '10px', fontSize: '13px' }}
-                />
-                <button onClick={handleRequestTransfer} disabled={saving} style={{
-                  width: '100%', background: '#C47B2B', color: '#fff',
-                  border: 'none', padding: '10px', borderRadius: '8px',
-                  fontSize: '13px', fontWeight: 500, cursor: 'pointer',
-                  fontFamily: "'DM Sans', sans-serif"
-                }}>Request ownership transfer</button>
-              </div>
-
-              <div style={{ background: '#F8F4EE', borderRadius: '12px', padding: '18px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '6px' }}>I just want to view this home</h4>
-                <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>
-                  Request view-only access. You can see all home details and history but cannot make changes.
-                </p>
-                <button onClick={handleRequestViewOnly} disabled={saving} style={{
-                  width: '100%', background: 'none', color: '#1E3A2F',
-                  border: '1px solid rgba(30,58,47,0.2)', padding: '10px', borderRadius: '8px',
-                  fontSize: '13px', cursor: 'pointer',
-                  fontFamily: "'DM Sans', sans-serif"
-                }}>Request view-only access</button>
-              </div>
-            </div>
-
-            <button onClick={() => { setShowDuplicateScreen(false); setDuplicateHome(null) }} style={{
-              width: '100%', background: 'none', border: 'none',
-              color: '#8A8A82', fontSize: '13px', cursor: 'pointer',
-              fontFamily: "'DM Sans', sans-serif", padding: '8px'
-            }}>← Go back and correct my address</button>
-          </div>
-        )}
-
-        {/* Request sent confirmation */}
-        {requestingSent && (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>
-              {requestType === 'transfer' ? '🔑' : requestType === 'co_owner' ? '🤝' : '👁️'}
-            </div>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '10px' }}>
-              {requestType === 'transfer' ? 'Transfer requested' : requestType === 'co_owner' ? 'Request sent' : 'View access requested'}
-            </h2>
-            <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.7, marginBottom: '24px', maxWidth: '380px', margin: '0 auto 24px' }}>
-              {requestType === 'transfer'
-                ? 'The current owner has been notified. If they don\'t respond within 30 days, ownership transfers automatically.'
-                : requestType === 'co_owner'
-                ? 'The current owner has been notified and needs to approve your request. We\'ll let you know when they respond.'
-                : 'The current owner has been notified. Once approved you\'ll be able to view this home\'s full history.'}
-            </p>
-            <a href="/dashboard" style={{
-              display: 'block', background: '#1E3A2F', color: '#F8F4EE',
-              textDecoration: 'none', padding: '13px', borderRadius: '10px',
-              fontSize: '14px', fontWeight: 500, textAlign: 'center'
-            }}>Go to my dashboard</a>
-          </div>
-        )}
-
-        {/* Existing homes screen */}
-        {!checkingHome && existingHomes.length > 0 && !addingAnother && !showDuplicateScreen && !requestingSent && (
+        {/* Existing homes */}
+        {existingHomes.length > 0 && !addingAnother && !showDuplicateScreen && !requestingSent && (
           <div>
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>
               {existingHomes.length === 1 ? 'You already have a home set up' : 'Your properties'}
             </h2>
             <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '20px' }}>
-              {existingHomes.length === 1
-                ? 'Your home is already in your account. Go to your dashboard to update details or log contractor jobs.'
-                : 'You have multiple properties. Go to your dashboard to manage them.'}
+              Go to your dashboard to manage your home or add another property.
             </p>
-
             <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
               {existingHomes.map(h => (
                 <div key={h.id} style={{ background: '#F8F4EE', borderRadius: '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -369,317 +283,255 @@ export default function Onboarding() {
                 </div>
               ))}
             </div>
-
             <div style={{ display: 'grid', gap: '10px' }}>
-              <a href="/dashboard" style={{
-                display: 'block', background: '#1E3A2F', color: '#F8F4EE',
-                textDecoration: 'none', padding: '12px', borderRadius: '10px',
-                fontSize: '14px', fontWeight: 500, textAlign: 'center'
-              }}>Go to my dashboard</a>
-              <button onClick={() => setAddingAnother(true)} style={{
-                background: 'none', border: '1px solid rgba(30,58,47,0.2)',
-                color: '#1E3A2F', padding: '12px', borderRadius: '10px',
-                fontSize: '14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-              }}>+ Add another property</button>
+              <a href="/dashboard" style={{ display: 'block', background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none', padding: '12px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, textAlign: 'center' }}>Go to my dashboard</a>
+              <button onClick={() => setAddingAnother(true)} style={{ background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#1E3A2F', padding: '12px', borderRadius: '10px', fontSize: '14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>+ Add another property</button>
             </div>
           </div>
         )}
 
-        {/* Progress bar */}
-        {!checkingHome && (existingHomes.length === 0 || addingAnother) && !showDuplicateScreen && !requestingSent && step < 4 && (
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '28px' }}>
-            {[1, 2, 3].map(s => (
-              <div key={s} style={{ flex: 1, height: '4px', borderRadius: '2px', background: s <= step ? '#1E3A2F' : '#EDE8E0' }} />
-            ))}
-          </div>
-        )}
-
-        {error && (
-          <div style={{ background: '#FDECEA', color: '#9B2C2C', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>{error}</div>
-        )}
-
-        {/* STEP 1 */}
-        {!checkingHome && (existingHomes.length === 0 || addingAnother) && !showDuplicateScreen && !requestingSent && step === 1 && (
+        {/* Duplicate screen */}
+        {showDuplicateScreen && !requestingSent && (
           <div>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>
-              {addingAnother ? 'Add another property' : 'Your home'}
-            </h2>
-            <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '24px' }}>Step 1 of 3 — Just the basics to get started</p>
-
-            <div style={{ display: 'grid', gap: '14px' }}>
-              <div>
-                <label style={labelStyle}>Street address</label>
-                <input value={address} onChange={e => setAddress(e.target.value)} style={inputStyle} placeholder="123 Main St" />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={labelStyle}>City</label>
-                  <input value={city} onChange={e => setCity(e.target.value)} style={inputStyle} placeholder="City" />
+            <div style={{ textAlign: 'center', fontSize: '40px', marginBottom: '16px' }}>🏠</div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px', textAlign: 'center' }}>This home is already in Hearth</h2>
+            <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '24px', textAlign: 'center', lineHeight: 1.7 }}>
+              {address}, {city}, {stateVal} {zip} is already registered. How would you like to proceed?
+            </p>
+            <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
+              {[
+                { title: 'I live here too', desc: 'Request co-owner access. The current owner will be notified and can approve your request.', action: handleRequestCoOwnership, label: 'Request co-owner access', style: { background: '#1E3A2F', color: '#F8F4EE', border: 'none' } },
+                { title: 'I just bought this home', desc: 'Request ownership transfer. If they don\'t respond within 30 days, ownership transfers automatically.', action: handleRequestTransfer, label: 'Request ownership transfer', style: { background: '#C47B2B', color: '#fff', border: 'none' }, hasMessage: true },
+                { title: 'I just want to view this home', desc: 'Request view-only access to see all home details and history.', action: handleRequestViewOnly, label: 'Request view-only access', style: { background: 'none', color: '#1E3A2F', border: '1px solid rgba(30,58,47,0.2)' } },
+              ].map((opt, i) => (
+                <div key={i} style={{ background: '#F8F4EE', borderRadius: '12px', padding: '18px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '6px' }}>{opt.title}</h4>
+                  <p style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>{opt.desc}</p>
+                  {opt.hasMessage && (
+                    <textarea value={transferMessage} onChange={e => setTransferMessage(e.target.value)} placeholder="Optional: add a note to the current owner" style={{ ...inputStyle, minHeight: '60px', resize: 'vertical', marginBottom: '10px', fontSize: '13px' }} />
+                  )}
+                  <button onClick={opt.action} disabled={saving} style={{ ...opt.style, width: '100%', padding: '10px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>{opt.label}</button>
                 </div>
-                <div>
-                  <label style={labelStyle}>State</label>
-                  <input value={stateVal} onChange={e => setStateVal(e.target.value)} style={inputStyle} placeholder="MD" />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={labelStyle}>ZIP code</label>
-                  <input value={zip} onChange={e => setZip(e.target.value)} style={inputStyle} placeholder="21601" />
-                </div>
-                <div>
-                  <label style={labelStyle}>Year built</label>
-                  <input value={yearBuilt} onChange={e => setYearBuilt(e.target.value)} style={inputStyle} placeholder="1995" />
-                </div>
-              </div>
-              <div>
-                <label style={labelStyle}>Home type</label>
-                <select value={homeType} onChange={e => setHomeType(e.target.value)} style={inputStyle}>
-                  <option value="single_family">Single family</option>
-                  <option value="townhouse">Townhouse</option>
-                  <option value="condo">Condo</option>
-                  <option value="multi_family">Multi-family</option>
-                </select>
-              </div>
-            </div>
-
-            <button onClick={goToStep2} style={{
-              width: '100%', marginTop: '24px', background: '#1E3A2F', color: '#F8F4EE',
-              border: 'none', padding: '12px', borderRadius: '10px',
-              fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-            }}>Continue →</button>
-          </div>
-        )}
-
-        {/* STEP 2 */}
-        {!checkingHome && (existingHomes.length === 0 || addingAnother) && !showDuplicateScreen && !requestingSent && step === 2 && (
-          <div>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Your products</h2>
-            <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '4px' }}>Step 2 of 3 — Install years are pre-filled from your build year. Update anything that&apos;s been replaced.</p>
-            <p style={{ fontSize: '12px', color: '#8A8A82', fontStyle: 'italic', marginBottom: '20px' }}>You can update materials and details anytime from your dashboard.</p>
-
-            <div style={{ display: 'grid', gap: '10px', marginBottom: '24px' }}>
-              {PRODUCTS.map(p => (
-                <ProductRow
-                  key={p.key}
-                  product={p}
-                  installYear={installYears[p.key] ?? yearBuilt}
-                  material={materials[p.key] || ''}
-                  isReplaced={replaced[p.key] || false}
-                  replacedYear={replacedYears[p.key] || ''}
-                  hasWarranty={warranties[p.key] || false}
-                  onYearChange={setInstallYear}
-                  onMaterialChange={setMaterial}
-                  onToggleReplaced={toggleReplaced}
-                  onReplacedYearChange={setReplacedYear}
-                  onToggleWarranty={toggleWarranty}
-                />
               ))}
             </div>
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setStep(1)} style={{
-                flex: 1, background: 'none', border: '1px solid rgba(30,58,47,0.2)',
-                color: '#1E3A2F', padding: '12px', borderRadius: '10px',
-                fontSize: '14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-              }}>← Back</button>
-              <button onClick={() => setStep(3)} style={{
-                flex: 2, background: '#1E3A2F', color: '#F8F4EE',
-                border: 'none', padding: '12px', borderRadius: '10px',
-                fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-              }}>Continue →</button>
-            </div>
+            <button onClick={() => { setShowDuplicateScreen(false); setDuplicateHome(null) }} style={{ width: '100%', background: 'none', border: 'none', color: '#8A8A82', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '8px' }}>← Go back and correct my address</button>
           </div>
         )}
 
-        {/* STEP 3 */}
-        {!checkingHome && (existingHomes.length === 0 || addingAnother) && !showDuplicateScreen && !requestingSent && step === 3 && (
-          <div>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Your goals</h2>
-            <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '24px' }}>Step 3 of 3 — Helps us personalize your score</p>
+        {/* Request sent */}
+        {requestingSent && (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>{requestType === 'transfer' ? '🔑' : requestType === 'co_owner' ? '🤝' : '👁️'}</div>
+            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '10px' }}>
+              {requestType === 'transfer' ? 'Transfer requested' : requestType === 'co_owner' ? 'Request sent' : 'View access requested'}
+            </h2>
+            <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.7, marginBottom: '24px', maxWidth: '380px', margin: '0 auto 24px' }}>
+              {requestType === 'transfer' ? 'The current owner has been notified. If they don\'t respond within 30 days, ownership transfers automatically.' : 'The current owner has been notified and needs to approve your request.'}
+            </p>
+            <a href="/dashboard" style={{ display: 'block', background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, textAlign: 'center' }}>Go to my dashboard</a>
+          </div>
+        )}
 
-            <div style={{ display: 'grid', gap: '18px' }}>
-              <div>
-                <label style={labelStyle}>DIY comfort level</label>
-                <p style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '8px' }}>1 = hire everything · 5 = do it all myself</p>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {[1,2,3,4,5].map(n => (
-                    <button key={n} onClick={() => setDiyLevel(n)} style={{
-                      flex: 1, padding: '10px', borderRadius: '8px',
-                      border: `2px solid ${diyLevel === n ? '#1E3A2F' : 'rgba(30,58,47,0.15)'}`,
-                      background: diyLevel === n ? '#1E3A2F' : '#fff',
-                      color: diyLevel === n ? '#F8F4EE' : '#1A1A18',
-                      fontFamily: "'DM Sans', sans-serif", fontSize: '14px',
-                      fontWeight: 500, cursor: 'pointer'
-                    }}>{n}</button>
+        {/* Main onboarding flow */}
+        {(existingHomes.length === 0 || addingAnother) && !showDuplicateScreen && !requestingSent && (
+          <div>
+
+            {/* Progress bar */}
+            {step < 3 && (
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                  {[1, 2].map(s => (
+                    <div key={s} style={{ flex: 1, height: '4px', borderRadius: '2px', background: s <= step ? '#1E3A2F' : '#EDE8E0', transition: 'background 0.3s' }} />
                   ))}
                 </div>
+                <div style={{ fontSize: '12px', color: '#8A8A82' }}>Step {step} of 2</div>
               </div>
+            )}
 
+            {error && (
+              <div style={{ background: '#FDECEA', color: '#9B2C2C', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>{error}</div>
+            )}
+
+            {/* STEP 1 — Identity + Home */}
+            {step === 1 && (
               <div>
-                <label style={labelStyle}>Plans to sell?</label>
-                <select value={planToSell} onChange={e => setPlanToSell(e.target.value)} style={inputStyle}>
-                  <option value="no_plans">No plans to sell</option>
-                  <option value="within_5yr">Yes, within 5 years</option>
-                  <option value="within_2yr">Yes, within 2 years</option>
-                </select>
-              </div>
+                <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>
+                  Let&apos;s set up your home
+                </h2>
+                <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '24px', lineHeight: 1.6 }}>
+                  Just a few basics to get started — you can add more details anytime.
+                </p>
 
+                <div style={{ display: 'grid', gap: '14px' }}>
+
+                  {/* Name */}
+                  <div>
+                    <label style={labelStyle}>Your name</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <input value={firstName} onChange={e => setFirstName(e.target.value)} style={inputStyle} placeholder="First name" />
+                      <input value={lastName} onChange={e => setLastName(e.target.value)} style={inputStyle} placeholder="Last name" />
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div>
+                    <label style={labelStyle}>Home address</label>
+                    <input value={address} onChange={e => setAddress(e.target.value)} style={{ ...inputStyle, marginBottom: '8px' }} placeholder="123 Main St" />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px', gap: '8px' }}>
+                      <input value={city} onChange={e => setCity(e.target.value)} style={inputStyle} placeholder="City" />
+                      <input value={stateVal} onChange={e => setStateVal(e.target.value)} style={inputStyle} placeholder="State" />
+                      <input value={zip} onChange={e => setZip(e.target.value)} style={inputStyle} placeholder="ZIP" />
+                    </div>
+                  </div>
+
+                  {/* Year built + type */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={labelStyle}>Year built</label>
+                      <input value={yearBuilt} onChange={e => setYearBuilt(e.target.value)} style={inputStyle} placeholder="e.g. 1998" />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Home type</label>
+                      <select value={homeType} onChange={e => setHomeType(e.target.value)} style={inputStyle}>
+                        <option value="single_family">Single family</option>
+                        <option value="townhouse">Townhouse</option>
+                        <option value="condo">Condo</option>
+                        <option value="multi_family">Multi-family</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={handleStep1Continue} style={{ width: '100%', marginTop: '24px', background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                  Continue →
+                </button>
+              </div>
+            )}
+
+            {/* STEP 2 — Systems checklist */}
+            {step === 2 && (
               <div>
-                <label style={labelStyle}>Annual maintenance budget</label>
-                <select value={budgetRange} onChange={e => setBudgetRange(e.target.value)} style={inputStyle}>
-                  <option value="under_1k">Under $1,000</option>
-                  <option value="1k_5k">$1,000 – $5,000</option>
-                  <option value="5k_15k">$5,000 – $15,000</option>
-                  <option value="15k_plus">$15,000+</option>
-                </select>
+                <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>
+                  What systems does your home have?
+                </h2>
+                <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '6px', lineHeight: 1.6 }}>
+                  Tap everything that applies. You can add details later from your dashboard.
+                </p>
+                <p style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '20px', fontStyle: 'italic' }}>
+                  Check "Don&apos;t know details" if you have the system but aren&apos;t sure about install year or condition.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px', marginBottom: '24px' }}>
+                  {SYSTEMS.map(sys => {
+                    const selected = selectedSystems.has(sys.key)
+                    const dontKnow = dontKnowSystems.has(sys.key)
+                    return (
+                      <div
+                        key={sys.key}
+                        onClick={() => toggleSystem(sys.key)}
+                        style={{
+                          border: `2px solid ${selected ? '#1E3A2F' : 'rgba(30,58,47,0.15)'}`,
+                          borderRadius: '12px',
+                          padding: '12px',
+                          cursor: 'pointer',
+                          background: selected ? '#F0F5F2' : '#fff',
+                          transition: 'all 0.15s',
+                          position: 'relative',
+                        }}
+                      >
+                        <div style={{ fontSize: '24px', marginBottom: '6px' }}>{sys.icon}</div>
+                        <div style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F', marginBottom: selected ? '8px' : '0' }}>{sys.label}</div>
+                        {selected && (
+                          <button
+                            type="button"
+                            onClick={e => toggleDontKnow(sys.key, e)}
+                            style={{
+                              fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                              border: `1px solid ${dontKnow ? '#C47B2B' : 'rgba(30,58,47,0.2)'}`,
+                              background: dontKnow ? '#FBF0DC' : '#fff',
+                              color: dontKnow ? '#7A4A10' : '#8A8A82',
+                              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                              display: 'block', width: '100%', textAlign: 'center',
+                            }}
+                          >
+                            {dontKnow ? '? No details' : 'Don\'t know details'}
+                          </button>
+                        )}
+                        {selected && !dontKnow && (
+                          <div style={{ position: 'absolute', top: '8px', right: '8px', width: '16px', height: '16px', borderRadius: '50%', background: '#1E3A2F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ color: '#fff', fontSize: '10px', lineHeight: 1 }}>✓</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {selectedSystems.size > 0 && (
+                  <div style={{ background: '#EAF2EC', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: '#3D7A5A' }}>
+                    ✓ {selectedSystems.size} system{selectedSystems.size !== 1 ? 's' : ''} selected
+                    {dontKnowSystems.size > 0 && ` · ${dontKnowSystems.size} marked as don't know`}
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  <button
+                    onClick={() => handleFinish(false)}
+                    disabled={saving}
+                    style={{ width: '100%', background: '#C47B2B', color: '#fff', border: 'none', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.7 : 1 }}
+                  >
+                    {saving ? 'Setting up your home...' : 'Get my home score →'}
+                  </button>
+                  <button
+                    onClick={() => handleFinish(true)}
+                    disabled={saving}
+                    style={{ width: '100%', background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#8A8A82', padding: '11px', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    Skip for now — I&apos;ll add systems later
+                  </button>
+                  <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#8A8A82', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '4px' }}>← Back</button>
+                </div>
               </div>
+            )}
 
-              <div>
-                <label style={labelStyle}>Primary goal</label>
-                <select value={primaryConcern} onChange={e => setPrimaryConcern(e.target.value)} style={inputStyle}>
-                  <option value="peace_of_mind">Peace of mind — know my home is in good shape</option>
-                  <option value="reduce_costs">Reduce costs — avoid expensive surprises</option>
-                  <option value="increase_value">Increase value — maximize what I get when I sell</option>
-                  <option value="prepare_to_sell">Prepare to sell — get my home market-ready</option>
-                  <option value="new_owner">New owner — understand what I just bought</option>
-                </select>
+            {/* STEP 3 — Score reveal */}
+            {step === 3 && (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#6AAF8A', marginBottom: '16px' }}>Your home health score</p>
+                <div style={{ position: 'relative', width: '140px', height: '140px', margin: '0 auto 24px' }}>
+                  <svg width="140" height="140" style={{ transform: 'rotate(-90deg)' }}>
+                    <circle cx="70" cy="70" r="58" fill="none" stroke="#EDE8E0" strokeWidth="12" />
+                    <circle cx="70" cy="70" r="58" fill="none"
+                      stroke={score >= 80 ? '#3D7A5A' : score >= 60 ? '#C47B2B' : '#9B2C2C'}
+                      strokeWidth="12" strokeDasharray="364"
+                      strokeDashoffset={364 - (364 * score / 100)}
+                      strokeLinecap="round" />
+                  </svg>
+                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontFamily: "'Playfair Display', Georgia, serif", fontSize: '42px', color: '#1E3A2F', fontWeight: 600 }}>{score}</div>
+                </div>
+
+                <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>
+                  Welcome{firstName ? `, ${firstName}` : ''}!
+                </h2>
+                <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.7, maxWidth: '380px', margin: '0 auto 12px' }}>
+                  {score >= 80 ? 'Your home is in great shape.' : score >= 60 ? 'Your home is doing well.' : 'Your home needs some attention.'}
+                  {' '}Log contractor jobs and update system details from your dashboard to improve your score over time.
+                </p>
+
+                {selectedSystems.size === 0 && (
+                  <p style={{ fontSize: '13px', color: '#C47B2B', marginBottom: '16px' }}>
+                    💡 Add your home systems to get a more accurate score.
+                  </p>
+                )}
+
+                <a href="/dashboard" style={{ display: 'block', background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, textAlign: 'center', maxWidth: '380px', margin: '0 auto' }}>
+                  Go to my dashboard →
+                </a>
               </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-              <button onClick={() => setStep(2)} style={{
-                flex: 1, background: 'none', border: '1px solid rgba(30,58,47,0.2)',
-                color: '#1E3A2F', padding: '12px', borderRadius: '10px',
-                fontSize: '14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-              }}>← Back</button>
-              <button onClick={handleFinish} disabled={saving} style={{
-                flex: 2, background: '#C47B2B', color: '#fff',
-                border: 'none', padding: '12px', borderRadius: '10px',
-                fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-              }}>{saving ? 'Saving...' : 'Get my score →'}</button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4 */}
-        {step === 4 && (
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#6AAF8A', marginBottom: '16px' }}>Your home health score</p>
-            <div style={{ position: 'relative', width: '140px', height: '140px', margin: '0 auto 24px' }}>
-              <svg width="140" height="140" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx="70" cy="70" r="58" fill="none" stroke="#EDE8E0" strokeWidth="12" />
-                <circle cx="70" cy="70" r="58" fill="none" stroke="#3D7A5A" strokeWidth="12"
-                  strokeDasharray="364" strokeDashoffset={364 - (364 * score / 100)} strokeLinecap="round" />
-              </svg>
-              <div style={{
-                position: 'absolute', top: '50%', left: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: '42px', color: '#1E3A2F', fontWeight: 600
-              }}>{score}</div>
-            </div>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#1E3A2F', marginBottom: '10px' }}>
-              {score >= 80 ? 'Your home is in great shape!' : score >= 60 ? 'Your home is doing well.' : 'Your home needs some attention.'}
-            </h2>
-            <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.7, maxWidth: '380px', margin: '0 auto 28px' }}>
-              You can update system details and log contractor jobs from your dashboard to improve your score over time.
-            </p>
-            <a href="/dashboard" style={{
-              display: 'block', background: '#1E3A2F', color: '#F8F4EE',
-              textDecoration: 'none', padding: '13px', borderRadius: '10px',
-              fontSize: '14px', fontWeight: 500, textAlign: 'center'
-            }}>Go to my dashboard →</a>
+            )}
           </div>
         )}
       </div>
     </main>
-  )
-}
-
-function ProductRow({ product, installYear, material, isReplaced, replacedYear, hasWarranty, onYearChange, onMaterialChange, onToggleReplaced, onReplacedYearChange, onToggleWarranty }: {
-  product: { key: string, icon: string, label: string, materials: string[] }
-  installYear: string
-  material: string
-  isReplaced: boolean
-  replacedYear: string
-  hasWarranty: boolean
-  onYearChange: (key: string, val: string) => void
-  onMaterialChange: (key: string, val: string) => void
-  onToggleReplaced: (key: string) => void
-  onReplacedYearChange: (key: string, val: string) => void
-  onToggleWarranty: (key: string) => void
-}) {
-  const cellInput = {
-    padding: '7px 10px', border: '1px solid rgba(30,58,47,0.2)',
-    borderRadius: '6px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
-    outline: 'none', background: '#fff', color: '#1A1A18', width: '100%',
-    boxSizing: 'border-box' as const
-  }
-
-  return (
-    <div style={{ background: '#F8F4EE', borderRadius: '12px', padding: '14px 16px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px auto', gap: '10px', alignItems: 'end' }}>
-        <div>
-          <div style={{ fontSize: '12px', fontWeight: 500, color: '#1A1A18', marginBottom: '5px' }}>
-            {product.icon} {product.label}
-          </div>
-          {product.materials.length > 0 ? (
-            <select value={material} onChange={e => onMaterialChange(product.key, e.target.value)} style={cellInput}>
-              <option value="">Material / type</option>
-              {product.materials.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          ) : (
-            <div style={{ fontSize: '12px', color: '#8A8A82', padding: '4px 0' }}>—</div>
-          )}
-        </div>
-        <div>
-          <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '5px' }}>Year installed</div>
-          <input
-            type="text"
-            value={installYear}
-            onChange={e => onYearChange(product.key, e.target.value)}
-            style={cellInput}
-            placeholder="Year"
-          />
-        </div>
-        <div style={{ paddingBottom: '2px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            <input
-              type="checkbox"
-              checked={isReplaced}
-              onChange={() => onToggleReplaced(product.key)}
-              style={{ width: '14px', height: '14px', accentColor: '#1E3A2F' }}
-            />
-            Replaced?
-          </label>
-        </div>
-      </div>
-
-      {isReplaced && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(30,58,47,0.1)' }}>
-          <div>
-            <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '5px' }}>Year replaced</div>
-            <input
-              type="text"
-              value={replacedYear}
-              onChange={e => onReplacedYearChange(product.key, e.target.value)}
-              style={cellInput}
-              placeholder="e.g. 2019"
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '2px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={hasWarranty}
-                onChange={() => onToggleWarranty(product.key)}
-                style={{ width: '14px', height: '14px', accentColor: '#1E3A2F' }}
-              />
-              Under warranty
-            </label>
-          </div>
-        </div>
-      )}
-    </div>
   )
 }

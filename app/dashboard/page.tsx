@@ -159,6 +159,7 @@ export default function Dashboard() {
   const [systemEdits, setSystemEdits] = useState<any>({})
   const [saving, setSaving] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [displayName, setDisplayName] = useState('')
   const [weather, setWeather] = useState<any>(null)
   const [weatherLoading, setWeatherLoading] = useState(true)
   const [showStormDetail, setShowStormDetail] = useState(false)
@@ -228,6 +229,15 @@ export default function Dashboard() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { window.location.href = '/login'; return }
       setUser(user)
+      // Load name from user_profiles
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('first_name, last_name')
+        .eq('user_id', user.id)
+        .single()
+      if (profile?.first_name) {
+        setDisplayName(profile.first_name.charAt(0).toUpperCase() + profile.first_name.slice(1))
+      }
 
       const { data: homes } = await supabase
         .from('homes').select('*').eq('user_id', user.id)
@@ -503,8 +513,7 @@ export default function Dashboard() {
   const tabs = ['overview', 'systems', 'log', 'report', 'documents']
   const tabLabels: Record<string, string> = { overview: 'Overview', systems: 'Systems', log: 'Contractor Log', report: 'Report Card', documents: 'Documents' }
   const alertSystems = systems.filter(s => ['Inspect', 'Priority'].includes(getCondition(s).label))
-  const firstName = user?.email?.split('@')[0]?.split('.')[0]
-  const displayName = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1) : 'there'
+  const displayNameFinal = displayName || user?.email?.split('@')[0]?.split('.')[0]?.replace(/^\w/, (c: string) => c.toUpperCase()) || 'there'
   const smartTasks = getSmartTasks(systems, score, weather).filter(t => !dismissedSmartTasks.includes(t.id))
   const customTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'dismissed' && t.source !== 'smart' && t.source !== 'seasonal')
   const doneTasks = tasks.filter(t => t.status === 'done')
@@ -545,7 +554,7 @@ export default function Dashboard() {
       <div style={{ background: '#1E3A2F', padding: '28px 28px 0' }}>
         <div style={{ paddingBottom: '20px' }}>
           <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(248,244,238,0.45)', marginBottom: '4px' }}>Welcome back</div>
-          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#F8F4EE', fontWeight: 400 }}>{displayName}</div>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#F8F4EE', fontWeight: 400 }}>{displayNameFinal}</div>
 
           {allHomes.length > 0 && (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px', alignItems: 'center' }}>
