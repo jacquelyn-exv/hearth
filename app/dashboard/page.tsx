@@ -1187,16 +1187,22 @@ export default function Dashboard() {
               <div style={{ display: 'grid', gap: '12px' }}>
                 {jobs.map(job => (
                   <div key={job.id} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '18px 20px', display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '3px' }}>{job.company_name}</h4>
-                      <p style={{ fontSize: '13px', color: '#8A8A82' }}>{job.service_description} · {job.job_date}</p>
+                      <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '6px' }}>
+                        {job.service_description} · {job.system_type?.replace(/_/g, ' ')}
+                        {job.job_date ? ` · ${new Date(job.job_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}` : ''}
+                      </p>
                       {job.tags && job.tags.length > 0 && (
-                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
                           {job.tags.map((tag: string) => <span key={tag} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>{tag}</span>)}
                         </div>
                       )}
+                      <a href={`/log`} style={{ fontSize: '11px', color: '#3D7A5A', textDecoration: 'none', border: '1px solid rgba(30,58,47,0.2)', padding: '3px 10px', borderRadius: '20px', fontFamily: "'DM Sans', sans-serif" }}>
+                        Edit →
+                      </a>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F' }}>{job.final_price ? `$${Number(job.final_price).toLocaleString()}` : '—'}</div>
                       <div style={{ color: '#C47B2B', fontSize: '12px' }}>{'★'.repeat(job.quality_rating)}</div>
                       <div style={{ fontSize: '11px', marginTop: '2px', color: job.is_shared ? '#3D7A5A' : '#8A8A82' }}>{job.is_shared ? '✓ Shared' : 'Private'}</div>
