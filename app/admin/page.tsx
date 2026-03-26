@@ -93,7 +93,14 @@ export default function Admin() {
     })
     setHomes(homesWithScore)
     setHomeDetails(d)
+// Fetch all auth users via admin function
+    const { data: authUsers } = await supabase.rpc('get_all_users_admin')
+    const authUserMap: Record<string, any> = {}
+    ;(authUsers || []).forEach((u: any) => {
+      authUserMap[u.user_id] = { email: u.email, created_at: u.created_at }
+    })
 
+    // ── Funnel analysis ──────────────────────────────────────────────────────
     // ── Funnel analysis ──────────────────────────────────────────────────────
     // Build per-user funnel state from all the data we have
     const userMap: Record<string, any> = {}
@@ -102,7 +109,7 @@ export default function Admin() {
       if (!userMap[uid]) {
         userMap[uid] = {
           user_id: uid,
-          email: home.email || null,
+          email: authUserMap[uid]?.email || null,
           signedUp: home.created_at,
           homes: [],
           hasHome: false,
@@ -126,6 +133,29 @@ export default function Admin() {
       if (home.zip) userMap[uid].zip = home.zip
       if (home.city) userMap[uid].city = home.city
       if (home.state) userMap[uid].state = home.state
+    })
+    ;(authUsers || []).forEach((u: any) => {
+      if (!userMap[u.user_id]) {
+        userMap[u.user_id] = {
+          user_id: u.user_id,
+          email: u.email,
+          signedUp: u.created_at,
+          homes: [],
+          hasHome: false,
+          hasSystems: false,
+          hasJobLogged: false,
+          hasSharedJob: false,
+          hasCommunityScore: false,
+          totalJobs: 0,
+          sharedJobs: 0,
+          systemCount: 0,
+          communityPoints: 0,
+          lastSeen: u.created_at,
+          zip: null,
+          city: null,
+          state: null,
+        }
+      }
     })
 
     s.forEach((sys: any) => {
