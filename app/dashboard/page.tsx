@@ -169,7 +169,12 @@ export default function Dashboard() {
   const [newTaskDesc, setNewTaskDesc] = useState('')
   const [newTaskDue, setNewTaskDue] = useState('')
   const [newTaskAssigned, setNewTaskAssigned] = useState('')
-  const [dismissedSmartTasks, setDismissedSmartTasks] = useState<string[]>([])
+  const [dismissedSmartTasks, setDismissedSmartTasks] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      return JSON.parse(localStorage.getItem('dismissedSmartTasks') || '[]')
+    } catch { return [] }
+  })
   const [propertyMenuOpen, setPropertyMenuOpen] = useState<string | null>(null)
   const [showClaimedModal, setShowClaimedModal] = useState(false)
 
@@ -727,7 +732,13 @@ export default function Dashboard() {
                         defaultValue="todo"
                         onChange={e => {
                           if (e.target.value === 'done' || e.target.value === 'dismiss') {
-                            setDismissedSmartTasks(prev => [...prev, item.id])
+                            setDismissedSmartTasks(prev => {
+                              const updated = [...prev, item.id]
+                              if (typeof window !== 'undefined') {
+                                localStorage.setItem('dismissedSmartTasks', JSON.stringify(updated))
+                              }
+                              return updated
+                            })
                           }
                         }}
                         style={{ fontSize: '11px', padding: '3px 6px', borderRadius: '6px', border: '1px solid rgba(30,58,47,0.2)', background: '#fff', fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' }}
