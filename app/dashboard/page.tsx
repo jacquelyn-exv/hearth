@@ -52,6 +52,9 @@ const DOC_SYSTEMS = [
 ]
 
 function getCondition(sys: any) {
+  if (sys.not_applicable) {
+    return { label: 'N/A', color: '#8A8A82', bg: '#F5F5F5', textColor: '#8A8A82' }
+  }
   if (sys.storm_damage_unaddressed || sys.known_issues) {
     return { label: 'Inspect', color: '#9B2C2C', bg: '#FDECEA', textColor: '#9B2C2C' }
   }
@@ -163,7 +166,6 @@ export default function Dashboard() {
   const [propertyMenuOpen, setPropertyMenuOpen] = useState<string | null>(null)
   const [showClaimedModal, setShowClaimedModal] = useState(false)
 
-  // Document state
   const [showUploadForm, setShowUploadForm] = useState(false)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadName, setUploadName] = useState('')
@@ -322,11 +324,16 @@ export default function Dashboard() {
 
   const startEditSystem = (sys: any) => {
     setSystemEdits({
-      install_year: sys.install_year || '', material: sys.material || '',
-      product_type: sys.product_type || '', ever_replaced: sys.ever_replaced || false,
-      replacement_year: sys.replacement_year || '', under_warranty: sys.under_warranty || false,
+      install_year: sys.install_year || '',
+      material: sys.material || '',
+      product_type: sys.product_type || '',
+      ever_replaced: sys.ever_replaced || false,
+      replacement_year: sys.replacement_year || '',
+      under_warranty: sys.under_warranty || false,
       storm_damage_unaddressed: sys.storm_damage_unaddressed || false,
-      known_issues: sys.known_issues || '', notes: sys.notes || '',
+      known_issues: sys.known_issues || '',
+      notes: sys.notes || '',
+      not_applicable: sys.not_applicable || false,
     })
     setEditingSystemId(sys.id)
   }
@@ -334,20 +341,28 @@ export default function Dashboard() {
   const saveSystem = async (sysId: string) => {
     setSaving(true)
     const effectiveYear = systemEdits.replacement_year || systemEdits.install_year
-    const age = effectiveYear ? new Date().getFullYear() - parseInt(effectiveYear) : null
+    const age = effectiveYear && systemEdits.install_year !== 'unknown'
+      ? new Date().getFullYear() - parseInt(effectiveYear)
+      : null
     const { data: updated } = await supabase.from('home_systems').update({
-      install_year: parseInt(systemEdits.install_year) || null,
-      material: systemEdits.material || null, product_type: systemEdits.product_type || null,
-      ever_replaced: systemEdits.ever_replaced, replacement_year: parseInt(systemEdits.replacement_year) || null,
-      under_warranty: systemEdits.under_warranty, storm_damage_unaddressed: systemEdits.storm_damage_unaddressed,
-      known_issues: systemEdits.known_issues || null, notes: systemEdits.notes || null, age_years: age,
+      install_year: systemEdits.install_year === 'unknown' ? null : parseInt(systemEdits.install_year) || null,
+      material: systemEdits.material || null,
+      product_type: systemEdits.product_type || null,
+      ever_replaced: systemEdits.ever_replaced,
+      replacement_year: parseInt(systemEdits.replacement_year) || null,
+      under_warranty: systemEdits.under_warranty,
+      storm_damage_unaddressed: systemEdits.storm_damage_unaddressed,
+      known_issues: systemEdits.known_issues || null,
+      notes: systemEdits.notes || null,
+      not_applicable: systemEdits.not_applicable || false,
+      age_years: age,
     }).eq('id', sysId).select().single()
     if (updated) setSystems(prev => prev.map(s => s.id === sysId ? updated : s))
 
     const { data: newScore } = await supabase.rpc('recalculate_health_score', { p_home_id: home.id })
     if (newScore) {
-      const { data: updatedScore } = await supabase.from('health_scores').select('*').eq('home_id', home.id).single()
-      if (updatedScore) setScore(updatedScore)
+      const { data: updatedScore } = await supabase.from('health_scores').select('*').eq('home_id', home.id).order('calculated_at', { ascending: false }).limit(1)
+      if (updatedScore && updatedScore.length > 0) setScore(updatedScore[0])
     }
     setEditingSystemId(null)
     setSaving(false)
@@ -372,6 +387,17 @@ export default function Dashboard() {
       status, completed_at: status === 'done' ? new Date().toISOString() : null
     }).eq('id', taskId)
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t))
+
+    if (home?.id) {
+      await supabase.rpc('recalculate_health_score', { p_home_id: home.id })
+      const { data: updatedScore } = await supabase
+        .from('health_scores')
+        .select('*')
+        .eq('home_id', home.id)
+        .order('calculated_at', { ascending: false })
+        .limit(1)
+      if (updatedScore && updatedScore.length > 0) setScore(updatedScore[0])
+    }
   }
 
   const deleteTask = async (taskId: string) => {
@@ -477,12 +503,12 @@ export default function Dashboard() {
     { label: 'Seasonal', icon: '🌿', value: score?.seasonal_readiness_score || 0, insight: score?.seasonal_readiness_score >= 70 ? 'Ready for the season' : 'Check your seasonal to-do list', action: 'View tasks', onClick: () => setActiveTab('overview') },
   ]
 
-  const inputStyle = {
+  const inputStyle: React.CSSProperties = {
     width: '100%', padding: '7px 10px',
     border: '1px solid rgba(30,58,47,0.2)', borderRadius: '6px',
     fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
     outline: 'none', background: '#fff', color: '#1A1A18',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box',
   }
 
   return (
@@ -576,7 +602,6 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Score */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
                 <div style={{ padding: '20px 22px', display: 'flex', alignItems: 'center', gap: '20px', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>
                   <div style={{ width: '72px', height: '72px', flexShrink: 0, position: 'relative' }}>
@@ -615,7 +640,6 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              {/* Home To-Do */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
                 <div style={{ background: '#1E3A2F', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <h4 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '16px', color: '#F8F4EE', fontWeight: 400 }}>Home To-Do</h4>
@@ -691,7 +715,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Systems grid */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden' }}>
                 <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid rgba(30,58,47,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h4 style={{ fontSize: '14px', fontWeight: 500 }}>Home Systems</h4>
@@ -718,9 +741,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Sidebar */}
             <div>
-              {/* Community Score */}
               {communityScore && (
                 <div style={{ background: '#1E3A2F', borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
@@ -762,7 +783,6 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Weather + Storm */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden' }}>
                   {weatherLoading ? (
@@ -824,7 +844,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Home details */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h4 style={{ fontSize: '13px', fontWeight: 500 }}>Home details</h4>
@@ -904,7 +923,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Quick actions */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '18px', marginBottom: '16px' }}>
                 <h4 style={{ fontSize: '13px', fontWeight: 500, marginBottom: '14px' }}>Quick actions</h4>
                 {[
@@ -987,11 +1005,11 @@ export default function Dashboard() {
                       {!isEditing ? (
                         <>
                           <div style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '8px' }}>
-                            {sys.material && <span>{sys.material} · </span>}
-                            {age ? `${age} years old · ${sys.ever_replaced ? `Replaced ${sys.replacement_year}` : `Installed ${sys.install_year}`}` : 'Install year unknown'}
+                            {sys.not_applicable ? 'Not applicable for this home' : sys.material ? `${sys.material} · ` : ''}
+                            {!sys.not_applicable && (age ? `${age} years old · ${sys.ever_replaced ? `Replaced ${sys.replacement_year}` : `Installed ${sys.install_year}`}` : 'Install year unknown')}
                           </div>
                           {sys.known_issues && <div style={{ fontSize: '12px', color: '#8B3A2A', marginBottom: '8px' }}>⚠️ {sys.known_issues}</div>}
-                          {age && (
+                          {age && !sys.not_applicable && (
                             <div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#8A8A82', marginBottom: '4px' }}>
                                 <span>Lifespan used</span><span>{pct}% of ~{lifespan} years</span>
@@ -1007,7 +1025,29 @@ export default function Dashboard() {
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                             <div>
                               <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Year installed</label>
-                              <input value={systemEdits.install_year} onChange={e => setSystemEdits((p: any) => ({ ...p, install_year: e.target.value }))} style={inputStyle} placeholder="e.g. 2018" />
+                              <input
+                                value={systemEdits.install_year === 'unknown' ? '' : systemEdits.install_year}
+                                onChange={e => setSystemEdits((p: any) => ({ ...p, install_year: e.target.value, not_applicable: false }))}
+                                style={{ ...inputStyle, opacity: systemEdits.not_applicable ? 0.4 : 1 }}
+                                placeholder={systemEdits.install_year === 'unknown' ? "Don't know" : 'e.g. 2018'}
+                                disabled={systemEdits.not_applicable}
+                              />
+                              <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSystemEdits((p: any) => ({ ...p, install_year: p.install_year === 'unknown' ? '' : 'unknown', not_applicable: false }))}
+                                  style={{ flex: 1, fontSize: '11px', padding: '4px 6px', borderRadius: '6px', border: '1px solid rgba(30,58,47,0.2)', background: systemEdits.install_year === 'unknown' ? '#1E3A2F' : '#fff', color: systemEdits.install_year === 'unknown' ? '#F8F4EE' : '#8A8A82', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                                >
+                                  Don&apos;t know
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSystemEdits((p: any) => ({ ...p, not_applicable: !p.not_applicable, install_year: '' }))}
+                                  style={{ flex: 1, fontSize: '11px', padding: '4px 6px', borderRadius: '6px', border: '1px solid rgba(30,58,47,0.2)', background: systemEdits.not_applicable ? '#1E3A2F' : '#fff', color: systemEdits.not_applicable ? '#F8F4EE' : '#8A8A82', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                                >
+                                  Not applicable
+                                </button>
+                              </div>
                             </div>
                             {SYSTEM_MATERIALS[sys.system_type] && (
                               <div>
@@ -1103,7 +1143,6 @@ export default function Dashboard() {
               <button onClick={() => setShowUploadForm(!showUploadForm)} style={{ background: '#C47B2B', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>+ Upload</button>
             </div>
 
-            {/* Privacy notice */}
             <div style={{ background: '#EAF2EC', border: '1px solid rgba(61,122,90,0.2)', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
               <span style={{ fontSize: '14px', flexShrink: 0 }}>🔒</span>
               <div style={{ fontSize: '12px', color: '#3D7A5A', lineHeight: 1.6 }}>
@@ -1111,7 +1150,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Expiring soon */}
             {expiringDocs.length > 0 && (
               <div style={{ background: '#FBF0DC', border: '1px solid rgba(196,123,43,0.2)', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
                 <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10', marginBottom: '6px' }}>⚠️ {expiringDocs.length} document{expiringDocs.length > 1 ? 's' : ''} expiring within 90 days</div>
@@ -1122,18 +1160,15 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Upload form */}
             {showUploadForm && (
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '22px', marginBottom: '20px' }}>
                 <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F', marginBottom: '16px' }}>Upload a document</h3>
-
                 <div onClick={() => fileInputRef.current?.click()} style={{ border: '2px dashed rgba(30,58,47,0.2)', borderRadius: '12px', padding: '24px', textAlign: 'center', cursor: 'pointer', background: uploadFile ? '#EAF2EC' : '#F8F4EE', marginBottom: '14px' }}>
                   <div style={{ fontSize: '28px', marginBottom: '6px' }}>{uploadFile ? '✅' : '📎'}</div>
                   <div style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>{uploadFile ? uploadFile.name : 'Click to select a file'}</div>
                   <div style={{ fontSize: '12px', color: '#8A8A82' }}>{uploadFile ? formatSize(uploadFile.size) : 'PDF, JPG, or PNG · Max 10MB'}</div>
                   <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={handleFileSelect} style={{ display: 'none' }} />
                 </div>
-
                 <div style={{ display: 'grid', gap: '10px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Document name *</label>
@@ -1163,11 +1198,9 @@ export default function Dashboard() {
                     <input type="date" value={uploadExpires} onChange={e => setUploadExpires(e.target.value)} style={inputStyle} />
                   </div>
                 </div>
-
                 {uploadError && (
                   <div style={{ background: '#FDECEA', color: '#9B2C2C', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginTop: '12px' }}>{uploadError}</div>
                 )}
-
                 <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
                   <button onClick={handleUpload} disabled={uploading || !uploadFile} style={{ flex: 2, background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '10px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: uploading || !uploadFile ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: uploading || !uploadFile ? 0.6 : 1 }}>
                     {uploading ? 'Uploading...' : 'Upload document'}
@@ -1177,7 +1210,6 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Category filter pills */}
             {docs.length > 0 && (
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
                 <button onClick={() => setDocFilter('all')} style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '12px', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", background: docFilter === 'all' ? '#1E3A2F' : '#fff', color: docFilter === 'all' ? '#F8F4EE' : '#1E3A2F', outline: '1px solid rgba(30,58,47,0.15)' }}>
@@ -1191,7 +1223,6 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Empty state */}
             {docs.length === 0 && !showUploadForm && (
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
                 <div style={{ fontSize: '44px', marginBottom: '14px' }}>📂</div>
@@ -1205,7 +1236,6 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Documents by category */}
             {docsByCategory.map(cat => (
               <div key={cat.key} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px' }}>
                 <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(30,58,47,0.08)', display: 'flex', alignItems: 'center', gap: '10px', background: cat.color }}>
@@ -1248,7 +1278,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Claimed home modal */}
       {showClaimedModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '36px', width: '100%', maxWidth: '480px', textAlign: 'center' }}>
@@ -1284,7 +1313,6 @@ function ReportCardInline({ home, details, systems, jobs, score, onTabChange }: 
 
   return (
     <div>
-      {/* Share bar */}
       <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '12px', padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
         <div style={{ fontSize: '13px', color: '#8A8A82' }}>{home?.address} · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -1299,7 +1327,6 @@ function ReportCardInline({ home, details, systems, jobs, score, onTabChange }: 
         </div>
       </div>
 
-      {/* Hero */}
       <div style={{ background: '#1E3A2F', borderRadius: '16px', padding: '28px 32px', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(196,123,43,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
@@ -1335,7 +1362,6 @@ function ReportCardInline({ home, details, systems, jobs, score, onTabChange }: 
         </div>
       )}
 
-      {/* Score Breakdown */}
       <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>
           <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F' }}>Health Score Breakdown</h3>
@@ -1362,7 +1388,6 @@ function ReportCardInline({ home, details, systems, jobs, score, onTabChange }: 
         ))}
       </div>
 
-      {/* Systems */}
       <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>
           <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F' }}>System Condition</h3>
@@ -1382,8 +1407,10 @@ function ReportCardInline({ home, details, systems, jobs, score, onTabChange }: 
                   <span style={{ fontSize: '10px', fontWeight: 500, padding: '1px 6px', borderRadius: '20px', background: condition.bg, color: condition.textColor }}>{condition.label}</span>
                   {sys.ever_replaced && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>Replaced {sys.replacement_year}</span>}
                 </div>
-                <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '4px' }}>{sys.material && `${sys.material} · `}{sysAge ? `${sysAge}yr old` : 'Year unknown'}</div>
-                {sysAge !== null && (
+                <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '4px' }}>
+                  {sys.not_applicable ? 'Not applicable' : `${sys.material ? `${sys.material} · ` : ''}${sysAge ? `${sysAge}yr old` : 'Year unknown'}`}
+                </div>
+                {sysAge !== null && !sys.not_applicable && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ flex: 1, height: '4px', background: '#EDE8E0', borderRadius: '2px' }}>
                       <div style={{ width: `${pct}%`, height: '100%', background: condition.color, borderRadius: '2px' }} />
@@ -1397,7 +1424,6 @@ function ReportCardInline({ home, details, systems, jobs, score, onTabChange }: 
         })}
       </div>
 
-      {/* Contractor History */}
       {jobs.length > 0 && (
         <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden', marginBottom: '20px' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(30,58,47,0.08)' }}>
@@ -1418,7 +1444,6 @@ function ReportCardInline({ home, details, systems, jobs, score, onTabChange }: 
         </div>
       )}
 
-      {/* Buyers / Sellers */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
         {[
           { emoji: '🏠', title: 'For Buyers', color: '#3D7A5A', items: ['Request maintenance records before closing', 'Flag systems past 80% of expected lifespan', 'Use deferred maintenance as negotiation leverage', 'Ask for contractor warranties on recent work', 'Get independent inspection of flagged systems'] },
