@@ -78,13 +78,17 @@ function getSmartTasks(systems: any[], score: any, weather: any): any[] {
   const isSummer = month >= 5 && month <= 7
 
   if (weather?.recentStorm) {
-    const systemList = weather.recentStorm.systems.map((s: string) => s.replace(/_/g, ' ')).join(', ')
-    tasks.push({
-      id: 'storm-event',
-      title: `Walk your property after the ${weather.recentStorm.label.toLowerCase()}`,
-      description: `Recorded ${new Date(weather.recentStorm.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}. Check these areas: ${systemList}. Document anything with photos before calling anyone.`,
-      source: 'smart', status: 'todo', system_type: null, urgency: 'high'
-    })
+    const THREE_WEEKS_MS = 21 * 24 * 60 * 60 * 1000
+    const stormAge = Date.now() - new Date(weather.recentStorm.date).getTime()
+    if (stormAge < THREE_WEEKS_MS) {
+      const systemList = weather.recentStorm.systems.map((s: string) => s.replace(/_/g, ' ')).join(', ')
+      tasks.push({
+        id: 'storm-event',
+        title: `Walk your property after the ${weather.recentStorm.label.toLowerCase()}`,
+        description: `Recorded ${new Date(weather.recentStorm.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}. Check these areas: ${systemList}. Document anything with photos before calling anyone.`,
+        source: 'smart', status: 'todo', system_type: null, urgency: 'high'
+      })
+    }
   }
 
   const criticalSystems = systems
@@ -158,11 +162,14 @@ export default function Dashboard() {
   const [weather, setWeather] = useState<any>(null)
   const [weatherLoading, setWeatherLoading] = useState(true)
   const [showStormDetail, setShowStormDetail] = useState(false)
+  const [showStormHistory, setShowStormHistory] = useState(false)
+  const [stormHistory, setStormHistory] = useState<any[]>([])
   const [showAddTask, setShowAddTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskDesc, setNewTaskDesc] = useState('')
   const [newTaskDue, setNewTaskDue] = useState('')
   const [newTaskAssigned, setNewTaskAssigned] = useState('')
+  const [dismissedSmartTasks, setDismissedSmartTasks] = useState<string[]>([])
   const [propertyMenuOpen, setPropertyMenuOpen] = useState<string | null>(null)
   const [showClaimedModal, setShowClaimedModal] = useState(false)
 
@@ -199,6 +206,17 @@ export default function Dashboard() {
     setTasks(taskData || [])
     setMembers(memberData || [])
     setDocs(docData || [])
+
+    const { data: homeZipData } = await supabase.from('homes').select('zip').eq('id', homeId).single()
+    if (homeZipData?.zip) {
+      const { data: storms } = await supabase
+        .from('storm_events')
+        .select('*')
+        .eq('zip', homeZipData.zip)
+        .order('event_date', { ascending: false })
+        .limit(20)
+      setStormHistory(storms || [])
+    }
   }
 
   useEffect(() => {
@@ -250,6 +268,7 @@ export default function Dashboard() {
     setSystems([]); setJobs([]); setTasks([]); setScore(null)
     setDetails(null); setMembers([]); setDocs([])
     setWeather(null); setWeatherLoading(true); setLoading(true)
+    setStormHistory([])
 
     if (selectedHome.city || selectedHome.zip) {
       fetch(`/api/weather?city=${encodeURIComponent(selectedHome.city || '')}&state=${encodeURIComponent(selectedHome.state || '')}&zip=${encodeURIComponent(selectedHome.zip || '')}`)
@@ -482,7 +501,7 @@ export default function Dashboard() {
   const alertSystems = systems.filter(s => ['Inspect', 'Priority'].includes(getCondition(s).label))
   const firstName = user?.email?.split('@')[0]?.split('.')[0]
   const displayName = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1) : 'there'
-  const smartTasks = getSmartTasks(systems, score, weather)
+  const smartTasks = getSmartTasks(systems, score, weather).filter(t => !dismissedSmartTasks.includes(t.id))
   const customTasks = tasks.filter(t => t.status !== 'done')
   const doneTasks = tasks.filter(t => t.status === 'done')
   const communityLevel = getCommunityLevel(communityScore?.total_points || 0)
@@ -495,6 +514,10 @@ export default function Dashboard() {
   const docsByCategory = DOC_CATEGORIES.map(cat => ({
     ...cat, docs: filteredDocs.filter(d => d.category === cat.key)
   })).filter(cat => cat.docs.length > 0)
+
+  const THREE_WEEKS_MS = 21 * 24 * 60 * 60 * 1000
+  const showActiveStorm = weather?.recentStorm &&
+    (Date.now() - new Date(weather.recentStorm.date).getTime()) < THREE_WEEKS_MS
 
   const scoreDetails = [
     { label: 'Systems', icon: '🏠', value: score?.system_risk_score || 0, insight: score?.system_risk_score >= 80 ? 'All systems in good shape' : score?.system_risk_score >= 60 ? 'A few systems to watch' : 'Systems need attention', action: 'View systems', onClick: () => setActiveTab('systems') },
@@ -696,9 +719,24 @@ export default function Dashboard() {
                       <div style={{ fontSize: '14px', marginBottom: '2px' }}>{item.title}</div>
                       <div style={{ fontSize: '12px', color: '#8A8A82' }}>{item.description}</div>
                     </div>
-                    <span style={{ fontSize: '10px', fontWeight: 500, padding: '3px 8px', borderRadius: '20px', flexShrink: 0, background: item.urgency === 'high' ? '#FDECEA' : item.urgency === 'medium' ? '#FBF0DC' : '#EAF2EC', color: item.urgency === 'high' ? '#9B2C2C' : item.urgency === 'medium' ? '#7A4A10' : '#3D7A5A' }}>
-                      {item.source === 'smart' ? 'Smart' : 'Seasonal'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                      <span style={{ fontSize: '10px', fontWeight: 500, padding: '3px 8px', borderRadius: '20px', background: item.urgency === 'high' ? '#FDECEA' : item.urgency === 'medium' ? '#FBF0DC' : '#EAF2EC', color: item.urgency === 'high' ? '#9B2C2C' : item.urgency === 'medium' ? '#7A4A10' : '#3D7A5A' }}>
+                        {item.source === 'smart' ? 'Smart' : 'Seasonal'}
+                      </span>
+                      <select
+                        defaultValue="todo"
+                        onChange={e => {
+                          if (e.target.value === 'done' || e.target.value === 'dismiss') {
+                            setDismissedSmartTasks(prev => [...prev, item.id])
+                          }
+                        }}
+                        style={{ fontSize: '11px', padding: '3px 6px', borderRadius: '6px', border: '1px solid rgba(30,58,47,0.2)', background: '#fff', fontFamily: "'DM Sans', sans-serif", cursor: 'pointer' }}
+                      >
+                        <option value="todo">To do</option>
+                        <option value="done">Done ✓</option>
+                        <option value="dismiss">Dismiss</option>
+                      </select>
+                    </div>
                   </div>
                 ))}
 
@@ -809,7 +847,8 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {weather?.recentStorm && (
+                {/* Active storm alert — only shows within 3 weeks */}
+                {showActiveStorm && (
                   <div style={{ background: '#FBF0DC', border: '1px solid rgba(196,123,43,0.2)', borderRadius: '12px', padding: '14px 16px', marginTop: '10px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10', marginBottom: '3px' }}>⚠️ {weather.recentStorm.label} recorded</div>
                     <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '6px' }}>
@@ -838,6 +877,49 @@ export default function Dashboard() {
                           <div style={{ fontSize: '11px', color: '#3D7A5A', lineHeight: 1.6 }}>💡 <strong>Insurance tip:</strong> Document everything with photos before any repairs. Contact your insurer before hiring a contractor.</div>
                         </div>
                         <button onClick={() => window.location.href = '/log'} style={{ marginTop: '10px', width: '100%', background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Log an inspection when ready →</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Storm history — always available */}
+                {stormHistory.length > 0 && (
+                  <div style={{ marginTop: '10px' }}>
+                    <button
+                      onClick={() => setShowStormHistory(!showStormHistory)}
+                      style={{ width: '100%', background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: showStormHistory ? '10px 10px 0 0' : '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                    >
+                      <span style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F' }}>🌩️ Storm history · {stormHistory.length} event{stormHistory.length !== 1 ? 's' : ''}</span>
+                      <span style={{ fontSize: '11px', color: '#8A8A82' }}>{showStormHistory ? '▲ Hide' : '▼ Show'}</span>
+                    </button>
+                    {showStormHistory && (
+                      <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+                        {stormHistory.map((storm, i) => {
+                          const daysAgo = Math.round((Date.now() - new Date(storm.event_date).getTime()) / (1000 * 60 * 60 * 24))
+                          return (
+                            <div key={storm.id} style={{ padding: '10px 14px', borderBottom: i < stormHistory.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                                <div>
+                                  <div style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F', marginBottom: '2px' }}>{storm.notes || storm.event_type.replace(/_/g, ' ')}</div>
+                                  <div style={{ fontSize: '11px', color: '#8A8A82' }}>
+                                    {new Date(storm.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    {storm.max_windspeed > 0 && ` · ${Math.round(storm.max_windspeed)} mph`}
+                                  </div>
+                                  {storm.affected_systems?.length > 0 && (
+                                    <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                      {storm.affected_systems.map((s: string) => (
+                                        <span key={s} style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '20px', background: '#F5F5F5', color: '#8A8A82', textTransform: 'capitalize' }}>{s.replace(/_/g, ' ')}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '20px', flexShrink: 0, background: daysAgo <= 21 ? '#FBF0DC' : '#F5F5F5', color: daysAgo <= 21 ? '#7A4A10' : '#8A8A82', fontWeight: 500 }}>
+                                  {daysAgo === 0 ? 'Today' : daysAgo === 1 ? '1 day ago' : `${daysAgo}d ago`}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -1005,8 +1087,7 @@ export default function Dashboard() {
                       {!isEditing ? (
                         <>
                           <div style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '8px' }}>
-                            {sys.not_applicable ? 'Not applicable for this home' : sys.material ? `${sys.material} · ` : ''}
-                            {!sys.not_applicable && (age ? `${age} years old · ${sys.ever_replaced ? `Replaced ${sys.replacement_year}` : `Installed ${sys.install_year}`}` : 'Install year unknown')}
+                            {sys.not_applicable ? 'Not applicable for this home' : `${sys.material ? `${sys.material} · ` : ''}${age ? `${age} years old · ${sys.ever_replaced ? `Replaced ${sys.replacement_year}` : `Installed ${sys.install_year}`}` : 'Install year unknown'}`}
                           </div>
                           {sys.known_issues && <div style={{ fontSize: '12px', color: '#8B3A2A', marginBottom: '8px' }}>⚠️ {sys.known_issues}</div>}
                           {age && !sys.not_applicable && (
