@@ -5,27 +5,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const SYSTEMS = [
-  'Deck / Patio',
-  'Doors',
-  'Driveway',
-  'Electrical',
-  'Fencing',
-  'Gutters',
-  'HVAC',
-  'Landscaping',
-  'Plumbing',
-  'Roof',
-  'Siding',
-  'Sump Pump',
-  'Water Heater',
-  'Windows',
-  'Other',
+  'Deck / Patio', 'Doors', 'Driveway', 'Electrical', 'Fencing',
+  'Gutters', 'HVAC', 'Landscaping', 'Plumbing', 'Roof',
+  'Siding', 'Sump Pump', 'Water Heater', 'Windows', 'Other',
 ]
 
 const PRESET_TAGS = ['Quality work', 'Fair pricing', 'On time', 'Clean', 'Overpriced', 'Late', 'Upsell attempt', 'Would hire again']
-
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-
 const YEARS = Array.from({ length: 20 }, (_, i) => (new Date().getFullYear() - i).toString())
 
 export default function ContractorLog() {
@@ -35,6 +21,7 @@ export default function ContractorLog() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [editingJobId, setEditingJobId] = useState<string | null>(null)
 
   const [company, setCompany] = useState('')
   const [system, setSystem] = useState('')
@@ -76,22 +63,52 @@ export default function ContractorLog() {
 
   const addCustomTag = () => {
     const tag = customTagInput.trim()
-    if (tag && !selectedTags.includes(tag)) {
-      setSelectedTags(prev => [...prev, tag])
-    }
+    if (tag && !selectedTags.includes(tag)) setSelectedTags(prev => [...prev, tag])
     setCustomTagInput('')
   }
 
-  const removeTag = (tag: string) => {
-    setSelectedTags(prev => prev.filter(t => t !== tag))
-  }
+  const removeTag = (tag: string) => setSelectedTags(prev => prev.filter(t => t !== tag))
 
   const resetForm = () => {
     setCompany(''); setSystem(''); setSystemOther(''); setDescription('')
     setJobMonth(''); setJobYear(new Date().getFullYear().toString())
     setQuotedPrice(''); setFinalPrice(''); setRating(0)
     setWouldRefer('yes'); setSelectedTags([]); setCustomTagInput('')
-    setNotes(''); setIsShared(true)
+    setNotes(''); setIsShared(true); setEditingJobId(null)
+  }
+
+  const openEditModal = (job: any) => {
+    setEditingJobId(job.id)
+    setCompany(job.company_name || '')
+    // Convert system_type back to display format
+    const sysDisplay = SYSTEMS.find(s =>
+      s.toLowerCase().replace(/ \/ /g, '_').replace(/ /g, '_') === job.system_type ||
+      s.toLowerCase().replace(/ /g, '_') === job.system_type
+    )
+    if (sysDisplay) {
+      setSystem(sysDisplay)
+      setSystemOther('')
+    } else {
+      setSystem('Other')
+      setSystemOther(job.system_type?.replace(/_/g, ' ') || '')
+    }
+    setDescription(job.service_description || '')
+    if (job.job_date) {
+      const d = new Date(job.job_date)
+      setJobMonth(MONTHS[d.getMonth()])
+      setJobYear(d.getFullYear().toString())
+    } else {
+      setJobMonth('')
+      setJobYear(new Date().getFullYear().toString())
+    }
+    setQuotedPrice(job.quoted_price ? String(job.quoted_price) : '')
+    setFinalPrice(job.final_price ? String(job.final_price) : '')
+    setRating(job.quality_rating || 0)
+    setWouldRefer(job.would_refer || 'yes')
+    setSelectedTags(job.tags || [])
+    setNotes(job.notes || '')
+    setIsShared(job.is_shared ?? true)
+    setShowModal(true)
   }
 
   const saveJob = async () => {
@@ -104,10 +121,7 @@ export default function ContractorLog() {
       ? `${jobYear}-${(MONTHS.indexOf(jobMonth) + 1).toString().padStart(2, '0')}-01`
       : null
 
-    const { data, error } = await supabase.from('contractor_jobs').insert({
-      home_id: home.id,
-      user_id: user.id,
-      zip: home.zip || null,
+    const payload = {
       company_name: company,
       system_type: systemValue,
       service_description: description,
@@ -119,21 +133,40 @@ export default function ContractorLog() {
       tags: selectedTags,
       notes,
       is_shared: isShared,
-      shared_radius: isShared ? 'zip' : null
-    }).select().single()
-
-    if (!error && data) {
-      setJobs(prev => [data, ...prev])
-      // Recalculate health score
-      await fetch('/api/recalculate-score', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ home_id: home.id })
-      })
-      setShowModal(false)
-      resetForm()
+      shared_radius: isShared ? 'zip' : null,
+      zip: home.zip || null,
     }
+
+    if (editingJobId) {
+      // Update existing job
+      const { data, error } = await supabase
+        .from('contractor_jobs')
+        .update(payload)
+        .eq('id', editingJobId)
+        .select().single()
+      if (!error && data) {
+        setJobs(prev => prev.map(j => j.id === editingJobId ? data : j))
+      }
+    } else {
+      // Insert new job
+      const { data, error } = await supabase
+        .from('contractor_jobs')
+        .insert({ home_id: home.id, user_id: user.id, ...payload })
+        .select().single()
+      if (!error && data) {
+        setJobs(prev => [data, ...prev])
+      }
+    }
+
+    await fetch('/api/recalculate-score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ home_id: home.id })
+    })
+
     setSaving(false)
+    setShowModal(false)
+    resetForm()
   }
 
   const toggleShare = async (jobId: string, currentShared: boolean) => {
@@ -141,6 +174,12 @@ export default function ContractorLog() {
       .update({ is_shared: !currentShared, shared_radius: !currentShared ? 'zip' : null })
       .eq('id', jobId)
     if (!error) setJobs(prev => prev.map(j => j.id === jobId ? { ...j, is_shared: !currentShared } : j))
+  }
+
+  const deleteJob = async (jobId: string) => {
+    if (!window.confirm('Delete this job? This cannot be undone.')) return
+    const { error } = await supabase.from('contractor_jobs').delete().eq('id', jobId)
+    if (!error) setJobs(prev => prev.filter(j => j.id !== jobId))
   }
 
   const inputStyle = {
@@ -160,10 +199,8 @@ export default function ContractorLog() {
 
   return (
     <main style={{ background: '#F8F4EE', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-      {/* Nav */}
       <Nav />
 
-      {/* Header */}
       <div style={{ background: '#1E3A2F', padding: '28px 28px 32px' }}>
         <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(248,244,238,0.45)', marginBottom: '4px' }}>My Records</div>
         <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '26px', color: '#F8F4EE', fontWeight: 400, marginBottom: '16px' }}>Contractor Log</div>
@@ -175,7 +212,6 @@ export default function ContractorLog() {
         }}>+ Log a job</button>
       </div>
 
-      {/* Job list */}
       <div style={{ padding: '24px 28px 48px', maxWidth: '900px', margin: '0 auto' }}>
         {jobs.length === 0 ? (
           <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
@@ -201,19 +237,33 @@ export default function ContractorLog() {
                         ))}
                       </div>
                     )}
-                    <button
-                      onClick={() => toggleShare(job.id, job.is_shared)}
-                      style={{
-                        background: job.is_shared ? '#EAF2EC' : '#F5F5F5',
-                        border: `1px solid ${job.is_shared ? 'rgba(30,58,47,0.2)' : 'rgba(30,58,47,0.1)'}`,
-                        color: job.is_shared ? '#3D7A5A' : '#8A8A82',
-                        fontSize: '11px', fontWeight: 500, padding: '4px 10px',
-                        borderRadius: '20px', cursor: 'pointer',
-                        fontFamily: "'DM Sans', sans-serif"
-                      }}
-                    >
-                      {job.is_shared ? '✓ Shared with community' : 'Share with neighbors'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => toggleShare(job.id, job.is_shared)}
+                        style={{
+                          background: job.is_shared ? '#EAF2EC' : '#F5F5F5',
+                          border: `1px solid ${job.is_shared ? 'rgba(30,58,47,0.2)' : 'rgba(30,58,47,0.1)'}`,
+                          color: job.is_shared ? '#3D7A5A' : '#8A8A82',
+                          fontSize: '11px', fontWeight: 500, padding: '4px 10px',
+                          borderRadius: '20px', cursor: 'pointer',
+                          fontFamily: "'DM Sans', sans-serif"
+                        }}
+                      >
+                        {job.is_shared ? '✓ Shared with community' : 'Share with neighbors'}
+                      </button>
+                      <button
+                        onClick={() => openEditModal(job)}
+                        style={{ background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#1E3A2F', fontSize: '11px', fontWeight: 500, padding: '4px 10px', borderRadius: '20px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteJob(job.id)}
+                        style={{ background: 'none', border: '1px solid rgba(155,44,44,0.2)', color: '#9B2C2C', fontSize: '11px', fontWeight: 500, padding: '4px 10px', borderRadius: '20px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontSize: '16px', fontWeight: 500, color: '#1E3A2F', marginBottom: '4px' }}>
@@ -236,24 +286,22 @@ export default function ContractorLog() {
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-              <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F' }}>Log a job</h3>
+              <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F' }}>
+                {editingJobId ? 'Edit job' : 'Log a job'}
+              </h3>
               <button onClick={() => { setShowModal(false); resetForm() }} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#8A8A82' }}>×</button>
             </div>
 
             <div style={{ display: 'grid', gap: '16px' }}>
-
-              {/* Company */}
               <div>
                 <label style={labelStyle}>Company name</label>
                 <input value={company} onChange={e => setCompany(e.target.value)} style={inputStyle} placeholder="e.g. Smith Roofing" />
               </div>
 
-              {/* System */}
               <div>
                 <label style={labelStyle}>System / Area</label>
                 <select value={system} onChange={e => setSystem(e.target.value)} style={inputStyle}>
@@ -268,13 +316,11 @@ export default function ContractorLog() {
                 </div>
               )}
 
-              {/* Description */}
               <div>
                 <label style={labelStyle}>Description of work</label>
                 <input value={description} onChange={e => setDescription(e.target.value)} style={inputStyle} placeholder="e.g. Full roof replacement, architectural shingles" />
               </div>
 
-              {/* Date */}
               <div>
                 <label style={labelStyle}>Job date</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -288,7 +334,6 @@ export default function ContractorLog() {
                 </div>
               </div>
 
-              {/* Prices */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={labelStyle}>Quoted price</label>
@@ -300,22 +345,16 @@ export default function ContractorLog() {
                 </div>
               </div>
 
-              {/* Rating */}
               <div>
                 <label style={labelStyle}>Quality rating</label>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {[1, 2, 3, 4, 5].map(n => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setRating(n)}
-                      style={{
-                        flex: 1, padding: '10px 0', borderRadius: '8px', fontSize: '20px',
-                        border: `2px solid ${rating >= n ? '#C47B2B' : 'rgba(30,58,47,0.15)'}`,
-                        background: rating >= n ? '#FBF0DC' : '#fff',
-                        cursor: 'pointer', lineHeight: 1
-                      }}
-                    >★</button>
+                    <button key={n} type="button" onClick={() => setRating(n)} style={{
+                      flex: 1, padding: '10px 0', borderRadius: '8px', fontSize: '20px',
+                      border: `2px solid ${rating >= n ? '#C47B2B' : 'rgba(30,58,47,0.15)'}`,
+                      background: rating >= n ? '#FBF0DC' : '#fff',
+                      cursor: 'pointer', lineHeight: 1
+                    }}>★</button>
                   ))}
                 </div>
                 {rating > 0 && (
@@ -325,7 +364,6 @@ export default function ContractorLog() {
                 )}
               </div>
 
-              {/* Would refer */}
               <div>
                 <label style={labelStyle}>Would you refer them?</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -341,7 +379,6 @@ export default function ContractorLog() {
                 </div>
               </div>
 
-              {/* Tags */}
               <div>
                 <label style={labelStyle}>Tags</label>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
@@ -359,11 +396,7 @@ export default function ContractorLog() {
                 {selectedTags.filter(t => !PRESET_TAGS.includes(t)).length > 0 && (
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
                     {selectedTags.filter(t => !PRESET_TAGS.includes(t)).map(tag => (
-                      <span key={tag} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                        padding: '4px 10px', borderRadius: '20px', fontSize: '12px',
-                        background: '#1E3A2F', color: '#F8F4EE'
-                      }}>
+                      <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', background: '#1E3A2F', color: '#F8F4EE' }}>
                         {tag}
                         <button type="button" onClick={() => removeTag(tag)} style={{ background: 'none', border: 'none', color: 'rgba(248,244,238,0.7)', cursor: 'pointer', padding: '0', fontSize: '14px', lineHeight: 1 }}>×</button>
                       </span>
@@ -372,45 +405,20 @@ export default function ContractorLog() {
                 )}
 
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    value={customTagInput}
-                    onChange={e => setCustomTagInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag() } }}
-                    style={{ ...inputStyle, flex: 1 }}
-                    placeholder="Add your own tag..."
-                  />
-                  <button type="button" onClick={addCustomTag} style={{
-                    background: '#1E3A2F', color: '#F8F4EE', border: 'none',
-                    padding: '10px 16px', borderRadius: '8px', fontSize: '13px',
-                    cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", flexShrink: 0
-                  }}>Add</button>
+                  <input value={customTagInput} onChange={e => setCustomTagInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag() } }} style={{ ...inputStyle, flex: 1 }} placeholder="Add your own tag..." />
+                  <button type="button" onClick={addCustomTag} style={{ background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '10px 16px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", flexShrink: 0 }}>Add</button>
                 </div>
               </div>
 
-              {/* Notes */}
               <div>
                 <label style={labelStyle}>Notes</label>
-                <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                  style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }}
-                  placeholder="Any additional details..." />
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }} placeholder="Any additional details..." />
               </div>
 
-              {/* Share toggle */}
-              <div
-                style={{ background: '#F8F4EE', borderRadius: '10px', padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}
-                onClick={() => setIsShared(!isShared)}
-              >
+              <div style={{ background: '#F8F4EE', borderRadius: '10px', padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }} onClick={() => setIsShared(!isShared)}>
                 <div style={{ position: 'relative', width: '36px', height: '20px', flexShrink: 0, marginTop: '2px' }}>
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    background: isShared ? '#3D7A5A' : '#D4C9B8',
-                    borderRadius: '10px', transition: '0.2s'
-                  }} />
-                  <div style={{
-                    position: 'absolute', width: '14px', height: '14px',
-                    background: '#fff', borderRadius: '50%', top: '3px',
-                    left: isShared ? '19px' : '3px', transition: '0.2s'
-                  }} />
+                  <div style={{ position: 'absolute', inset: 0, background: isShared ? '#3D7A5A' : '#D4C9B8', borderRadius: '10px', transition: '0.2s' }} />
+                  <div style={{ position: 'absolute', width: '14px', height: '14px', background: '#fff', borderRadius: '50%', top: '3px', left: isShared ? '19px' : '3px', transition: '0.2s' }} />
                 </div>
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: 500, color: '#1A1A18', marginBottom: '2px' }}>
@@ -424,16 +432,10 @@ export default function ContractorLog() {
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
-              <button type="button" onClick={() => { setShowModal(false); resetForm() }} style={{
-                flex: 1, background: 'none', border: '1px solid rgba(30,58,47,0.2)',
-                color: '#1E3A2F', padding: '12px', borderRadius: '10px',
-                fontSize: '14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-              }}>Cancel</button>
-              <button type="button" onClick={saveJob} disabled={saving} style={{
-                flex: 2, background: '#C47B2B', color: '#fff',
-                border: 'none', padding: '12px', borderRadius: '10px',
-                fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif"
-              }}>{saving ? 'Saving...' : 'Save job'}</button>
+              <button type="button" onClick={() => { setShowModal(false); resetForm() }} style={{ flex: 1, background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#1E3A2F', padding: '12px', borderRadius: '10px', fontSize: '14px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
+              <button type="button" onClick={saveJob} disabled={saving} style={{ flex: 2, background: '#C47B2B', color: '#fff', border: 'none', padding: '12px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                {saving ? 'Saving...' : editingJobId ? 'Save changes' : 'Save job'}
+              </button>
             </div>
           </div>
         </div>
