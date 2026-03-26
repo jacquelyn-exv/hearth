@@ -529,8 +529,10 @@ export default function Dashboard() {
   })).filter(cat => cat.docs.length > 0)
 
   const THREE_WEEKS_MS = 21 * 24 * 60 * 60 * 1000
-  const showActiveStorm = weather?.recentStorm &&
-    (Date.now() - new Date(weather.recentStorm.date).getTime()) < THREE_WEEKS_MS
+  const stormDate = weather?.recentStorm ? new Date(weather.recentStorm.date) : null
+  const stormIsFuture = stormDate ? stormDate.getTime() > Date.now() : false
+  const showActiveStorm = stormDate !== null &&
+    (stormIsFuture || (Date.now() - stormDate.getTime()) < THREE_WEEKS_MS)
 
   const scoreDetails = [
     { label: 'Systems', icon: '🏠', value: score?.system_risk_score || 0, insight: score?.system_risk_score >= 80 ? 'All systems in good shape' : score?.system_risk_score >= 60 ? 'A few systems to watch' : 'Systems need attention', action: 'View systems', onClick: () => setActiveTab('systems') },
@@ -872,9 +874,11 @@ export default function Dashboard() {
                 {/* Active storm alert — only shows within 3 weeks */}
                 {showActiveStorm && (
                   <div style={{ background: '#FBF0DC', border: '1px solid rgba(196,123,43,0.2)', borderRadius: '12px', padding: '14px 16px', marginTop: '10px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10', marginBottom: '3px' }}>⚠️ {weather.recentStorm.label} recorded</div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10', marginBottom: '3px' }}>
+                      {stormIsFuture ? '🌨️ Incoming storm forecast' : `⚠️ ${weather.recentStorm.label} recorded`}
+                    </div>
                     <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '6px' }}>
-                      {new Date(weather.recentStorm.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      {stormIsFuture ? `Expected ${new Date(weather.recentStorm.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}` : new Date(weather.recentStorm.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                       {weather.recentStorm.windspeed > 0 && ` · ${Math.round(weather.recentStorm.windspeed)} mph winds`}
                     </div>
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '10px' }}>
@@ -918,6 +922,7 @@ export default function Dashboard() {
                       <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
                         {stormHistory.map((storm, i) => {
                           const daysAgo = Math.round((Date.now() - new Date(storm.event_date).getTime()) / (1000 * 60 * 60 * 24))
+                          const isForecast = daysAgo < 0
                           return (
                             <div key={storm.id} style={{ padding: '10px 14px', borderBottom: i < stormHistory.length - 1 ? '1px solid rgba(30,58,47,0.06)' : 'none' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
@@ -935,8 +940,8 @@ export default function Dashboard() {
                                     </div>
                                   )}
                                 </div>
-                                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '20px', flexShrink: 0, background: daysAgo <= 21 ? '#FBF0DC' : '#F5F5F5', color: daysAgo <= 21 ? '#7A4A10' : '#8A8A82', fontWeight: 500 }}>
-                                  {daysAgo === 0 ? 'Today' : daysAgo === 1 ? '1 day ago' : `${daysAgo}d ago`}
+                                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '20px', flexShrink: 0, background: isForecast ? '#E6F2F8' : daysAgo <= 21 ? '#FBF0DC' : '#F5F5F5', color: isForecast ? '#3A7CA8' : daysAgo <= 21 ? '#7A4A10' : '#8A8A82', fontWeight: 500 }}>
+                                  {isForecast ? `In ${Math.abs(daysAgo)}d` : daysAgo === 0 ? 'Today' : daysAgo === 1 ? '1 day ago' : `${daysAgo}d ago`}
                                 </span>
                               </div>
                             </div>
