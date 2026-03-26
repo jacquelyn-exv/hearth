@@ -506,7 +506,7 @@ export default function Dashboard() {
   const firstName = user?.email?.split('@')[0]?.split('.')[0]
   const displayName = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1) : 'there'
   const smartTasks = getSmartTasks(systems, score, weather).filter(t => !dismissedSmartTasks.includes(t.id))
-  const customTasks = tasks.filter(t => t.status !== 'done')
+  const customTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'dismissed' && t.source !== 'smart' && t.source !== 'seasonal')
   const doneTasks = tasks.filter(t => t.status === 'done')
   const communityLevel = getCommunityLevel(communityScore?.total_points || 0)
   const expiringDocs = docs.filter(d => {
