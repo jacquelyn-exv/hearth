@@ -169,12 +169,7 @@ export default function Dashboard() {
   const [newTaskDesc, setNewTaskDesc] = useState('')
   const [newTaskDue, setNewTaskDue] = useState('')
   const [newTaskAssigned, setNewTaskAssigned] = useState('')
-  const [dismissedSmartTasks, setDismissedSmartTasks] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return []
-    try {
-      return JSON.parse(localStorage.getItem('dismissedSmartTasks') || '[]')
-    } catch { return [] }
-  })
+  const [dismissedSmartTasks, setDismissedSmartTasks] = useState<string[]>([])
   const [propertyMenuOpen, setPropertyMenuOpen] = useState<string | null>(null)
   const [showClaimedModal, setShowClaimedModal] = useState(false)
 
@@ -209,6 +204,10 @@ export default function Dashboard() {
     setJobs(jobData || [])
     if (scoreData && scoreData.length > 0) setScore(scoreData[0])
     setTasks(taskData || [])
+  const dismissedIds = (taskData || [])
+      .filter((t: any) => t.status === 'dismissed')
+      .map((t: any) => t.title)
+    setDismissedSmartTasks(dismissedIds)
     setMembers(memberData || [])
     setDocs(docData || [])
 
@@ -730,14 +729,17 @@ export default function Dashboard() {
                       </span>
                       <select
                         defaultValue="todo"
-                        onChange={e => {
+                        onChange={async e => {
                           if (e.target.value === 'done' || e.target.value === 'dismiss') {
-                            setDismissedSmartTasks(prev => {
-                              const updated = [...prev, item.id]
-                              if (typeof window !== 'undefined') {
-                                localStorage.setItem('dismissedSmartTasks', JSON.stringify(updated))
-                              }
-                              return updated
+                            setDismissedSmartTasks(prev => [...prev, item.id])
+                            const { data: { user: u } } = await supabase.auth.getUser()
+                            await supabase.from('home_tasks').insert({
+                              home_id: home.id,
+                              created_by: u!.id,
+                              title: item.id,
+                              source: item.source,
+                              status: 'dismissed',
+                              dismissed_at: new Date().toISOString(),
                             })
                           }
                         }}
