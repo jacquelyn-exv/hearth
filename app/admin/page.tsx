@@ -97,7 +97,7 @@ export default function Admin() {
     const { data: authUsers } = await supabase.rpc('get_all_users_admin')
     const authUserMap: Record<string, any> = {}
     ;(authUsers || []).forEach((u: any) => {
-      authUserMap[u.user_id] = { email: u.email, created_at: u.created_at }
+      authUserMap[u.user_id] = { email: u.user_email, created_at: u.created_at }
     })
 
     // ── Funnel analysis ──────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ export default function Admin() {
       if (!userMap[u.user_id]) {
         userMap[u.user_id] = {
           user_id: u.user_id,
-          email: u.email,
+          email: u.user_email,
           signedUp: u.created_at,
           homes: [],
           hasHome: false,
