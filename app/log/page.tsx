@@ -107,6 +107,7 @@ export default function ContractorLog() {
     const { data, error } = await supabase.from('contractor_jobs').insert({
       home_id: home.id,
       user_id: user.id,
+      zip: home.zip || null,
       company_name: company,
       system_type: systemValue,
       service_description: description,
