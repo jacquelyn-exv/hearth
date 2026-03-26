@@ -8,7 +8,7 @@ export async function POST(request: Request) {
 
   try {
     await resend.emails.send({
-      from: 'Hearth <hello@hearthome.co>',
+      from: 'Hearth <hello@homehearth.app>',
       to: email,
       subject: 'Welcome to Hearth — your home is in good hands',
       html: `
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
                       <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                           <td align="center">
-                            <a href="https://hearth-navy.vercel.app/dashboard" style="display:inline-block;background:#1E3A2F;color:#F8F4EE;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:500;font-family:system-ui,sans-serif;">
+                            <a href="https://homehearth.app/dashboard" style="display:inline-block;background:#1E3A2F;color:#F8F4EE;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:500;font-family:system-ui,sans-serif;">
                               Go to my dashboard →
                             </a>
                           </td>
@@ -81,8 +81,8 @@ export async function POST(request: Request) {
 
                       <p style="font-size:13px;color:#8A8A82;line-height:1.7;margin:28px 0 0;text-align:center;">
                         Questions? Reply to this email anytime.<br/>
-                        <a href="https://hearth-navy.vercel.app/privacy" style="color:#1E3A2F;">Privacy Policy</a> · 
-                        <a href="https://hearth-navy.vercel.app/terms" style="color:#1E3A2F;">Terms of Service</a>
+                        <a href="https://homehearth.app/privacy" style="color:#1E3A2F;">Privacy Policy</a> · 
+                        <a href="https://homehearth.app/terms" style="color:#1E3A2F;">Terms of Service</a>
                       </p>
                     </td>
                   </tr>
