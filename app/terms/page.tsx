@@ -46,7 +46,7 @@ export default function Terms() {
     },
     {
       title: 'Contact us',
-      body: `If you have questions about these Terms of Service, please contact us at legal@hearthome.co.`
+      body: `If you have questions about these Terms of Service, please contact us at jacquelyn@exp-ventures.com.`
     },
   ]
 

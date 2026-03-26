@@ -26,7 +26,7 @@ export default function Privacy() {
     },
     {
       title: 'Your rights',
-      body: `You have the right to access all data we hold about you. You have the right to correct any inaccurate information. You have the right to export your data at any time. You have the right to delete your account and all associated data permanently. You have the right to opt out of anonymous data sharing at any time.\n\nTo exercise any of these rights, contact us at privacy@hearthome.co.`
+      body: `You have the right to access all data we hold about you. You have the right to correct any inaccurate information. You have the right to export your data at any time. You have the right to delete your account and all associated data permanently. You have the right to opt out of anonymous data sharing at any time.\n\nTo exercise any of these rights, contact us at jacquelyn@exp-ventures.com.`
     },
     {
       title: 'Data retention',

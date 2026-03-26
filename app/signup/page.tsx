@@ -19,7 +19,7 @@ export default function Signup() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`
+        emailRedirectTo: `https://homehearth.app/auth/callback`
       }
     })
 
