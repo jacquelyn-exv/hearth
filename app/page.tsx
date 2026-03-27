@@ -163,7 +163,6 @@ export default function Home() {
             <p style={{ fontSize: '16px', color: 'rgba(248,244,238,0.65)', lineHeight: 1.8, marginBottom: '16px', maxWidth: '480px', fontWeight: 300 }}>
               Most homeowners have no idea what their home is really worth, what&apos;s quietly failing, or whether they&apos;re getting overcharged. Hearth fixes that — with a live health score, a complete maintenance record, and real pricing from your neighbors.
             </p>
-            <p style={{ fontSize: '13px', color: 'rgba(248,244,238,0.40)', marginBottom: '36px', fontStyle: 'italic' }}>Built by people with 13 years inside the home services industry.</p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <a href="/signup" style={{ background: '#C47B2B', color: '#fff', padding: '14px 28px', borderRadius: '10px', fontFamily: "'DM Sans', sans-serif", fontSize: '15px', fontWeight: 500, textDecoration: 'none', display: 'inline-block' }}>Set up my home — free</a>
               <a href="/neighbors" style={{ background: 'none', border: '1px solid rgba(248,244,238,0.25)', color: 'rgba(248,244,238,0.85)', padding: '13px 26px', borderRadius: '10px', fontFamily: "'DM Sans', sans-serif", fontSize: '15px', textDecoration: 'none', display: 'inline-block' }}>See neighbor pricing</a>
