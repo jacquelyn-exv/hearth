@@ -826,9 +826,11 @@ export default function Dashboard() {
   const [expandedChecklistCats,setExpandedChecklistCats]=useState<Set<string>>(new Set(['safety']))
   const [homeEdits,setHomeEdits]=useState<any>({})
   const [editingHomeSection,setEditingHomeSection]=useState<string|null>(null)
+  const [savedSection,setSavedSection]=useState<string|null>(null)
   const [expandedSections,setExpandedSections]=useState<Set<string>>(new Set(['about']))
   const [expandedSystems,setExpandedSystems]=useState<Set<string>>(new Set())
   const [editingSystemId,setEditingSystemId]=useState<string|null>(null)
+  const [savedSystemId,setSavedSystemId]=useState<string|null>(null)
   const [systemEdits,setSystemEdits]=useState<any>({})
   const [showHiddenSystems,setShowHiddenSystems]=useState(false)
   const [showUploadForm,setShowUploadForm]=useState(false)
@@ -939,6 +941,8 @@ export default function Dashboard() {
       }
       await recalculateScore()
       setEditingHomeSection(null)
+      setSavedSection(section)
+      setTimeout(()=>setSavedSection(null),2500)
     }catch(e:any){console.error('saveHomeSection:',e);alert('Save failed: '+e.message)}
     setSaving(false)
   }
@@ -967,6 +971,8 @@ export default function Dashboard() {
       if(updated)setSystems((prev:any[])=>prev.map(s=>s.id===sysId?updated:s))
       await recalculateScore()
       setEditingSystemId(null)
+      setSavedSystemId(sysId)
+      setTimeout(()=>setSavedSystemId(null),2500)
     }catch(e:any){console.error('saveSystem:',e);alert('Save failed: '+e.message)}
     setSaving(false)
   }
@@ -1067,6 +1073,7 @@ export default function Dashboard() {
             <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'2px',flexWrap:'wrap'}}>
               <span style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>{SYSTEM_DISPLAY_NAMES[sys.system_type]||sys.system_type}</span>
               <span style={{fontSize:'10px',fontWeight:500,padding:'2px 7px',borderRadius:'20px',background:cond.bg,color:cond.textColor}}>{cond.label}</span>
+              {savedSystemId===sys.id&&<span style={{fontSize:'10px',fontWeight:500,padding:'2px 10px',borderRadius:'20px',background:'#EAF2EC',color:'#3D7A5A'}}>✓ Saved</span>}
               {sys.ever_replaced&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#EAF2EC',color:'#3D7A5A'}}>Replaced {sys.replacement_year}</span>}
               {sys.considering_replacing&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#E6F2F8',color:'#3A7CA8'}}>Considering replacing</span>}
             </div>
@@ -1296,7 +1303,7 @@ export default function Dashboard() {
               <div key={sec.key} style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden',marginBottom:'12px'}}>
                 <div style={{padding:'16px 20px',borderBottom:expandedSections.has(sec.key)?'1px solid rgba(30,58,47,0.08)':'none',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}} onClick={()=>{if(editingHomeSection===sec.key)setEditingHomeSection(null);else startEditSection(sec.key)}}>
                   <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',fontWeight:400,color:'#1E3A2F'}}>{sec.title}</h3>
-                  <div style={{display:'flex',gap:'8px',alignItems:'center'}}><span style={{fontSize:'12px',color:'#3D7A5A',fontWeight:500}}>{editingHomeSection===sec.key?'Cancel ✕':'Edit ✎'}</span><span style={{fontSize:'12px',color:'#8A8A82'}}>{expandedSections.has(sec.key)?'▲':'▼'}</span></div>
+                  <div style={{display:'flex',gap:'8px',alignItems:'center'}}>{savedSection===sec.key?<span style={{fontSize:'12px',color:'#3D7A5A',fontWeight:500,background:'#EAF2EC',padding:'3px 10px',borderRadius:'20px'}}>✓ Saved</span>:<span style={{fontSize:'12px',color:'#3D7A5A',fontWeight:500}}>{editingHomeSection===sec.key?'Cancel ✕':'Edit ✎'}</span>}<span style={{fontSize:'12px',color:'#8A8A82'}}>{expandedSections.has(sec.key)?'▲':'▼'}</span></div>
                 </div>
                 {expandedSections.has(sec.key)&&sec.key==='about'&&(
                   <div style={{padding:'20px'}}>
