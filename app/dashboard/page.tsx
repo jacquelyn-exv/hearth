@@ -845,24 +845,29 @@ export default function Dashboard() {
   const [uploading,setUploading]=useState(false)
   const [uploadError,setUploadError]=useState('')
   const [docFilter,setDocFilter]=useState('all')
+  const [homeMembers,setHomeMembers]=useState<any[]>([])
+  const [showAssignMenu,setShowAssignMenu]=useState<string|null>(null)
   const fileInputRef=useRef<HTMLInputElement>(null)
 
   const iS:React.CSSProperties={width:'100%',padding:'7px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'6px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',background:'#fff',color:'#1A1A18',boxSizing:'border-box'}
 
   const loadHomeData=async(homeId:string)=>{
-    const [{data:det},{data:sys},{data:j},{data:sc},{data:tk},{data:dc}]=await Promise.all([
+    const [{data:det},{data:sys},{data:j},{data:sc},{data:tk},{data:dc},{data:hm}]=await Promise.all([
       supabase.from('home_details').select('*').eq('home_id',homeId).single(),
       supabase.from('home_systems').select('*').eq('home_id',homeId),
       supabase.from('contractor_jobs').select('*').eq('home_id',homeId).order('job_date',{ascending:false}),
       supabase.from('health_scores').select('*').eq('home_id',homeId).order('calculated_at',{ascending:false}).limit(1),
       supabase.from('home_tasks').select('*').eq('home_id',homeId).order('created_at',{ascending:false}),
-      supabase.from('home_documents').select('*').eq('home_id',homeId).order('created_at',{ascending:false})
+      supabase.from('home_documents').select('*').eq('home_id',homeId).order('created_at',{ascending:false}),
+      supabase.from('home_members').select('*').eq('home_id',homeId).eq('status','approved')
     ])
     setDetails(det);setSystems(sys||[]);setJobs(j||[])
     if(sc&&sc.length>0)setScore(sc[0])
     setTasks(tk||[])
     setDismissedSmartTasks((tk||[]).filter((t:any)=>t.status==='dismissed').map((t:any)=>t.title))
     setDocs(dc||[])
+    setHomeMembers(hm||[])
+    setHomeMembers(hm||[])
     const {data:zd}=await supabase.from('homes').select('zip').eq('id',homeId).single()
     if(zd?.zip){const {data:st}=await supabase.from('storm_events').select('*').eq('zip',zd.zip).order('event_date',{ascending:false}).limit(20);setStormHistory(st||[])}
   }
@@ -1010,6 +1015,15 @@ export default function Dashboard() {
   }
 
   const deleteTask=async(taskId:string)=>{await supabase.from('home_tasks').delete().eq('id',taskId);setTasks((prev:any[])=>prev.filter(t=>t.id!==taskId))}
+
+  const assignTask=async(taskId:string,assignedTo:string|null)=>{
+    await supabase.from('home_tasks').update({assigned_to:assignedTo,assigned_by:user.id,assigned_at:new Date().toISOString()}).eq('id',taskId)
+    setTasks((prev:any[])=>prev.map(t=>t.id===taskId?{...t,assigned_to:assignedTo,assigned_by:user.id}:t))
+    setShowAssignMenu(null)
+    if(assignedTo&&assignedTo!==user.id){
+      await supabase.from('home_tasks').update({status:'todo'}).eq('id',taskId)
+    }
+  }
 
   const handleFileSelect=(e:React.ChangeEvent<HTMLInputElement>)=>{
     const f=e.target.files?.[0];if(!f)return
@@ -1240,7 +1254,43 @@ export default function Dashboard() {
               <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden',marginBottom:'20px'}}>
                 <div style={{background:'#1E3A2F',padding:'14px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}><h4 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',color:'#F8F4EE',fontWeight:400}}>Home To-Do</h4><button onClick={()=>setShowAddTask(!showAddTask)} style={{background:'rgba(248,244,238,0.1)',border:'1px solid rgba(248,244,238,0.2)',color:'#F8F4EE',fontSize:'12px',padding:'4px 10px',borderRadius:'6px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>+ Add task</button></div>
                 {showAddTask&&(<div style={{padding:'16px 20px',borderBottom:'1px solid rgba(30,58,47,0.08)',background:'#F8F4EE'}}><div style={{display:'grid',gap:'10px'}}><input value={newTaskTitle} onChange={e=>setNewTaskTitle(e.target.value)} style={iS} placeholder="Task title"/><input value={newTaskDesc} onChange={e=>setNewTaskDesc(e.target.value)} style={iS} placeholder="Description (optional)"/><input type="date" value={newTaskDue} onChange={e=>setNewTaskDue(e.target.value)} style={{...iS,maxWidth:'200px'}}/><div style={{display:'flex',gap:'8px'}}><button onClick={addTask} style={{flex:1,background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'8px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Add task</button><button onClick={()=>setShowAddTask(false)} style={{flex:1,background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'8px',borderRadius:'8px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button></div></div></div>)}
-                {customTasks.map(task=>(<div key={task.id} style={{display:'flex',alignItems:'flex-start',gap:'12px',padding:'13px 20px',borderBottom:'1px solid rgba(30,58,47,0.06)'}}><div style={{width:'36px',height:'36px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0,background:'#EAF2EC'}}>✏️</div><div style={{flex:1}}><div style={{fontSize:'14px',marginBottom:'2px',fontWeight:500}}>{task.title}</div>{task.description&&<div style={{fontSize:'12px',color:'#8A8A82',marginBottom:'4px'}}>{task.description}</div>}{task.due_date&&<div style={{fontSize:'11px',color:'#C47B2B'}}>Due {new Date(task.due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>}</div><div style={{display:'flex',gap:'6px',flexShrink:0}}><select value={task.status} onChange={e=>updateTaskStatus(task.id,e.target.value)} style={{fontSize:'11px',padding:'3px 6px',borderRadius:'6px',border:'1px solid rgba(30,58,47,0.2)',background:'#fff',fontFamily:"'DM Sans', sans-serif",cursor:'pointer'}}><option value="todo">To do</option><option value="in_progress">In progress</option><option value="done">Done ✓</option></select><button onClick={()=>deleteTask(task.id)} style={{background:'none',border:'none',color:'#8A8A82',cursor:'pointer',fontSize:'16px',padding:'0 4px'}}>×</button></div></div>))}
+                {customTasks.map(task=>{
+                  const assignedMember=homeMembers.find((m:any)=>m.user_id===task.assigned_to)
+                  return(
+                    <div key={task.id} style={{display:'flex',alignItems:'flex-start',gap:'12px',padding:'13px 20px',borderBottom:'1px solid rgba(30,58,47,0.06)',position:'relative'}}>
+                      <div style={{width:'36px',height:'36px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0,background:'#EAF2EC'}}>✏️</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:'14px',marginBottom:'2px',fontWeight:500}}>{task.title}</div>
+                        {task.description&&<div style={{fontSize:'12px',color:'#8A8A82',marginBottom:'4px'}}>{task.description}</div>}
+                        <div style={{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}}>
+                          {task.due_date&&<div style={{fontSize:'11px',color:'#C47B2B'}}>Due {new Date(task.due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>}
+                          {task.assigned_to&&<div style={{fontSize:'11px',color:'#3D7A5A',background:'#EAF2EC',padding:'2px 8px',borderRadius:'10px'}}>→ {task.assigned_to===user?.id?'You':assignedMember?.email||'Assigned'}</div>}
+                        </div>
+                      </div>
+                      <div style={{display:'flex',gap:'6px',flexShrink:0,alignItems:'flex-start',position:'relative'}}>
+                        {homeMembers.length>0&&(
+                          <div style={{position:'relative'}}>
+                            <button onClick={()=>setShowAssignMenu(showAssignMenu===task.id?null:task.id)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'3px 8px',borderRadius:'6px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>👤 Assign</button>
+                            {showAssignMenu===task.id&&(
+                              <div style={{position:'absolute',top:'28px',right:0,background:'#fff',border:'1px solid rgba(30,58,47,0.15)',borderRadius:'10px',boxShadow:'0 4px 20px rgba(0,0,0,0.12)',zIndex:100,minWidth:'180px',overflow:'hidden'}}>
+                                <div style={{padding:'8px 12px',borderBottom:'1px solid rgba(30,58,47,0.08)',fontSize:'11px',color:'#8A8A82',fontWeight:500}}>Assign to</div>
+                                {task.assigned_to&&<button onClick={()=>assignTask(task.id,null)} style={{display:'block',width:'100%',padding:'8px 12px',background:'none',border:'none',borderBottom:'1px solid rgba(30,58,47,0.06)',cursor:'pointer',textAlign:'left',fontSize:'12px',color:'#9B2C2C',fontFamily:"'DM Sans', sans-serif"}}>× Remove assignment</button>}
+                                <button onClick={()=>assignTask(task.id,user.id)} style={{display:'block',width:'100%',padding:'8px 12px',background:'none',border:'none',borderBottom:'1px solid rgba(30,58,47,0.06)',cursor:'pointer',textAlign:'left',fontSize:'12px',color:'#1E3A2F',fontFamily:"'DM Sans', sans-serif",fontWeight:task.assigned_to===user?.id?600:400}}>Myself {task.assigned_to===user?.id?'✓':''}</button>
+                                {homeMembers.map((m:any)=>(
+                                  <button key={m.user_id} onClick={()=>assignTask(task.id,m.user_id)} style={{display:'block',width:'100%',padding:'8px 12px',background:'none',border:'none',borderBottom:'1px solid rgba(30,58,47,0.06)',cursor:'pointer',textAlign:'left',fontSize:'12px',color:'#1E3A2F',fontFamily:"'DM Sans', sans-serif",fontWeight:task.assigned_to===m.user_id?600:400}}>
+                                    {m.email} <span style={{fontSize:'10px',color:'#8A8A82',textTransform:'capitalize'}}>({(m.role||'').replace('_',' ')})</span> {task.assigned_to===m.user_id?'✓':''}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <select value={task.status} onChange={e=>updateTaskStatus(task.id,e.target.value)} style={{fontSize:'11px',padding:'3px 6px',borderRadius:'6px',border:'1px solid rgba(30,58,47,0.2)',background:'#fff',fontFamily:"'DM Sans', sans-serif",cursor:'pointer'}}><option value="todo">To do</option><option value="in_progress">In progress</option><option value="done">Done ✓</option></select>
+                        <button onClick={()=>deleteTask(task.id)} style={{background:'none',border:'none',color:'#8A8A82',cursor:'pointer',fontSize:'16px',padding:'0 4px'}}>×</button>
+                      </div>
+                    </div>
+                  )
+                })}
                 {smartTasks.map((item:any)=>(<div key={item.id} style={{display:'flex',alignItems:'flex-start',gap:'12px',padding:'13px 20px',borderBottom:'1px solid rgba(30,58,47,0.06)'}}><div style={{width:'36px',height:'36px',borderRadius:'8px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0,background:item.urgency==='high'?'#FDECEA':item.urgency==='medium'?'#FBF0DC':'#EAF2EC'}}>{item.source==='smart'?'🧠':'📋'}</div><div style={{flex:1}}><div style={{fontSize:'14px',marginBottom:'2px'}}>{item.title}</div><div style={{fontSize:'12px',color:'#8A8A82'}}>{item.description}</div></div><div style={{display:'flex',alignItems:'center',gap:'6px',flexShrink:0}}><span style={{fontSize:'10px',fontWeight:500,padding:'3px 8px',borderRadius:'20px',background:item.urgency==='high'?'#FDECEA':item.urgency==='medium'?'#FBF0DC':'#EAF2EC',color:item.urgency==='high'?'#9B2C2C':item.urgency==='medium'?'#7A4A10':'#3D7A5A'}}>{item.source==='smart'?'Smart':'Seasonal'}</span><select defaultValue="todo" onChange={async e=>{if(e.target.value==='done'||e.target.value==='dismiss'){setDismissedSmartTasks((prev:string[])=>[...prev,item.id]);await supabase.from('home_tasks').insert({home_id:home.id,created_by:user.id,title:item.id,source:item.source,status:'dismissed',dismissed_at:new Date().toISOString()})}}} style={{fontSize:'11px',padding:'3px 6px',borderRadius:'6px',border:'1px solid rgba(30,58,47,0.2)',background:'#fff',fontFamily:"'DM Sans', sans-serif",cursor:'pointer'}}><option value="todo">To do</option><option value="done">Done ✓</option><option value="dismiss">Dismiss</option></select></div></div>))}
                 {customTasks.length===0&&smartTasks.length===0&&<div style={{padding:'24px',textAlign:'center',color:'#8A8A82',fontSize:'13px'}}>No tasks right now — add your own or they will appear based on your home data.</div>}
                 {doneTasks.length>0&&<div style={{padding:'10px 20px',background:'#F8F4EE',borderTop:'1px solid rgba(30,58,47,0.06)'}}><div style={{fontSize:'12px',color:'#8A8A82'}}>✓ {doneTasks.length} completed task{doneTasks.length!==1?'s':''}</div></div>}
