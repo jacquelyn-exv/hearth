@@ -61,3 +61,64 @@ button {
   }
 }
 @import "tailwindcss";
+
+/* ── MOBILE RESPONSIVE ── */
+@media (max-width: 768px) {
+  /* Hero grid — stack on mobile */
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
+  /* Hide score viz on mobile */
+  .hero-score-viz {
+    display: none !important;
+  }
+
+  /* Nav wrapping */
+  nav {
+    flex-wrap: wrap;
+    height: auto !important;
+    padding: 12px 16px !important;
+    gap: 8px;
+  }
+
+  /* Reduce hero padding on mobile */
+  section {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Dashboard header */
+  .dashboard-header {
+    padding: 16px !important;
+  }
+
+  /* Pricing chart min width */
+  svg {
+    min-width: unset !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Stack all 2-col grids */
+  [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tighten section padding */
+  section, main > div {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Make tables scrollable */
+  table {
+    font-size: 12px !important;
+  }
+
+  /* Reduce heading sizes */
+  h1 {
+    font-size: clamp(28px, 8vw, 48px) !important;
+  }
+}

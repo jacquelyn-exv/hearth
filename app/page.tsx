@@ -154,7 +154,7 @@ export default function Home() {
         <div style={{ position: 'absolute', top: '-80px', right: '-60px', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(196,123,43,0.14) 0%, transparent 68%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '-100px', left: '-80px', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(106,175,138,0.08) 0%, transparent 68%)', pointerEvents: 'none' }} />
 
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '56px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+        <div className="hero-grid" style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '40px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
           <div>
             <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(36px, 5vw, 56px)', lineHeight: 1.08, color: '#F8F4EE', marginBottom: '24px', fontWeight: 400 }}>
               Your home is your<br />biggest investment.<br />
@@ -238,7 +238,7 @@ export default function Home() {
       {/* ── NEIGHBOR NETWORK ── */}
       <section style={{ padding: '80px 32px', background: '#fff' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ background: '#1E3A2F', borderRadius: '20px', padding: '52px 48px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'center' }}>
+          <div style={{ background: '#1E3A2F', borderRadius: '20px', padding: '52px 48px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '40px', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#6AAF8A', marginBottom: '14px' }}>Neighbor Network</div>
               <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(24px, 3vw, 34px)', color: '#F8F4EE', fontWeight: 400, marginBottom: '16px', lineHeight: 1.2 }}>
@@ -293,7 +293,7 @@ export default function Home() {
       {/* ── GUIDES ── */}
       <section style={{ padding: '80px 32px', background: '#F8F4EE' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '56px', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '40px', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#3D7A5A', marginBottom: '14px' }}>Home Guides</div>
               <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 400, color: '#1E3A2F', lineHeight: 1.2, marginBottom: '16px' }}>
