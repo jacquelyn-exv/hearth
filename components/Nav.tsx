@@ -221,7 +221,7 @@ export default function Nav() {
                                   : 'View-only access request'}
                               </div>
                               <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '4px' }}>
-                                {notif.address}
+                                {notif.type === 'smart_task' ? (notif.description || notif.address) : notif.address}
                               </div>
                               {notif.type === 'transfer' && notif.message && (
                                 <div style={{ fontSize: '12px', color: '#4A4A44', background: '#F8F4EE', borderRadius: '6px', padding: '6px 8px', marginBottom: '6px', fontStyle: 'italic' }}>
@@ -236,7 +236,7 @@ export default function Nav() {
                               <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '10px' }}>
                                 {new Date(notif.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                               </div>
-                              <div style={{ display: 'flex', gap: '8px' }}>
+                              {notif.type !== 'smart_task' && <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
                                   onClick={() => handleApprove(notif)}
                                   style={{
@@ -258,7 +258,10 @@ export default function Nav() {
                                     fontFamily: "'DM Sans', sans-serif"
                                   }}
                                 >Decline</button>
-                              </div>
+                              </div>}
+                              {notif.type === 'smart_task' && (
+                                <a href="/dashboard" style={{ display: 'block', background: '#1E3A2F', color: '#F8F4EE', padding: '7px 12px', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', textAlign: 'center', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>View in dashboard</a>
+                              )}
                             </div>
                           </div>
                         </div>
