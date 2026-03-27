@@ -846,6 +846,11 @@ export default function Dashboard() {
   const [uploadError,setUploadError]=useState('')
   const [docFilter,setDocFilter]=useState('all')
   const [homeMembers,setHomeMembers]=useState<any[]>([])
+  const [showInviteForm,setShowInviteForm]=useState(false)
+  const [inviteEmail,setInviteEmail]=useState('')
+  const [inviteRole,setInviteRole]=useState('co_owner')
+  const [inviteSending,setInviteSending]=useState(false)
+  const [inviteSent,setInviteSent]=useState(false)
   const [showAssignMenu,setShowAssignMenu]=useState<string|null>(null)
   const fileInputRef=useRef<HTMLInputElement>(null)
 
@@ -1023,6 +1028,18 @@ export default function Dashboard() {
     if(assignedTo&&assignedTo!==user.id){
       await supabase.from('home_tasks').update({status:'todo'}).eq('id',taskId)
     }
+  }
+
+  const sendInvite=async()=>{
+    if(!inviteEmail.trim()||!home?.id)return
+    setInviteSending(true)
+    const token=Math.random().toString(36).substring(2)+Date.now().toString(36)
+    await supabase.from('home_invites').insert({home_id:home.id,invited_by:user.id,email:inviteEmail.trim().toLowerCase(),role:inviteRole,token,status:'pending'})
+    await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:inviteEmail.trim(),role:inviteRole,inviterName:displayName||user?.email?.split('@')[0]||'Your co-owner',homeAddress:home?.address||'your home',token})})
+    setInviteSent(true)
+    setInviteSending(false)
+    setInviteEmail('')
+    setTimeout(()=>{setInviteSent(false);setShowInviteForm(false)},3000)
   }
 
   const handleFileSelect=(e:React.ChangeEvent<HTMLInputElement>)=>{
@@ -1308,6 +1325,47 @@ export default function Dashboard() {
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}><h4 style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Your goals</h4><button onClick={()=>{setEditingGoals(!editingGoals);setDraftGoals(new Set(userGoals))}} style={{background:'none',border:'none',fontSize:'12px',color:'#3D7A5A',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",fontWeight:500}}>{editingGoals?'Cancel':'Edit'}</button></div>
                 {!editingGoals?(userGoals.length>0?(<div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>{userGoals.map(key=>{const g=GOALS.find(g=>g.key===key);return g?<span key={key} style={{background:'#1E3A2F',color:'#F8F4EE',padding:'5px 12px',borderRadius:'20px',fontSize:'12px',fontWeight:500}}>{g.emoji} {g.label}</span>:null})}</div>):<button onClick={()=>{setEditingGoals(true);setDraftGoals(new Set())}} style={{width:'100%',background:'#F8F4EE',border:'1px dashed rgba(30,58,47,0.2)',color:'#8A8A82',fontSize:'12px',padding:'10px',borderRadius:'8px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>+ Set your goals</button>):(
                   <div><p style={{fontSize:'11px',color:'#8A8A82',marginBottom:'10px'}}>Select up to 3</p><div style={{display:'grid',gap:'6px',marginBottom:'12px'}}>{GOALS.map(goal=>{const sel=draftGoals.has(goal.key);const atMax=draftGoals.size>=3&&!sel;return(<div key={goal.key} onClick={()=>{if(atMax)return;setDraftGoals(prev=>{const n=new Set(prev);if(n.has(goal.key))n.delete(goal.key);else n.add(goal.key);return n})}} style={{display:'flex',alignItems:'center',gap:'8px',padding:'8px 10px',border:`1px solid ${sel?'#1E3A2F':'rgba(30,58,47,0.15)'}`,borderRadius:'8px',cursor:atMax?'not-allowed':'pointer',background:sel?'#F0F5F2':'#fff',opacity:atMax?0.5:1}}><span style={{fontSize:'16px'}}>{goal.emoji}</span><span style={{fontSize:'12px',fontWeight:sel?500:400,color:'#1E3A2F',flex:1}}>{goal.label}</span>{sel&&<span style={{fontSize:'11px',color:'#3D7A5A'}}>✓</span>}</div>)})}</div><button onClick={saveGoals} style={{width:'100%',background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'9px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Save goals</button></div>
+                )}
+              </div>
+
+              {/* Members */}
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'18px',marginBottom:'16px'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
+                  <h4 style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Home members</h4>
+                  <button onClick={()=>{setShowInviteForm(!showInviteForm);setInviteSent(false)}} style={{background:'none',border:'none',fontSize:'12px',color:'#3D7A5A',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",fontWeight:500}}>{showInviteForm?'Cancel':'+ Invite'}</button>
+                </div>
+                {homeMembers.length===0&&!showInviteForm&&(
+                  <p style={{fontSize:'12px',color:'#8A8A82',lineHeight:1.6,marginBottom:'10px'}}>No other members yet. Invite a co-owner, property manager, or viewer.</p>
+                )}
+                {homeMembers.length>0&&(
+                  <div style={{display:'flex',flexDirection:'column',gap:'8px',marginBottom:'12px'}}>
+                    {homeMembers.map((m:any)=>(
+                      <div key={m.user_id} style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                        <div style={{width:'28px',height:'28px',borderRadius:'50%',background:'#1E3A2F',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',color:'#F8F4EE',flexShrink:0,fontWeight:500}}>{(m.email||'?')[0].toUpperCase()}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.email}</div>
+                          <div style={{fontSize:'11px',color:'#8A8A82',textTransform:'capitalize'}}>{(m.role||'').replace('_',' ')}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {showInviteForm&&(
+                  <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                    {inviteSent?(
+                      <div style={{background:'#EAF2EC',border:'1px solid rgba(61,122,90,0.2)',borderRadius:'8px',padding:'10px 12px',fontSize:'13px',color:'#3D7A5A',textAlign:'center'}}>✓ Invitation sent!</div>
+                    ):(
+                      <>
+                        <input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="Email address" style={{width:'100%',padding:'8px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'8px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',boxSizing:'border-box' as const}}/>
+                        <select value={inviteRole} onChange={e=>setInviteRole(e.target.value)} style={{width:'100%',padding:'8px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'8px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',background:'#fff'}}>
+                          <option value="co_owner">Co-owner — full edit access</option>
+                          <option value="property_manager">Property manager — view only</option>
+                          <option value="viewer">Viewer — read only</option>
+                        </select>
+                        <button onClick={sendInvite} disabled={inviteSending||!inviteEmail.trim()} style={{background:inviteEmail.trim()?'#1E3A2F':'rgba(30,58,47,0.3)',color:'#F8F4EE',border:'none',padding:'9px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:inviteEmail.trim()?'pointer':'not-allowed',fontFamily:"'DM Sans', sans-serif"}}>{inviteSending?'Sending...':'Send invitation'}</button>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
 
