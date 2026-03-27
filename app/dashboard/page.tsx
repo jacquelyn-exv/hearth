@@ -353,7 +353,8 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
   const addProject=async(title?:string,category?:string,estimatedCost?:string)=>{
     const t=title||newTitle;if(!t.trim())return
     setSaving(true)
-    const {data}=await supabase.from('home_projects').insert({home_id:homeId,created_by:userId,title:t.trim(),category:category||newCategory,estimated_cost:estimatedCost||newCost||null,notes:newNotes||null,priority:newPriority,timeline:newTimeline,status:'wishlist'}).select().single()
+    const {data,error}=await supabase.from('home_projects').insert({home_id:homeId,created_by:userId,title:t.trim(),category:category||newCategory,estimated_cost:estimatedCost||newCost||null,notes:newNotes||null,priority:newPriority,status:'wishlist'}).select().single()
+    if(error){console.error('addProject error:',error);alert('Could not save project: '+error.message);setSaving(false);return}
     if(data)setProjects((prev:any[])=>[data,...prev])
     setNewTitle('');setNewCategory('maintenance');setNewCost('');setNewNotes('');setNewPriority('medium');setNewTimeline('within_2_years');setShowAddForm(false);setShowTemplates(false);setSaving(false)
   }
@@ -361,7 +362,9 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
   const startEdit=(p:any)=>{setEditingId(p.id);setEditEdits({title:p.title,category:p.category,estimated_cost:p.estimated_cost||'',notes:p.notes||'',priority:p.priority||'medium',timeline:p.timeline||'within_2_years',status:p.status||'wishlist'})}
   const saveEdit=async()=>{
     if(!editingId)return;setSaving(true)
-    const {data}=await supabase.from('home_projects').update(editEdits).eq('id',editingId).select().single()
+    const {title,category,estimated_cost,notes,priority,status}=editEdits
+    const {data,error}=await supabase.from('home_projects').update({title,category,estimated_cost:estimated_cost||null,notes:notes||null,priority,status}).eq('id',editingId).select().single()
+    if(error){console.error('saveEdit error:',error);alert('Could not save: '+error.message);setSaving(false);return}
     if(data)setProjects((prev:any[])=>prev.map(p=>p.id===editingId?data:p))
     setEditingId(null);setSaving(false)
   }
