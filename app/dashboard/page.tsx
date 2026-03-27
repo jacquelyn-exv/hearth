@@ -1129,7 +1129,6 @@ export default function Dashboard() {
 
               {/* Buyer / Seller tips */}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
-                {[{emoji:'🏠',title:'For Buyers',color:'#3D7A5A',items:['Request maintenance records before closing','Flag systems past 80% of expected lifespan','Use deferred maintenance as negotiation leverage','Ask for contractor warranties on recent work']},{emoji:'🔑',title:'For Sellers',color:'#C47B2B',items:['Address Inspect and Priority items before listing','Document all recent contractor work','Share your report card with serious buyers','Recent maintenance history builds buyer confidence']}].map(section=>(<div key={section.title} style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderTop:`3px solid ${section.color}`,borderRadius:'14px',padding:'18px'}}><div style={{fontSize:'20px',marginBottom:'6px'}}>{section.emoji}</div><h4 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'15px',fontWeight:400,color:'#1E3A2F',marginBottom:'10px'}}>{section.title}</h4>{section.items.map(item=><div key={item} style={{display:'flex',gap:'6px',marginBottom:'6px',fontSize:'12px',color:'#4A4A44',lineHeight:1.5}}><span style={{color:section.color,flexShrink:0}}>✓</span>{item}</div>)}</div>))}
               </div>
             </div>
 
