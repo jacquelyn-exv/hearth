@@ -11,7 +11,7 @@ const PILLARS = [
     iconColor: '#3D7A5A',
     title: 'Know exactly where your home stands',
     body: 'A live health score across every major system — system risk, maintenance history, value protection, and seasonal readiness. Not a guess. A real picture of your home\'s condition.',
-    cta: 'Set up my home',
+    cta: 'Set up my home — free',
     href: '/signup',
     modalTitle: 'Home Health Score',
     modalContent: 'Your Home Health Score is a live 0–100 rating calculated across four dimensions: System Risk, Maintenance History, Value Protection, and Seasonal Readiness. It updates every time you log a job, add a system, or complete a task.',
@@ -29,7 +29,7 @@ const PILLARS = [
     iconColor: '#C47B2B',
     title: 'Build a record that travels with your home',
     body: 'Every repair, upgrade, inspection, and maintenance task — logged in one place. When you sell, it\'s proof of care. When something breaks, you have the history. It transfers with ownership.',
-    cta: 'Start your home record',
+    cta: 'Start logging — free',
     href: '/signup',
     modalTitle: 'Home Maintenance Log',
     modalContent: 'The log captures everything done to your home — contractor jobs, DIY work, maintenance, inspections, and upgrades. Entries are organized by type and stay permanently attached to the property, not your account.',
@@ -65,7 +65,7 @@ const PILLARS = [
     iconColor: '#8B3A2A',
     title: 'Guides written from inside the industry',
     body: 'Not generic home improvement content. Deep guides on every system — lifespans, failure timelines, what questions to ask, what red flags to look for — from 13 years inside manufacturing, installation, and contracting.',
-    cta: 'Read the guides',
+    cta: 'Browse all guides',
     href: '/guides',
     modalTitle: 'Home Guides',
     modalContent: 'Hearth\'s guides are written from 13 years inside home services — manufacturing, installation, construction technology, and national-scale contracting. Each guide covers the full lifecycle of a system: materials, lifespan, failure signs, repair vs. replace, what to ask contractors, and what to avoid.',
@@ -104,9 +104,8 @@ function PillarsSection() {
               </div>
               <h3 style={{ fontSize: '17px', fontWeight: 500, color: '#1E3A2F', marginBottom: '10px', lineHeight: 1.3 }}>{pillar.title}</h3>
               <p style={{ fontSize: '13px', color: '#8A8A82', lineHeight: 1.75, marginBottom: '20px' }}>{pillar.body}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#8A8A82' }}>Find it at:</span>
-                <span style={{ fontSize: '12px', fontWeight: 500, color: pillar.iconColor, background: pillar.color, padding: '2px 8px', borderRadius: '20px' }}>{pillar.nav}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: 'auto' }}>
+                <span style={{ fontSize: '11px', color: '#8A8A82' }}>Click to learn how to navigate this →</span>
               </div>
             </div>
           ))}
@@ -135,7 +134,10 @@ function PillarsSection() {
                 ))}
               </div>
             </div>
-            <a href={pillar.href} style={{ display: 'block', background: '#1E3A2F', color: '#F8F4EE', textAlign: 'center', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}>{pillar.cta}</a>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setActiveModal(null)} style={{ flex: 1, background: '#F8F4EE', border: '1px solid rgba(30,58,47,0.15)', color: '#1E3A2F', padding: '12px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Got it</button>
+              <a href={pillar.href} style={{ flex: 2, display: 'block', background: '#1E3A2F', color: '#F8F4EE', textAlign: 'center', padding: '12px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}>{pillar.cta}</a>
+            </div>
           </div>
         </div>
       )}
