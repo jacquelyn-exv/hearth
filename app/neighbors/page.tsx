@@ -642,59 +642,6 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
                 })}
               </div>
             )}
-          {/* Recent jobs in this area */}
-          <div style={{ marginTop: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Recent jobs nearby</h3>
-                <p style={{ fontSize: '12px', color: '#8A8A82' }}>What homeowners in this area are hiring for</p>
-              </div>
-            </div>
-            {filtered.length === 0 ? (
-              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
-                <div style={{ fontSize: '36px', marginBottom: '12px' }}>📋</div>
-                <h4 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>No jobs logged in this area yet</h4>
-                <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '16px' }}>Be the first to log a job and help your neighbors.</p>
-                <button onClick={() => window.location.href = user ? '/dashboard' : '/signup'} style={{ background: '#C47B2B', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                  {user ? 'Log a job' : 'Create account to contribute'}
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {filtered.slice(0, 20).map(job => (
-                  <div key={job.id} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '14px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F' }}>{job.company_name}</span>
-                        <span style={{ fontSize: '11px', padding: '1px 7px', borderRadius: '20px', background: '#EDE8E0', color: '#8A8A82', textTransform: 'capitalize' }}>{job.system_type?.replace(/_/g, ' ')}</span>
-                        {job.zip && <span style={{ fontSize: '11px', color: '#8A8A82' }}>{job.zip}</span>}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '6px' }}>
-                        {job.service_description}
-                        {job.job_date ? ` · ${new Date(job.job_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : ''}
-                      </div>
-                      {job.tags?.length > 0 && (
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                          {job.tags.map((tag: string) => <span key={tag} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>{tag}</span>)}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      {job.final_price && (
-                        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', color: '#1E3A2F', fontWeight: 600 }}>${Number(job.final_price).toLocaleString()}</div>
-                      )}
-                      {job.quality_rating > 0 && (
-                        <div style={{ fontSize: '12px', color: '#C47B2B' }}>{'★'.repeat(job.quality_rating)}{'☆'.repeat(5 - job.quality_rating)}</div>
-                      )}
-                      <div style={{ fontSize: '11px', color: job.would_refer === 'yes' ? '#3D7A5A' : job.would_refer === 'no' ? '#9B2C2C' : '#8A8A82', marginTop: '2px' }}>
-                        {job.would_refer === 'yes' ? '✓ Would refer' : job.would_refer === 'no' ? '✕ Would not refer' : ''}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
         )}
 
