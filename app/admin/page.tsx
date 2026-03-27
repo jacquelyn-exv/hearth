@@ -63,6 +63,7 @@ export default function Admin() {
   const [aiFetched, setAiFetched] = useState(false)
 
   const loadData = useCallback(async () => {
+    setAiLoading(true)
     const now = new Date()
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString()
@@ -163,6 +164,31 @@ export default function Admin() {
       role: roleMap[u.user_id] || 'homeowner',
     })).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     setUsersList(userListData)
+
+    // Trigger AI insights now that all data is loaded
+    const now2 = new Date()
+    const weekAgo2 = new Date(now2.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const totalSU = Object.keys(userMap).length
+    const hasHomeSU = Object.values(userMap).filter((u: any) => u.hasHome).length
+    const hasSystemsSU = Object.values(userMap).filter((u: any) => u.hasSystems).length
+    const hasJobSU = Object.values(userMap).filter((u: any) => u.hasJobLogged).length
+    const hasSharedSU = Object.values(userMap).filter((u: any) => u.hasSharedJob).length
+    const newThisWeekSU = h.filter((hm: any) => hm.created_at > weekAgo2).length
+    const shareRateSU = j.length ? Math.round((j.filter((jb: any) => jb.is_shared).length / j.length) * 100) : 0
+    const avgScoreSU = sc.length ? Math.round(sc.reduce((a: number, b: any) => a + (b.total_score || 0), 0) / sc.length) : 0
+    const metricsStr = `Total users: ${totalSU}, New this week: ${newThisWeekSU}, Funnel: ${totalSU} signed up → ${hasHomeSU} added home (${totalSU ? Math.round(hasHomeSU/totalSU*100) : 0}%) → ${hasSystemsSU} added systems → ${hasJobSU} logged job → ${hasSharedSU} shared (${hasJobSU ? Math.round(hasSharedSU/hasJobSU*100) : 0}%), Jobs: ${j.length}, Share rate: ${shareRateSU}%, Avg score: ${avgScoreSU}, Content requests: ${cr.length}`
+    
+    try {
+      const aiResp = await fetch('/api/ai-insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metrics: metricsStr })
+      })
+      const aiData = await aiResp.json()
+      setAiInsights(aiData.insights || '[]')
+    } catch {}
+    setAiFetched(true)
+    setAiLoading(false)
   }, [])
 
   useEffect(() => {
@@ -222,9 +248,7 @@ Respond with ONLY valid JSON array, no markdown, no explanation.`
     setAiLoading(false)
   }
 
-  useEffect(() => {
-    if (!loading && allUsers.length > 0 && !aiFetched) fetchAiInsights()
-  }, [loading, allUsers.length])
+
 
   const toggleAdmin = async (userId: string, currentRole: string) => {
     setTogglingUserId(userId)
