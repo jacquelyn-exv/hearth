@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { MaintenanceLog } from '@/components/log/MaintenanceLog'
 import { getSmartTasks as getEngineSmartTasks } from '@/lib/smartTasks'
 import { adaptHomeProfile } from '@/lib/adaptHomeProfile'
 import Nav from '@/components/Nav'
@@ -1153,8 +1154,8 @@ export default function Dashboard() {
   if(loading)return<div style={{background:'#F8F4EE',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'DM Sans', sans-serif"}}><p style={{color:'#8A8A82'}}>Loading your home...</p></div>
 
   const sv=score?.total_score||0
-  const tabs=['overview','home_details','financial','projects','maintenance','documents']
-  const tl:Record<string,string>={overview:'Overview',home_details:'Home Details',financial:'💰 Financial',projects:'✨ Projects',maintenance:'📅 Maintenance',documents:'Documents'}
+  const tabs=['overview','home_details','log','financial','projects','maintenance','documents']
+  const tl:Record<string,string>={overview:'Overview',home_details:'Home Details',log:'📋 Log',financial:'💰 Financial',projects:'✨ Projects',maintenance:'📅 Maintenance',documents:'Documents'}
   const alertSys=systems.filter(s=>['Inspect','Priority'].includes(getCondition(s).label))
   const dnf=displayName||user?.email?.split('@')[0]?.split('.')[0]?.replace(/^\w/,(c:string)=>c.toUpperCase())||'there'
   const engineProfile=adaptHomeProfile(home,systems,userGoals,stormHistory)
@@ -1381,7 +1382,7 @@ export default function Dashboard() {
               {/* Quick actions */}
               <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'18px',marginBottom:'16px'}}>
                 <h4 style={{fontSize:'13px',fontWeight:500,marginBottom:'14px',color:'#1E3A2F'}}>Quick actions</h4>
-                {[{label:'+ Log a contractor job',href:'/log'},{label:'👤 Invite a home member',onClick:()=>{setActiveTab('home_details');setTimeout(()=>setShowInviteForm(true),100)}},{label:'✨ Add a project to wish list',onClick:()=>setActiveTab('projects')},{label:'+ Add another property',href:'/onboarding'},{label:'📄 Share report card',href:'/report',target:'_blank'},{label:'📖 Browse guides',href:'/guides'}].map((a:any)=>a.href?<a key={a.label} href={a.href} target={a.target} style={{display:'block',padding:'9px 0',fontSize:'13px',color:'#1E3A2F',textDecoration:'none',borderBottom:'1px solid rgba(30,58,47,0.07)'}}>{a.label}</a>:<button key={a.label} onClick={a.onClick} style={{display:'block',width:'100%',padding:'9px 0',fontSize:'13px',color:'#1E3A2F',background:'none',border:'none',borderBottom:'1px solid rgba(30,58,47,0.07)',cursor:'pointer',textAlign:'left',fontFamily:"'DM Sans', sans-serif"}}>{a.label}</button>)}
+                {[{label:'+ Log a job',onClick:()=>setActiveTab('log')},{label:'👤 Invite a home member',onClick:()=>{setActiveTab('home_details');setTimeout(()=>setShowInviteForm(true),100)}},{label:'✨ Add a project to wish list',onClick:()=>setActiveTab('projects')},{label:'+ Add another property',href:'/onboarding'},{label:'📄 Share report card',href:'/report',target:'_blank'},{label:'📖 Browse guides',href:'/guides'}].map((a:any)=>a.href?<a key={a.label} href={a.href} target={a.target} style={{display:'block',padding:'9px 0',fontSize:'13px',color:'#1E3A2F',textDecoration:'none',borderBottom:'1px solid rgba(30,58,47,0.07)'}}>{a.label}</a>:<button key={a.label} onClick={a.onClick} style={{display:'block',width:'100%',padding:'9px 0',fontSize:'13px',color:'#1E3A2F',background:'none',border:'none',borderBottom:'1px solid rgba(30,58,47,0.07)',cursor:'pointer',textAlign:'left',fontFamily:"'DM Sans', sans-serif"}}>{a.label}</button>)}
               </div>
 
               <div style={{background:'#fff',border:'1px solid rgba(155,44,44,0.15)',borderRadius:'16px',padding:'18px'}}>
@@ -1576,6 +1577,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {activeTab==='log'&&home&&user&&<MaintenanceLog homeId={home.id} userId={user.id} userName={displayName||user.email||''}/>}
         {activeTab==='projects'&&<ProjectsTab homeId={home?.id} userId={user?.id}/>}
         {activeTab==='maintenance'&&<MaintenanceTab systems={systems} home={home} jobs={jobs} onTabChange={setActiveTab}/>}
 
