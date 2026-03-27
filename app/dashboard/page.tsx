@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getSmartTasks as getEngineSmartTasks } from '@/lib/smartTasks'
+import { adaptHomeProfile } from '@/lib/adaptHomeProfile'
 import Nav from '@/components/Nav'
 
 // ─────────────────────────────────────────────────────────────
@@ -1112,7 +1114,9 @@ export default function Dashboard() {
   const tl:Record<string,string>={overview:'Overview',home_details:'Home Details',financial:'💰 Financial',projects:'✨ Projects',maintenance:'📅 Maintenance',documents:'Documents'}
   const alertSys=systems.filter(s=>['Inspect','Priority'].includes(getCondition(s).label))
   const dnf=displayName||user?.email?.split('@')[0]?.split('.')[0]?.replace(/^\w/,(c:string)=>c.toUpperCase())||'there'
-  const smartTasks=getSmartTasks(systems,score,weather).filter((t:any)=>!dismissedSmartTasks.includes(t.id))
+  const engineProfile=adaptHomeProfile(home,systems,userGoals,stormHistory)
+  const engineResult=getEngineSmartTasks(engineProfile)
+  const smartTasks=engineResult.displayed.filter(t=>!dismissedSmartTasks.includes(t.id))
   const customTasks=tasks.filter(t=>t.status!=='done'&&t.status!=='dismissed'&&t.source!=='smart'&&t.source!=='seasonal')
   const doneTasks=tasks.filter(t=>t.status==='done')
   const communityLevel=getCommunityLevel(communityScore?.total_points||0)
