@@ -30,11 +30,8 @@ Respond with ONLY a valid JSON array. No markdown, no explanation, no backticks.
       })
     })
     const data = await response.json()
-    if (data.error) {
-      return NextResponse.json({ insights: '[]', error: data.error.message, raw: data }, { status: 500 })
-    }
-    const text = data.content?.[0]?.text || '[]'
-    return NextResponse.json({ insights: text })
+    // Return full response for debugging
+    return NextResponse.json({ insights: data.content?.[0]?.text || '[]', debug: data })
   } catch (error: any) {
     return NextResponse.json({ insights: '[]', error: error.message }, { status: 500 })
   }
