@@ -98,14 +98,13 @@ function PillarsSection() {
             <div key={pillar.title} onClick={() => setActiveModal(i)} style={{ background: '#fff', borderRadius: '20px', padding: '32px', border: '1px solid rgba(30,58,47,0.08)', cursor: 'pointer', transition: 'all 0.15s ease', position: 'relative' }}
               onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(30,58,47,0.10)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(30,58,47,0.18)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(30,58,47,0.08)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ marginBottom: '20px' }}>
                 <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: pillar.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>{pillar.icon}</div>
-                <span style={{ fontSize: '11px', color: '#8A8A82', background: '#F8F4EE', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(30,58,47,0.10)' }}>Learn more →</span>
               </div>
               <h3 style={{ fontSize: '17px', fontWeight: 500, color: '#1E3A2F', marginBottom: '10px', lineHeight: 1.3 }}>{pillar.title}</h3>
               <p style={{ fontSize: '13px', color: '#8A8A82', lineHeight: 1.75, marginBottom: '20px' }}>{pillar.body}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: 'auto' }}>
-                <span style={{ fontSize: '11px', color: '#8A8A82' }}>Click to learn how to navigate this →</span>
+              <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 500, color: pillar.iconColor }}>Learn more →</span>
               </div>
             </div>
           ))}
