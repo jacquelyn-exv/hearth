@@ -135,6 +135,8 @@ export default function Neighbors() {
 const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'pricing' | 'reviews' | 'leaderboard'>('neighborhood')
   const [search, setSearch] = useState('')
   const [zipSearch, setZipSearch] = useState('')
+  const [nearbyZips, setNearbyZips] = useState<string[]>([])
+  const [loadingZips, setLoadingZips] = useState(false)
   const [filterSystem, setFilterSystem] = useState('All systems')
   const [sortBy, setSortBy] = useState<'reviews' | 'rating' | 'refer' | 'recent'>('reviews')
   const [expandedContractor, setExpandedContractor] = useState<string | null>(null)
@@ -155,7 +157,14 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
         const { data: homes } = await supabase.from('homes').select('id, zip').eq('user_id', user.id).limit(1)
         if (homes && homes.length > 0) {
           setUserZip(homes[0].zip || '')
-          setZipSearch(homes[0].zip || '')
+          const initialZip = homes[0].zip || ''
+          setZipSearch(initialZip)
+          if (initialZip) {
+            fetch(`/api/nearby-zips?zip=${initialZip}&radius=50`)
+              .then(r => r.json())
+              .then(d => setNearbyZips(d.zips || [initialZip]))
+              .catch(() => setNearbyZips([initialZip]))
+          }
           const { data: systems } = await supabase.from('home_systems').select('system_type').eq('home_id', homes[0].id)
           setUserSystems(systems?.map(s => s.system_type) || [])
           const { data: myJobData } = await supabase
@@ -193,6 +202,26 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
     load()
   }, [])
 
+  const loadNearbyZips = async (zip: string) => {
+    if (!zip || zip.length !== 5) return
+    setLoadingZips(true)
+    try {
+      const res = await fetch(`/api/nearby-zips?zip=${zip}&radius=50`)
+      const data = await res.json()
+      setNearbyZips(data.zips || [zip])
+    } catch {
+      setNearbyZips([zip])
+    }
+    setLoadingZips(false)
+  }
+
+  const handleZipChange = async (newZip: string) => {
+    setZipSearch(newZip)
+    if (newZip.length === 5) {
+      await loadNearbyZips(newZip)
+    }
+  }
+
   const filtered = jobs.filter(job => {
     const matchesSearch = !search ||
       job.company_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -200,7 +229,8 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
     const matchesSystem = filterSystem === 'All systems' ||
       job.system_type?.replace(/_/g, ' ').toLowerCase() === filterSystem.toLowerCase().replace(' / ', '/').replace('/', ' ').toLowerCase() ||
       job.system_type?.replace(/_/g, ' ').toLowerCase() === filterSystem.toLowerCase()
-    const matchesZip = !zipSearch || job.zip === zipSearch || !job.zip
+    const activeZips = nearbyZips.length > 0 ? nearbyZips : [zipSearch]
+    const matchesZip = !zipSearch || activeZips.includes(job.zip) || !job.zip
     return matchesSearch && matchesSystem && matchesZip
   })
 
@@ -221,7 +251,7 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
   })
 
   // Neighborhood stats
-  const zipJobs = jobs.filter(j => j.zip === userZip)
+  const zipJobs = jobs.filter(j => nearbyZips.length > 0 ? nearbyZips.includes(j.zip) : j.zip === userZip)
   const month = new Date().getMonth()
   const seasonTips = SEASON_TIPS[month] || []
   const pricesWithData = filtered.filter(j => j.final_price).map(j => Number(j.final_price))
@@ -238,7 +268,8 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
 
   // Pricing by system
   const pricingBySystem: Record<string, number[]> = {}
-  jobs.filter(j => j.final_price && (j.zip === userZip || !userZip)).forEach(j => {
+  const pricingZips = nearbyZips.length > 0 ? nearbyZips : (userZip ? [userZip] : [])
+  jobs.filter(j => j.final_price && (pricingZips.length === 0 || pricingZips.includes(j.zip))).forEach(j => {
     const sys = j.system_type?.replace(/_/g, ' ')
     if (!sys) return
     if (!pricingBySystem[sys]) pricingBySystem[sys] = []
@@ -323,10 +354,11 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
               <div>
                 <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>
                   {userZip ? `Your area · ${userZip}` : 'Your neighborhood'}
+                  {nearbyZips.length > 1 && <span style={{ fontSize: '13px', fontWeight: 400, color: 'rgba(248,244,238,0.5)', marginLeft: '8px' }}>· {nearbyZips.length} zip codes within 50 miles</span>}
                 </h2>
                 <p style={{ fontSize: '13px', color: '#8A8A82' }}>{zipJobs.length} reviews from your zip code</p>
               </div>
-              <input value={zipSearch} onChange={e => setZipSearch(e.target.value)} style={{ ...inputStyle, width: '120px', fontSize: '13px' }} placeholder="Change ZIP" />
+              <input value={zipSearch} onChange={e => handleZipChange(e.target.value)} style={{ ...inputStyle, width: '120px', fontSize: '13px' }} placeholder="Change ZIP" />
             </div>
 
             {/* Trending systems */}
@@ -409,7 +441,7 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
             {/* Search and filter */}
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <input value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, flex: 2, minWidth: '180px' }} placeholder="Search by contractor or service..." />
-              <input value={zipSearch} onChange={e => setZipSearch(e.target.value)} style={{ ...inputStyle, width: '110px' }} placeholder="ZIP code" />
+              <input value={zipSearch} onChange={e => handleZipChange(e.target.value)} style={{ ...inputStyle, width: '110px' }} placeholder="ZIP code" />
               <select value={filterSystem} onChange={e => setFilterSystem(e.target.value)} style={inputStyle}>
                 {SYSTEMS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -565,7 +597,7 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
                   <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>What neighbors paid</h3>
                   <p style={{ fontSize: '13px', color: '#8A8A82' }}>Real prices logged by verified homeowners{userZip ? ` near ${userZip}` : ''}</p>
                 </div>
-                <input value={zipSearch} onChange={e => setZipSearch(e.target.value)} style={{ ...inputStyle, width: '130px' }} placeholder="Filter by ZIP" />
+                <input value={zipSearch} onChange={e => handleZipChange(e.target.value)} style={{ ...inputStyle, width: '130px' }} placeholder="Filter by ZIP" />
               </div>
 
               {Object.keys(pricingBySystem).length === 0 ? (
@@ -657,7 +689,7 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
           <div>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
               <input value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, flex: 2, minWidth: '180px' }} placeholder="Search reviews..." />
-              <input value={zipSearch} onChange={e => setZipSearch(e.target.value)} style={{ ...inputStyle, width: '110px' }} placeholder="ZIP code" />
+              <input value={zipSearch} onChange={e => handleZipChange(e.target.value)} style={{ ...inputStyle, width: '110px' }} placeholder="ZIP code" />
               <select value={filterSystem} onChange={e => setFilterSystem(e.target.value)} style={inputStyle}>
                 {SYSTEMS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
