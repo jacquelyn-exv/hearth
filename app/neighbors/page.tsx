@@ -1,6 +1,7 @@
 'use client'
 
 import Nav from '@/components/Nav'
+import PriceTrendChart from '@/components/pricing/PriceTrendChart'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -557,7 +558,7 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
         {activeView === 'pricing' && (
           <div style={{ display: 'grid', gap: '32px' }}>
 
-            {/* ── COMMUNITY PRICING ── */}
+            {/* COMMUNITY PRICING */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
@@ -606,7 +607,16 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
               )}
             </div>
 
-            {/* ── NATIONAL BENCHMARKS (narrative, compliant) ── */}
+            {/* PRICE TRENDS */}
+            <div>
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Project cost trends 2019–2025</h3>
+                <p style={{ fontSize: '13px', color: '#8A8A82' }}>How project costs and resale returns have shifted over 7 years. Hover over a year to see what was driving prices.</p>
+              </div>
+              <PriceTrendChart />
+            </div>
+
+            {/* NATIONAL BENCHMARKS */}
             <div style={{ background: '#1E3A2F', borderRadius: '20px', padding: '32px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
                 <div>
