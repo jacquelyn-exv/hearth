@@ -235,32 +235,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── WHAT HEARTH GIVES YOU ── */}
-      <section style={{ padding: '80px 32px', background: '#F8F4EE' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '52px' }}>
-            <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#3D7A5A', marginBottom: '12px' }}>What Hearth gives you</div>
-            <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 400, color: '#1E3A2F', lineHeight: 1.2 }}>
-              The information advantage<br />your home deserves.
-            </h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-            {[
-              { icon: '📊', color: '#EAF2EC', iconColor: '#3D7A5A', title: 'Know exactly where your home stands', body: 'A live health score across every major system — system risk, maintenance history, value protection, and seasonal readiness. Not a guess. A real picture of your home\'s condition.', cta: 'See how the score works', href: '/signup' },
-              { icon: '📋', color: '#FBF0DC', iconColor: '#C47B2B', title: 'Build a record that travels with your home', body: 'Every repair, upgrade, inspection, and maintenance task — logged in one place. When you sell, it\'s proof of care. When something breaks, you have the history. It transfers with ownership.', cta: 'Start your home record', href: '/signup' },
-              { icon: '👥', color: '#E6F2F8', iconColor: '#3A7CA8', title: 'Never overpay for contractor work again', body: 'Real prices from real homeowners in your zip code, tied to verified logged jobs. No contractors paying for placement. No anonymous reviews. Just what people like you actually paid.', cta: 'Browse neighbor pricing', href: '/neighbors' },
-              { icon: '📖', color: '#F5EAE7', iconColor: '#8B3A2A', title: 'Guides written from inside the industry', body: 'Not generic home improvement content. Deep guides on every system — lifespans, failure timelines, what questions to ask, what red flags to look for — from 13 years inside manufacturing, installation, and contracting.', cta: 'Read the guides', href: '/guides' },
-            ].map(pillar => (
-              <div key={pillar.title} style={{ background: '#fff', borderRadius: '20px', padding: '32px', border: '1px solid rgba(30,58,47,0.08)' }}>
-                <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: pillar.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>{pillar.icon}</div>
-                <h3 style={{ fontSize: '17px', fontWeight: 500, color: '#1E3A2F', marginBottom: '10px', lineHeight: 1.3 }}>{pillar.title}</h3>
-                <p style={{ fontSize: '13px', color: '#8A8A82', lineHeight: 1.75, marginBottom: '20px' }}>{pillar.body}</p>
-                <a href={pillar.href} style={{ fontSize: '13px', fontWeight: 500, color: pillar.iconColor, textDecoration: 'none' }}>{pillar.cta} →</a>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PillarsSection />
 
       {/* ── NEIGHBOR NETWORK ── */}
       <section style={{ padding: '80px 32px', background: '#fff' }}>
