@@ -243,13 +243,28 @@ export default function Home() {
             <div>
               <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#6AAF8A', marginBottom: '14px' }}>Neighbor Network</div>
               <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(24px, 3vw, 34px)', color: '#F8F4EE', fontWeight: 400, marginBottom: '16px', lineHeight: 1.2 }}>
-                What did your neighbor pay for their roof?
+                The contractor intel your neighborhood has been sitting on.
               </h2>
-              <p style={{ fontSize: '14px', color: 'rgba(248,244,238,0.65)', lineHeight: 1.8, marginBottom: '12px' }}>
-                Every review in Hearth is tied to a verified logged job. Homeowners share pricing anonymously — you see real numbers, real contractors, real ZIP codes.
+              <p style={{ fontSize: '14px', color: 'rgba(248,244,238,0.65)', lineHeight: 1.8, marginBottom: '24px' }}>
+                Every review is tied to a real logged job from a verified homeowner. Browse real pricing by ZIP, find contractors your neighbors actually hired, spot pricing trends by system, and see who&apos;s worth calling — and who isn&apos;t.
               </p>
-              <p style={{ fontSize: '13px', color: 'rgba(248,244,238,0.40)', marginBottom: '28px', fontStyle: 'italic' }}>No contractors paying for placement. No fake reviews.</p>
-              <a href="/neighbors" style={{ display: 'inline-block', background: '#C47B2B', color: '#fff', textDecoration: 'none', padding: '12px 24px', borderRadius: '10px', fontSize: '14px', fontWeight: 500 }}>Browse reviews in your area</a>
+              <div style={{ display: 'grid', gap: '10px', marginBottom: '28px' }}>
+                {[
+                  { icon: '💰', label: 'Pricing by ZIP', desc: 'See what jobs actually cost in your area' },
+                  { icon: '🔍', label: 'Find contractors', desc: 'Search by system, rating, and neighborhood' },
+                  { icon: '📈', label: 'Pricing trends', desc: 'Watch costs move over time by category' },
+                  { icon: '⭐', label: 'Verified reviews', desc: 'Tied to real logged jobs — not anonymous tips' },
+                ].map(f => (
+                  <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(106,175,138,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flexShrink: 0 }}>{f.icon}</div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 500, color: '#F8F4EE' }}>{f.label}</div>
+                      <div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.45)' }}>{f.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <a href="/neighbors" style={{ display: 'inline-block', background: '#C47B2B', color: '#fff', textDecoration: 'none', padding: '12px 24px', borderRadius: '10px', fontSize: '14px', fontWeight: 500 }}>Explore your Neighbor Network</a>
             </div>
             <div style={{ display: 'grid', gap: '10px' }}>
               {[
@@ -267,6 +282,10 @@ export default function Home() {
                   </div>
                 </div>
               ))}
+              <div style={{ background: 'rgba(196,123,43,0.12)', border: '1px solid rgba(196,123,43,0.2)', borderRadius: '12px', padding: '14px 16px' }}>
+                <div style={{ fontSize: '11px', color: '#C47B2B', fontWeight: 500, marginBottom: '6px' }}>📈 Pricing trend · Roof replacement</div>
+                <div style={{ fontSize: '13px', color: 'rgba(248,244,238,0.7)' }}>Avg cost in 21658: <span style={{ color: '#F8F4EE', fontWeight: 600 }}>$13,200</span> · Up 8% from last year</div>
+              </div>
             </div>
           </div>
         </div>
