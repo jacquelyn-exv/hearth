@@ -335,7 +335,7 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
   const [showAddForm,setShowAddForm]=useState(false)
   const [newTitle,setNewTitle]=useState('')
   const [newCategory,setNewCategory]=useState('maintenance')
-  const [newCost,setNewCost]=useState('')
+  const [newBudget,setNewBudget]=useState('')
   const [newNotes,setNewNotes]=useState('')
   const [newPriority,setNewPriority]=useState('medium')
   const [newTimeline,setNewTimeline]=useState('within_2_years')
@@ -345,6 +345,49 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
   const [filterCat,setFilterCat]=useState('all')
   const [showTemplates,setShowTemplates]=useState(false)
 
+  // Known cost averages per project type (midpoint of typical range)
+  const COST_AVERAGES: Record<string,{low:number;high:number;label:string}> = {
+    'roof replacement':        {low:8000,  high:20000, label:'$8,000–20,000'},
+    'roof':                    {low:8000,  high:20000, label:'$8,000–20,000'},
+    'hvac replacement':        {low:6000,  high:12000, label:'$6,000–12,000'},
+    'hvac':                    {low:6000,  high:12000, label:'$6,000–12,000'},
+    'entry door':              {low:1500,  high:4000,  label:'$1,500–4,000'},
+    'window replacement':      {low:5000,  high:15000, label:'$5,000–15,000'},
+    'windows':                 {low:5000,  high:15000, label:'$5,000–15,000'},
+    'deck':                    {low:4000,  high:20000, label:'$4,000–20,000'},
+    'deck or patio':           {low:4000,  high:20000, label:'$4,000–20,000'},
+    'siding replacement':      {low:8000,  high:20000, label:'$8,000–20,000'},
+    'siding':                  {low:8000,  high:20000, label:'$8,000–20,000'},
+    'gutter replacement':      {low:1500,  high:3500,  label:'$1,500–3,500'},
+    'gutters':                 {low:1500,  high:3500,  label:'$1,500–3,500'},
+    'landscaping':             {low:2000,  high:10000, label:'$2,000–10,000'},
+    'driveway':                {low:500,   high:8000,  label:'$500–8,000'},
+    'bathroom remodel':        {low:8000,  high:25000, label:'$8,000–25,000'},
+    'kitchen':                 {low:5000,  high:40000, label:'$5,000–40,000'},
+    'generator':               {low:7000,  high:15000, label:'$7,000–15,000'},
+    'fence':                   {low:3000,  high:10000, label:'$3,000–10,000'},
+    'fencing':                 {low:3000,  high:10000, label:'$3,000–10,000'},
+    'water heater':            {low:800,   high:2000,  label:'$800–2,000'},
+    'paint':                   {low:2000,  high:6000,  label:'$2,000–6,000'},
+    'chimney':                 {low:1000,  high:5000,  label:'$1,000–5,000'},
+  }
+
+  const getKnownAverage=(title:string)=>{
+    const t=title.toLowerCase()
+    for(const key of Object.keys(COST_AVERAGES)){
+      if(t.includes(key))return COST_AVERAGES[key]
+    }
+    return null
+  }
+
+  const parseBudget=(val:string):number|null=>{
+    if(!val)return null
+    const n=parseInt(val.replace(/[^0-9]/g,''))
+    return isNaN(n)||n<=0?null:n
+  }
+
+  const formatDollars=(n:number)=>'$'+n.toLocaleString()
+
   useEffect(()=>{
     if(!homeId)return
     supabase.from('home_projects').select('*').eq('home_id',homeId).order('created_at',{ascending:false}).then(({data})=>setProjects(data||[]))
@@ -353,26 +396,32 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
   const addProject=async(title?:string,category?:string,estimatedCost?:string)=>{
     const t=title||newTitle;if(!t.trim())return
     setSaving(true)
-    const {data,error}=await supabase.from('home_projects').insert({home_id:homeId,created_by:userId,title:t.trim(),category:category||newCategory,estimated_cost:estimatedCost||newCost||null,notes:newNotes||null,priority:newPriority,status:'wishlist'}).select().single()
-    if(error){console.error('addProject error:',error);alert('Could not save project: '+error.message);setSaving(false);return}
+    const budgetRaw=newBudget||estimatedCost||''
+    const budgetNum=parseBudget(budgetRaw)
+    const {data,error}=await supabase.from('home_projects').insert({home_id:homeId,created_by:userId,title:t.trim(),category:category||newCategory,estimated_cost:budgetNum?String(budgetNum):null,notes:newNotes||null,priority:newPriority,timeline:newTimeline,status:'wishlist'}).select().single()
+    if(error){console.error('addProject:',error);alert('Could not save project: '+error.message);setSaving(false);return}
     if(data)setProjects((prev:any[])=>[data,...prev])
-    setNewTitle('');setNewCategory('maintenance');setNewCost('');setNewNotes('');setNewPriority('medium');setNewTimeline('within_2_years');setShowAddForm(false);setShowTemplates(false);setSaving(false)
+    setNewTitle('');setNewCategory('maintenance');setNewBudget('');setNewNotes('');setNewPriority('medium');setNewTimeline('within_2_years');setShowAddForm(false);setShowTemplates(false);setSaving(false)
   }
 
   const startEdit=(p:any)=>{setEditingId(p.id);setEditEdits({title:p.title,category:p.category,estimated_cost:p.estimated_cost||'',notes:p.notes||'',priority:p.priority||'medium',timeline:p.timeline||'within_2_years',status:p.status||'wishlist'})}
+
   const saveEdit=async()=>{
     if(!editingId)return;setSaving(true)
-    const {title,category,estimated_cost,notes,priority,status}=editEdits
-    const {data,error}=await supabase.from('home_projects').update({title,category,estimated_cost:estimated_cost||null,notes:notes||null,priority,status}).eq('id',editingId).select().single()
-    if(error){console.error('saveEdit error:',error);alert('Could not save: '+error.message);setSaving(false);return}
+    const {title,category,notes,priority,status,timeline}=editEdits
+    const budgetNum=parseBudget(editEdits.estimated_cost||'')
+    const {data,error}=await supabase.from('home_projects').update({title,category,estimated_cost:budgetNum?String(budgetNum):null,notes:notes||null,priority,status,timeline}).eq('id',editingId).select().single()
+    if(error){console.error('saveEdit:',error);alert('Could not save: '+error.message);setSaving(false);return}
     if(data)setProjects((prev:any[])=>prev.map(p=>p.id===editingId?data:p))
     setEditingId(null);setSaving(false)
   }
+
   const deleteProject=async(id:string)=>{
     if(!window.confirm('Remove this project?'))return
     await supabase.from('home_projects').delete().eq('id',id)
     setProjects((prev:any[])=>prev.filter(p=>p.id!==id))
   }
+
   const updateStatus=async(id:string,status:string)=>{
     await supabase.from('home_projects').update({status}).eq('id',id)
     setProjects((prev:any[])=>prev.map(p=>p.id===id?{...p,status}:p))
@@ -387,18 +436,27 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
     if(t.includes('window'))return{when:'Spring or Fall',reason:'Mild weather for installation'}
     if(t.includes('generator'))return{when:'Fall',reason:'Before storm season'}
     if(t.includes('siding'))return{when:'Late Spring or Summer',reason:'Dry conditions required'}
+    if(t.includes('fence')||t.includes('fencing'))return{when:'Spring or Fall',reason:'Ground workable, contractors available'}
+    if(t.includes('driveway'))return{when:'Late Spring or Summer',reason:'Asphalt needs warm temps'}
+    if(t.includes('paint'))return{when:'Late Spring or Summer',reason:'Dry conditions required'}
     if(category==='energy')return{when:'Spring',reason:'Maximize summer savings'}
     return{when:'Spring or Fall',reason:'Best contractor availability'}
   }
 
-  const getSavingsGoal=(cost:string,timeline:string)=>{
-    const nums=cost.replace(/[^0-9]/g,' ').trim().split(/s+/).map(Number).filter(n=>n>100)
-    if(!nums.length)return null
-    const mid=nums.length>1?(nums[0]+nums[nums.length-1])/2:nums[0]
+  const getSavingsGoal=(budgetStr:string|null,timeline:string,knownAvg:{low:number;high:number}|null)=>{
     const months=timeline==='within_1_year'?12:timeline==='within_2_years'?24:timeline==='3_5_years'?48:60
-    const mo=Math.round(mid/months)
     const label=timeline==='within_1_year'?'1 year':timeline==='within_2_years'?'2 years':timeline==='3_5_years'?'3–5 years':'someday'
-    return{monthly:'$'+mo.toLocaleString()+' / mo',readyIn:'Ready in '+label+' at this rate'}
+    const budget=parseBudget(budgetStr||'')
+    if(budget){
+      const mo=Math.round(budget/months)
+      return{monthly:formatDollars(mo)+' / mo',readyIn:'Ready in '+label+' at this rate',target:budget}
+    }
+    if(knownAvg){
+      const mid=Math.round((knownAvg.low+knownAvg.high)/2)
+      const mo=Math.round(mid/months)
+      return{monthly:formatDollars(mo)+' / mo',readyIn:'Based on '+formatDollars(mid)+' avg · Ready in '+label,target:mid}
+    }
+    return null
   }
 
   const getGuideLinks=(title:string):{label:string;slug:string}[]=>{
@@ -410,6 +468,7 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
     if(t.includes('siding'))return[{label:'📖 Siding material guide',slug:'siding'},{label:'💡 Fiber cement vs vinyl',slug:'siding'},{label:'🏠 Siding ROI at sale',slug:'siding'}]
     if(t.includes('gutter'))return[{label:'📖 Gutter material guide',slug:'gutters'},{label:'💡 Do you need gutter guards?',slug:'gutters'}]
     if(t.includes('door'))return[{label:'📖 Entry door guide',slug:'entry-door'},{label:'💡 Fiberglass vs steel vs wood',slug:'entry-door'}]
+    if(t.includes('fence')||t.includes('fencing'))return[{label:'📖 Fencing material guide',slug:''},{label:'💡 Wood vs vinyl vs aluminum',slug:''}]
     return[{label:'📖 Browse all guides',slug:''}]
   }
 
@@ -418,6 +477,7 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
 
   return(
     <div>
+      {/* Header */}
       <div style={{background:'#1E3A2F',borderRadius:'16px',padding:'24px 28px',marginBottom:'24px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'20px'}}>
         <div>
           <h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'24px',fontWeight:400,color:'#F8F4EE',marginBottom:'6px'}}>Your Project Wish List</h2>
@@ -426,14 +486,23 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
         <button onClick={()=>setShowAddForm(!showAddForm)} style={{background:'#C47B2B',color:'#fff',border:'none',padding:'11px 22px',borderRadius:'10px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0,whiteSpace:'nowrap'}}>+ Add project</button>
       </div>
 
+      {/* Add form */}
       {showAddForm&&(
         <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'22px',marginBottom:'20px'}}>
           <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F',marginBottom:'16px'}}>Add a project</h3>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
-            <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Project name *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} style={iS} placeholder="e.g. Deck replacement, Kitchen renovation"/></div>
+            <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Project name *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} style={iS} placeholder="e.g. Deck replacement, Fence, Kitchen renovation"/></div>
             <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Category</label><select value={newCategory} onChange={e=>setNewCategory(e.target.value)} style={iS}>{PROJECT_CATEGORIES.map(c=><option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}</select></div>
             <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Timeline</label><select value={newTimeline} onChange={e=>setNewTimeline(e.target.value)} style={iS}><option value="within_1_year">Within 1 year</option><option value="within_2_years">Within 2 years</option><option value="3_5_years">3–5 years</option><option value="someday">Someday</option></select></div>
-            <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Estimated cost</label><input value={newCost} onChange={e=>setNewCost(e.target.value)} style={iS} placeholder="e.g. $12,000–18,000"/></div>
+            <div style={{gridColumn:'1/-1'}}>
+              <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Budget in mind? (optional)</label>
+              <div style={{position:'relative'}}>
+                <span style={{position:'absolute',left:'10px',top:'50%',transform:'translateY(-50%)',fontSize:'13px',color:'#8A8A82'}}>$</span>
+                <input type="number" value={newBudget} onChange={e=>setNewBudget(e.target.value)} style={{...iS,paddingLeft:'22px'}} placeholder="e.g. 15000"/>
+              </div>
+              {newBudget&&parseBudget(newBudget)&&<div style={{fontSize:'11px',color:'#3D7A5A',marginTop:'4px'}}>= {formatDollars(parseBudget(newBudget)!)}</div>}
+              {!newBudget&&newTitle&&getKnownAverage(newTitle)&&<div style={{fontSize:'11px',color:'#8A8A82',marginTop:'4px'}}>No budget? We will use the typical range: {getKnownAverage(newTitle)!.label}</div>}
+            </div>
             <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Notes (optional)</label><input value={newNotes} onChange={e=>setNewNotes(e.target.value)} style={iS} placeholder="Material preference, inspiration, anything else"/></div>
           </div>
           <div style={{display:'flex',gap:'8px',marginTop:'14px'}}>
@@ -443,8 +512,10 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
         </div>
       )}
 
+      {/* Browse ideas toggle */}
       {!showAddForm&&<div style={{marginBottom:'20px'}}><button onClick={()=>setShowTemplates(!showTemplates)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'8px 16px',borderRadius:'10px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{showTemplates?'▲ Hide ideas':'▼ Browse common projects'}</button></div>}
 
+      {/* Templates grid */}
       {showTemplates&&(
         <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'22px',marginBottom:'20px'}}>
           <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F',marginBottom:'16px'}}>Common home projects</h3>
@@ -454,6 +525,7 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
         </div>
       )}
 
+      {/* Category filter */}
       {projects.length>0&&(
         <div style={{display:'flex',gap:'8px',flexWrap:'wrap',marginBottom:'20px'}}>
           <button onClick={()=>setFilterCat('all')} style={{padding:'6px 14px',borderRadius:'20px',fontSize:'12px',border:'none',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",background:filterCat==='all'?'#1E3A2F':'#fff',color:filterCat==='all'?'#F8F4EE':'#1E3A2F',outline:'1px solid rgba(30,58,47,0.15)'}}>All ({projects.length})</button>
@@ -461,6 +533,7 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
         </div>
       )}
 
+      {/* Empty state */}
       {filtered.length===0&&!showAddForm&&!showTemplates&&(
         <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'48px',textAlign:'center'}}>
           <div style={{fontSize:'44px',marginBottom:'14px'}}>✨</div>
@@ -470,17 +543,28 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
         </div>
       )}
 
+      {/* Project cards */}
       <div style={{display:'grid',gap:'16px'}}>
         {filtered.map(p=>{
           const cat=PROJECT_CATEGORIES.find(c=>c.key===p.category)
           const isEditing=editingId===p.id
           const timing=getBestTiming(p.title,p.category)
-          const savings=p.estimated_cost?getSavingsGoal(p.estimated_cost,p.timeline||'within_2_years'):null
+          const knownAvg=getKnownAverage(p.title)
+          const savings=getSavingsGoal(p.estimated_cost,p.timeline||'within_2_years',knownAvg)
           const guides=getGuideLinks(p.title)
+          const budget=parseBudget(p.estimated_cost||'')
+          const neighborAvg=knownAvg?Math.round((knownAvg.low+knownAvg.high)/2):null
           const timelineLabel=(p.timeline||'within_2_years').replace('within_1_year','Within 1 year').replace('within_2_years','Within 2 years').replace('3_5_years','3–5 years').replace('someday','Someday')
           const catRoi=cat?.key==='value'?'High resale ROI':cat?.key==='maintenance'?'Protects home value':cat?.key==='energy'?'Lowers utility bills':cat?.key==='curb_appeal'?'Strong curb appeal ROI':'Good long-term investment'
+
+          // Budget vs neighbor comparison
+          const budgetDiff=budget&&neighborAvg?budget-neighborAvg:null
+          const budgetVsNeighbor=budgetDiff!==null?(budgetDiff>0?{label:'$'+Math.abs(budgetDiff).toLocaleString()+' above neighbor avg',color:'#9B2C2C'}:budgetDiff<0?{label:'$'+Math.abs(budgetDiff).toLocaleString()+' below neighbor avg — may need to adjust',color:'#C47B2B'}:{label:'Right at neighbor avg',color:'#3D7A5A'}):null
+
           return(
             <div key={p.id} style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden'}}>
+
+              {/* Card header */}
               <div style={{padding:'20px 24px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'16px'}}>
                 <div style={{display:'flex',alignItems:'flex-start',gap:'14px',flex:1}}>
                   <div style={{width:'44px',height:'44px',borderRadius:'12px',background:'#F8F4EE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px',flexShrink:0}}>{cat?.icon||'📋'}</div>
@@ -493,37 +577,57 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
                   </div>
                 </div>
                 <div style={{textAlign:'right',flexShrink:0}}>
-                  {p.estimated_cost&&<div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'22px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{p.estimated_cost}</div>}
+                  {budget?<div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'22px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{formatDollars(budget)}</div>:knownAvg?<div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:500,color:'#8A8A82',marginBottom:'2px'}}>{knownAvg.label} typical</div>:null}
                   <div style={{fontSize:'12px',color:'#3D7A5A',fontWeight:500}}>↑ {catRoi}</div>
                 </div>
               </div>
 
+              {/* Stats row */}
               {!isEditing&&(
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1px',background:'rgba(30,58,47,0.06)'}}>
+                  {/* Neighbors paid */}
                   <div style={{background:'#F8F4EE',padding:'14px 18px'}}>
                     <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',marginBottom:'6px'}}>Neighbors Paid</div>
-                    <div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>See neighbor data</div>
-                    <div style={{fontSize:'11px',color:'#8A8A82'}}><a href="/neighbors" style={{color:'#3D7A5A',textDecoration:'none'}}>View jobs in your ZIP →</a></div>
+                    {neighborAvg?(
+                      <>
+                        <div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{formatDollars(neighborAvg)} avg</div>
+                        <div style={{fontSize:'11px',color:'#8A8A82'}}>{knownAvg!.label} typical range</div>
+                        {budgetVsNeighbor&&budget&&<div style={{fontSize:'11px',color:budgetVsNeighbor.color,marginTop:'4px',fontWeight:500}}>{budgetVsNeighbor.label}</div>}
+                      </>
+                    ):(
+                      <><div style={{fontSize:'14px',color:'#8A8A82',marginBottom:'2px'}}>No data yet</div><a href="/neighbors" style={{fontSize:'11px',color:'#3D7A5A',textDecoration:'none'}}>View jobs in your ZIP →</a></>
+                    )}
                   </div>
+                  {/* Best time */}
                   <div style={{background:'#F8F4EE',padding:'14px 18px'}}>
                     <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',marginBottom:'6px'}}>Best Time to Hire</div>
                     <div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{timing.when}</div>
                     <div style={{fontSize:'11px',color:'#8A8A82'}}>{timing.reason}</div>
                   </div>
+                  {/* Monthly savings */}
                   <div style={{background:'#F8F4EE',padding:'14px 18px'}}>
                     <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',marginBottom:'6px'}}>Monthly Savings Goal</div>
-                    {savings?<><div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{savings.monthly}</div><div style={{fontSize:'11px',color:'#8A8A82'}}>{savings.readyIn}</div></>:<div style={{fontSize:'13px',color:'#8A8A82'}}>Add a cost estimate</div>}
+                    {savings?(
+                      <>
+                        <div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{savings.monthly}</div>
+                        <div style={{fontSize:'11px',color:'#8A8A82'}}>{savings.readyIn}</div>
+                      </>
+                    ):<div style={{fontSize:'13px',color:'#8A8A82'}}>Add a budget or timeline</div>}
                   </div>
                 </div>
               )}
 
+              {/* Edit form */}
               {isEditing&&(
                 <div style={{padding:'16px 24px',background:'#F8F4EE',borderTop:'1px solid rgba(30,58,47,0.06)'}}>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'12px'}}>
                     <div><select value={editEdits.category} onChange={e=>setEditEdits((prev:any)=>({...prev,category:e.target.value}))} style={iS}>{PROJECT_CATEGORIES.map(c=><option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}</select></div>
                     <div><select value={editEdits.timeline||'within_2_years'} onChange={e=>setEditEdits((prev:any)=>({...prev,timeline:e.target.value}))} style={iS}><option value="within_1_year">Within 1 year</option><option value="within_2_years">Within 2 years</option><option value="3_5_years">3–5 years</option><option value="someday">Someday</option></select></div>
                     <div><select value={editEdits.status||'wishlist'} onChange={e=>setEditEdits((prev:any)=>({...prev,status:e.target.value}))} style={iS}><option value="wishlist">Wish list</option><option value="planning">Planning</option><option value="in_progress">In progress</option><option value="done">Done</option></select></div>
-                    <div><input value={editEdits.estimated_cost||''} onChange={e=>setEditEdits((prev:any)=>({...prev,estimated_cost:e.target.value}))} style={iS} placeholder="Cost estimate"/></div>
+                    <div>
+                      <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Budget in mind?</label>
+                      <div style={{position:'relative'}}><span style={{position:'absolute',left:'10px',top:'50%',transform:'translateY(-50%)',fontSize:'13px',color:'#8A8A82'}}>$</span><input type="number" value={editEdits.estimated_cost||''} onChange={e=>setEditEdits((prev:any)=>({...prev,estimated_cost:e.target.value}))} style={{...iS,paddingLeft:'22px'}} placeholder="e.g. 15000"/></div>
+                    </div>
                     <div style={{gridColumn:'1/-1'}}><input value={editEdits.notes||''} onChange={e=>setEditEdits((prev:any)=>({...prev,notes:e.target.value}))} style={iS} placeholder="Notes, material preferences..."/></div>
                   </div>
                   <div style={{display:'flex',gap:'8px'}}>
@@ -533,6 +637,7 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
                 </div>
               )}
 
+              {/* Guide chips + status */}
               {!isEditing&&(
                 <div style={{padding:'14px 24px',borderTop:'1px solid rgba(30,58,47,0.06)'}}>
                   <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',marginBottom:'10px'}}>Educational Guides</div>
