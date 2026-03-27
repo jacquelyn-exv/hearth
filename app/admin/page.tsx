@@ -52,6 +52,10 @@ export default function Admin() {
   const [contentRequests, setContentRequests] = useState<any[]>([])
   const [allUsers, setAllUsers] = useState<any[]>([])
   const [funnelUsers, setFunnelUsers] = useState<any[]>([])
+  const [usersList, setUsersList] = useState<any[]>([])
+  const [usersSearch, setUsersSearch] = useState('')
+  const [deletingUserId, setDeletingUserId] = useState<string|null>(null)
+  const [togglingUserId, setTogglingUserId] = useState<string|null>(null)
 
   // AI insights
   const [aiInsights, setAiInsights] = useState<string>('')
@@ -141,6 +145,24 @@ export default function Admin() {
     const funnel = Object.values(userMap).sort((a: any, b: any) => new Date(b.signedUp).getTime() - new Date(a.signedUp).getTime())
     setAllUsers(funnel)
     setFunnelUsers(funnel)
+
+    // Load users list with profile data
+    const { data: profiles } = await supabase.from('user_profiles').select('user_id, first_name, last_name')
+    const { data: roles } = await supabase.from('user_roles').select('user_id, role')
+    const profileMap: Record<string, any> = {}
+    ;(profiles || []).forEach((p: any) => { profileMap[p.user_id] = p })
+    const roleMap: Record<string, string> = {}
+    ;(roles || []).forEach((r: any) => { roleMap[r.user_id] = r.role })
+
+    const userListData = (authUsers || []).map((u: any) => ({
+      user_id: u.user_id,
+      email: u.user_email,
+      created_at: u.created_at,
+      first_name: profileMap[u.user_id]?.first_name || null,
+      last_name: profileMap[u.user_id]?.last_name || null,
+      role: roleMap[u.user_id] || 'homeowner',
+    })).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    setUsersList(userListData)
   }, [])
 
   useEffect(() => {
@@ -186,17 +208,13 @@ Metrics:
 
 Respond with ONLY valid JSON array, no markdown, no explanation.`
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/api/ai-insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }]
-        })
+        body: JSON.stringify({ metrics: prompt })
       })
       const data = await response.json()
-      const text = data.content?.[0]?.text || '[]'
+      const text = data.insights || '[]'
       setAiInsights(text)
     } catch (e) {
       setAiInsights('[]')
@@ -207,6 +225,25 @@ Respond with ONLY valid JSON array, no markdown, no explanation.`
   useEffect(() => {
     if (!loading && allUsers.length > 0 && !aiFetched) fetchAiInsights()
   }, [loading, allUsers.length])
+
+  const toggleAdmin = async (userId: string, currentRole: string) => {
+    setTogglingUserId(userId)
+    const newRole = currentRole === 'admin' ? 'homeowner' : 'admin'
+    await supabase.from('user_roles').upsert({ user_id: userId, role: newRole }, { onConflict: 'user_id' })
+    setUsersList(prev => prev.map(u => u.user_id === userId ? { ...u, role: newRole } : u))
+    setTogglingUserId(null)
+  }
+
+  const deleteUser = async (userId: string) => {
+    if (!window.confirm('Permanently delete this user? This cannot be undone.')) return
+    setDeletingUserId(userId)
+    await supabase.from('homes').delete().eq('user_id', userId)
+    await supabase.from('user_profiles').delete().eq('user_id', userId)
+    await supabase.from('user_roles').delete().eq('user_id', userId)
+    try { await supabase.rpc('admin_delete_user', { p_user_id: userId }) } catch {}
+    setUsersList(prev => prev.filter(u => u.user_id !== userId))
+    setDeletingUserId(null)
+  }
 
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}><p style={{ color: '#8A8A82' }}>Loading...</p></div>
   if (!authorized) return null
@@ -619,6 +656,97 @@ Respond with ONLY valid JSON array, no markdown, no explanation.`
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── USERS ── */}
+        {activeTab === 'users' && (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Users</h2>
+                <p style={{ fontSize: '13px', color: '#8A8A82' }}>{usersList.length} total accounts</p>
+              </div>
+              <input
+                type="text"
+                value={usersSearch}
+                onChange={e => setUsersSearch(e.target.value)}
+                placeholder="Search by name or email..."
+                style={{ padding: '9px 14px', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none', width: '260px' }}
+              />
+            </div>
+
+            <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    {['Name', 'Email', 'Role', 'Joined', 'Actions'].map(h => (
+                      <th key={h} style={th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {usersList
+                    .filter(u => {
+                      if (!usersSearch.trim()) return true
+                      const q = usersSearch.toLowerCase()
+                      return (
+                        u.email?.toLowerCase().includes(q) ||
+                        u.first_name?.toLowerCase().includes(q) ||
+                        u.last_name?.toLowerCase().includes(q)
+                      )
+                    })
+                    .map(u => (
+                      <tr key={u.user_id} style={{ opacity: deletingUserId === u.user_id ? 0.4 : 1 }}>
+                        <td style={td}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#1E3A2F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: '#F8F4EE', fontWeight: 600, flexShrink: 0 }}>
+                              {(u.first_name || u.email || '?')[0].toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>
+                              {u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : u.first_name || '—'}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ ...td, color: '#8A8A82', fontSize: '12px' }}>{u.email || '—'}</td>
+                        <td style={td}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px', background: u.role === 'admin' ? '#1E3A2F' : '#F8F4EE', color: u.role === 'admin' ? '#F8F4EE' : '#8A8A82', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {u.role === 'admin' ? 'Admin' : 'Homeowner'}
+                          </span>
+                        </td>
+                        <td style={{ ...td, color: '#8A8A82', fontSize: '12px' }}>
+                          {new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+                        </td>
+                        <td style={td}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <button
+                              onClick={() => toggleAdmin(u.user_id, u.role)}
+                              disabled={togglingUserId === u.user_id}
+                              style={{ fontSize: '11px', padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(30,58,47,0.2)', background: '#fff', color: '#1E3A2F', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500, whiteSpace: 'nowrap' }}
+                            >
+                              {togglingUserId === u.user_id ? '...' : u.role === 'admin' ? 'Remove admin' : 'Make admin'}
+                            </button>
+                            <button
+                              onClick={() => deleteUser(u.user_id)}
+                              disabled={deletingUserId === u.user_id}
+                              style={{ fontSize: '11px', padding: '5px 10px', borderRadius: '6px', border: '1px solid rgba(155,44,44,0.25)', background: '#fff', color: '#9B2C2C', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}
+                            >
+                              {deletingUserId === u.user_id ? '...' : 'Delete'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+              {usersList.filter(u => {
+                if (!usersSearch.trim()) return true
+                const q = usersSearch.toLowerCase()
+                return u.email?.toLowerCase().includes(q) || u.first_name?.toLowerCase().includes(q) || u.last_name?.toLowerCase().includes(q)
+              }).length === 0 && (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#8A8A82', fontSize: '13px' }}>No users match</div>
+              )}
             </div>
           </div>
         )}
