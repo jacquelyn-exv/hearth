@@ -846,6 +846,7 @@ export default function Dashboard() {
   const [uploadError,setUploadError]=useState('')
   const [docFilter,setDocFilter]=useState('all')
   const [homeMembers,setHomeMembers]=useState<any[]>([])
+  const [homeInvites,setHomeInvites]=useState<any[]>([])
   const [showInviteForm,setShowInviteForm]=useState(false)
   const [inviteEmail,setInviteEmail]=useState('')
   const [inviteFirstName,setInviteFirstName]=useState('')
@@ -859,14 +860,15 @@ export default function Dashboard() {
   const iS:React.CSSProperties={width:'100%',padding:'7px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'6px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',background:'#fff',color:'#1A1A18',boxSizing:'border-box'}
 
   const loadHomeData=async(homeId:string)=>{
-    const [{data:det},{data:sys},{data:j},{data:sc},{data:tk},{data:dc},{data:hm}]=await Promise.all([
+    const [{data:det},{data:sys},{data:j},{data:sc},{data:tk},{data:dc},{data:hm},{data:hi}]=await Promise.all([
       supabase.from('home_details').select('*').eq('home_id',homeId).single(),
       supabase.from('home_systems').select('*').eq('home_id',homeId),
       supabase.from('contractor_jobs').select('*').eq('home_id',homeId).order('job_date',{ascending:false}),
       supabase.from('health_scores').select('*').eq('home_id',homeId).order('calculated_at',{ascending:false}).limit(1),
       supabase.from('home_tasks').select('*').eq('home_id',homeId).order('created_at',{ascending:false}),
       supabase.from('home_documents').select('*').eq('home_id',homeId).order('created_at',{ascending:false}),
-      supabase.from('home_members').select('*').eq('home_id',homeId).eq('status','approved')
+      supabase.from('home_members').select('*').eq('home_id',homeId).eq('status','approved'),
+      supabase.from('home_invites').select('*').eq('home_id',homeId).eq('status','pending').order('created_at',{ascending:false})
     ])
     setDetails(det);setSystems(sys||[]);setJobs(j||[])
     if(sc&&sc.length>0)setScore(sc[0])
@@ -874,6 +876,7 @@ export default function Dashboard() {
     setDismissedSmartTasks((tk||[]).filter((t:any)=>t.status==='dismissed').map((t:any)=>t.title))
     setDocs(dc||[])
     setHomeMembers(hm||[])
+    setHomeInvites(hi||[])
     setHomeMembers(hm||[])
     const {data:zd}=await supabase.from('homes').select('zip').eq('id',homeId).single()
     if(zd?.zip){const {data:st}=await supabase.from('storm_events').select('*').eq('zip',zd.zip).order('event_date',{ascending:false}).limit(20);setStormHistory(st||[])}
@@ -1044,6 +1047,11 @@ export default function Dashboard() {
     setInviteFirstName('')
     setInviteLastName('')
     setTimeout(()=>{setInviteSent(false);setShowInviteForm(false)},3000)
+  }
+
+  const cancelInvite=async(inviteId:string)=>{
+    await supabase.from('home_invites').update({status:'cancelled'}).eq('id',inviteId)
+    setHomeInvites(prev=>prev.filter(i=>i.id!==inviteId))
   }
 
   const handleFileSelect=(e:React.ChangeEvent<HTMLInputElement>)=>{
@@ -1470,7 +1478,7 @@ export default function Dashboard() {
                   )}
                 </div>
               )}
-              {homeMembers.length===0&&!showInviteForm&&(
+              {homeMembers.length===0&&homeInvites.length===0&&!showInviteForm&&(
                 <div style={{padding:'20px',textAlign:'center'}}>
                   <p style={{fontSize:'13px',color:'#8A8A82',lineHeight:1.6}}>No other members yet. Invite a co-owner, property manager, or viewer.</p>
                 </div>
@@ -1486,6 +1494,25 @@ export default function Dashboard() {
                         <div style={{fontSize:'11px',color:'#8A8A82',textTransform:'capitalize'}}>{(m.role||'').replace(/_/g,' ')}</div>
                       </div>
                       <span style={{fontSize:'11px',padding:'3px 8px',borderRadius:'20px',background:'#EAF2EC',color:'#3D7A5A',fontWeight:500}}>Active</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {homeInvites.length>0&&(
+                <div style={{borderTop:homeMembers.length>0?'1px solid rgba(30,58,47,0.08)':'none'}}>
+                  {homeMembers.length>0&&<div style={{padding:'8px 20px',background:'#F8F4EE'}}><span style={{fontSize:'11px',fontWeight:600,color:'#8A8A82',textTransform:'uppercase',letterSpacing:'0.05em'}}>Pending invites</span></div>}
+                  {homeInvites.map((inv:any)=>(
+                    <div key={inv.id} style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 20px',borderBottom:'1px solid rgba(30,58,47,0.06)'}}>
+                      <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'rgba(196,123,43,0.15)',border:'1px dashed rgba(196,123,43,0.40)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',color:'#C47B2B',flexShrink:0,fontWeight:500}}>{(inv.email||'?')[0].toUpperCase()}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{inv.first_name&&inv.last_name?inv.first_name+' '+inv.last_name:inv.email}</div>
+                        {inv.first_name&&<div style={{fontSize:'11px',color:'#8A8A82'}}>{inv.email}</div>}
+                        <div style={{fontSize:'11px',color:'#8A8A82',textTransform:'capitalize'}}>{(inv.role||'').replace(/_/g,' ')} · Invited {new Date(inv.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                        <span style={{fontSize:'11px',padding:'3px 8px',borderRadius:'20px',background:'#FBF0DC',color:'#C47B2B',fontWeight:500}}>Pending</span>
+                        <button onClick={()=>cancelInvite(inv.id)} style={{background:'none',border:'none',color:'#8A8A82',cursor:'pointer',fontSize:'13px',padding:'2px 6px',borderRadius:'4px'}} title="Cancel invite">×</button>
+                      </div>
                     </div>
                   ))}
                 </div>
