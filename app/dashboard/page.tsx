@@ -1328,47 +1328,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Members */}
-              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'18px',marginBottom:'16px'}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
-                  <h4 style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Home members</h4>
-                  <button onClick={()=>{setShowInviteForm(!showInviteForm);setInviteSent(false)}} style={{background:'none',border:'none',fontSize:'12px',color:'#3D7A5A',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",fontWeight:500}}>{showInviteForm?'Cancel':'+ Invite'}</button>
-                </div>
-                {homeMembers.length===0&&!showInviteForm&&(
-                  <p style={{fontSize:'12px',color:'#8A8A82',lineHeight:1.6,marginBottom:'10px'}}>No other members yet. Invite a co-owner, property manager, or viewer.</p>
-                )}
-                {homeMembers.length>0&&(
-                  <div style={{display:'flex',flexDirection:'column',gap:'8px',marginBottom:'12px'}}>
-                    {homeMembers.map((m:any)=>(
-                      <div key={m.user_id} style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                        <div style={{width:'28px',height:'28px',borderRadius:'50%',background:'#1E3A2F',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',color:'#F8F4EE',flexShrink:0,fontWeight:500}}>{(m.email||'?')[0].toUpperCase()}</div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.email}</div>
-                          <div style={{fontSize:'11px',color:'#8A8A82',textTransform:'capitalize'}}>{(m.role||'').replace('_',' ')}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {showInviteForm&&(
-                  <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-                    {inviteSent?(
-                      <div style={{background:'#EAF2EC',border:'1px solid rgba(61,122,90,0.2)',borderRadius:'8px',padding:'10px 12px',fontSize:'13px',color:'#3D7A5A',textAlign:'center'}}>✓ Invitation sent!</div>
-                    ):(
-                      <>
-                        <input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="Email address" style={{width:'100%',padding:'8px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'8px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',boxSizing:'border-box' as const}}/>
-                        <select value={inviteRole} onChange={e=>setInviteRole(e.target.value)} style={{width:'100%',padding:'8px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'8px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',background:'#fff'}}>
-                          <option value="co_owner">Co-owner — full edit access</option>
-                          <option value="property_manager">Property manager — view only</option>
-                          <option value="viewer">Viewer — read only</option>
-                        </select>
-                        <button onClick={sendInvite} disabled={inviteSending||!inviteEmail.trim()} style={{background:inviteEmail.trim()?'#1E3A2F':'rgba(30,58,47,0.3)',color:'#F8F4EE',border:'none',padding:'9px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:inviteEmail.trim()?'pointer':'not-allowed',fontFamily:"'DM Sans', sans-serif"}}>{inviteSending?'Sending...':'Send invitation'}</button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
               {/* Community score */}
               {communityScore&&(<div style={{background:'#1E3A2F',borderRadius:'16px',padding:'18px',marginBottom:'16px'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'12px'}}><div style={{fontSize:'26px'}}>{communityLevel.emoji}</div><div><div style={{fontSize:'13px',fontWeight:500,color:'#F8F4EE'}}>{communityLevel.label}</div><div style={{fontSize:'11px',color:'rgba(248,244,238,0.5)'}}>Community score</div></div><div style={{marginLeft:'auto',fontFamily:"'Playfair Display', Georgia, serif",fontSize:'24px',color:'#C47B2B',fontWeight:600}}>{communityScore.total_points}</div></div>
@@ -1395,7 +1354,7 @@ export default function Dashboard() {
               {/* Quick actions */}
               <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'18px',marginBottom:'16px'}}>
                 <h4 style={{fontSize:'13px',fontWeight:500,marginBottom:'14px',color:'#1E3A2F'}}>Quick actions</h4>
-                {[{label:'+ Log a contractor job',href:'/log'},{label:'✨ Add a project to wish list',onClick:()=>setActiveTab('projects')},{label:'+ Add another property',href:'/onboarding'},{label:'📄 Share report card',href:'/report',target:'_blank'},{label:'📖 Browse guides',href:'/guides'}].map((a:any)=>a.href?<a key={a.label} href={a.href} target={a.target} style={{display:'block',padding:'9px 0',fontSize:'13px',color:'#1E3A2F',textDecoration:'none',borderBottom:'1px solid rgba(30,58,47,0.07)'}}>{a.label}</a>:<button key={a.label} onClick={a.onClick} style={{display:'block',width:'100%',padding:'9px 0',fontSize:'13px',color:'#1E3A2F',background:'none',border:'none',borderBottom:'1px solid rgba(30,58,47,0.07)',cursor:'pointer',textAlign:'left',fontFamily:"'DM Sans', sans-serif"}}>{a.label}</button>)}
+                {[{label:'+ Log a contractor job',href:'/log'},{label:'👤 Invite a home member',onClick:()=>{setActiveTab('home_details');setTimeout(()=>setShowInviteForm(true),100)}},{label:'✨ Add a project to wish list',onClick:()=>setActiveTab('projects')},{label:'+ Add another property',href:'/onboarding'},{label:'📄 Share report card',href:'/report',target:'_blank'},{label:'📖 Browse guides',href:'/guides'}].map((a:any)=>a.href?<a key={a.label} href={a.href} target={a.target} style={{display:'block',padding:'9px 0',fontSize:'13px',color:'#1E3A2F',textDecoration:'none',borderBottom:'1px solid rgba(30,58,47,0.07)'}}>{a.label}</a>:<button key={a.label} onClick={a.onClick} style={{display:'block',width:'100%',padding:'9px 0',fontSize:'13px',color:'#1E3A2F',background:'none',border:'none',borderBottom:'1px solid rgba(30,58,47,0.07)',cursor:'pointer',textAlign:'left',fontFamily:"'DM Sans', sans-serif"}}>{a.label}</button>)}
               </div>
 
               <div style={{background:'#fff',border:'1px solid rgba(155,44,44,0.15)',borderRadius:'16px',padding:'18px'}}>

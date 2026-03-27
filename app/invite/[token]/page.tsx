@@ -34,7 +34,7 @@ export default function InvitePage() {
     if (!currentUser) {
       // Save token to localStorage and redirect to signup
       localStorage.setItem('hearth_invite_token', token)
-      router.push('/signup?invite=' + token)
+      router.push('/signup?invite=' + token + '&email=' + encodeURIComponent(invite.email))
       return
     }
     // Insert into home_members

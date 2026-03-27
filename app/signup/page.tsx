@@ -38,6 +38,13 @@ export default function Signup() {
       body: JSON.stringify({ email, name: displayName })
     })
 
+    // Auto-accept invite if one was saved
+    const inviteToken = typeof window !== 'undefined' ? localStorage.getItem('hearth_invite_token') : null
+    if (inviteToken) {
+      // Store email so the invite accept page can use it after email confirmation
+      localStorage.setItem('hearth_invite_pending_email', email)
+    }
+
     setSuccess(true)
     setLoading(false)
 
