@@ -217,7 +217,7 @@ export default function Home() {
               Most homeowners are flying blind.<br />It&apos;s expensive.
             </h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', background: 'rgba(30,58,47,0.08)', borderRadius: '20px', overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2px', background: 'rgba(30,58,47,0.08)', borderRadius: '20px', overflow: 'hidden' }}>
             {[
               { stat: '$15,000+', label: 'Average deferred maintenance cost', sub: 'when homeowners wait too long to address aging systems', color: '#9B2C2C', bg: '#FDECEA' },
               { stat: '23%', label: 'Homeowners overpay for contractor work', sub: 'because they have no idea what the job should cost in their area', color: '#7A4A10', bg: '#FBF0DC' },
