@@ -382,8 +382,11 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
 
   const parseBudget=(val:string):number|null=>{
     if(!val)return null
-    const n=parseInt(val.replace(/[^0-9]/g,''))
-    return isNaN(n)||n<=0?null:n
+    const clean=val.replace(/[$,]/g,'')
+    const parts=clean.split(/[–-]/).map((s:string)=>parseInt(s.trim())).filter((n:number)=>!isNaN(n)&&n>0)
+    if(parts.length>=2)return Math.round((parts[0]+parts[parts.length-1])/2)
+    if(parts.length===1)return parts[0]
+    return null
   }
 
   const formatDollars=(n:number)=>'$'+n.toLocaleString()
