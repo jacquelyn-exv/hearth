@@ -555,41 +555,90 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
 
         {/* PRICING TRENDS VIEW */}
         {activeView === 'pricing' && (
-          <div>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-              <input value={zipSearch} onChange={e => setZipSearch(e.target.value)} style={{ ...inputStyle, width: '120px' }} placeholder="ZIP code" />
+          <div style={{ display: 'grid', gap: '32px' }}>
+
+            {/* ── COMMUNITY PRICING ── */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>What neighbors paid</h3>
+                  <p style={{ fontSize: '13px', color: '#8A8A82' }}>Real prices logged by verified homeowners{userZip ? ` near ${userZip}` : ''}</p>
+                </div>
+                <input value={zipSearch} onChange={e => setZipSearch(e.target.value)} style={{ ...inputStyle, width: '130px' }} placeholder="Filter by ZIP" />
+              </div>
+
+              {Object.keys(pricingBySystem).length === 0 ? (
+                <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '36px', marginBottom: '12px' }}>📊</div>
+                  <h4 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>No pricing data yet for this area</h4>
+                  <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '16px' }}>Be the first to log a job and help your neighbors.</p>
+                  <a href={user ? '/dashboard' : '/signup'} style={{ display: 'inline-block', background: '#C47B2B', color: '#fff', textDecoration: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 500 }}>
+                    {user ? 'Log a job' : 'Create account to contribute'}
+                  </a>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {Object.entries(pricingBySystem).sort((a, b) => b[1].length - a[1].length).map(([sys, prices]) => {
+                    const sysAvg = Math.round(prices.reduce((a: number, b: number) => a + b, 0) / prices.length)
+                    const sysMin = Math.min(...prices)
+                    const sysMax = Math.max(...prices)
+                    const maxAvg = Math.max(...Object.values(pricingBySystem).map((p: number[]) => Math.round(p.reduce((a: number, b: number) => a + b, 0) / p.length)))
+                    const barPct = Math.min(100, (sysAvg / maxAvg) * 100)
+                    return (
+                      <div key={sys} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '14px', padding: '18px 22px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div>
+                            <div style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px', textTransform: 'capitalize' }}>{sys.replace(/_/g, ' ')}</div>
+                            <div style={{ fontSize: '11px', color: '#8A8A82' }}>{prices.length} job{prices.length !== 1 ? 's' : ''} logged in your area</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', color: '#1E3A2F', fontWeight: 600 }}>${sysAvg.toLocaleString()}</div>
+                            <div style={{ fontSize: '11px', color: '#8A8A82' }}>range: ${sysMin.toLocaleString()} – ${sysMax.toLocaleString()}</div>
+                          </div>
+                        </div>
+                        <div style={{ height: '8px', background: '#EDE8E0', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${barPct}%`, height: '100%', background: '#3D7A5A', borderRadius: '4px', transition: 'width 0.4s ease' }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
-            {Object.keys(pricingBySystem).length === 0 ? (
-              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
-                <p style={{ color: '#8A8A82' }}>No pricing data available yet for this area.</p>
+            {/* ── NATIONAL BENCHMARKS (narrative, compliant) ── */}
+            <div style={{ background: '#1E3A2F', borderRadius: '20px', padding: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                <div>
+                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#F8F4EE', marginBottom: '6px' }}>National resale benchmarks</h3>
+                  <p style={{ fontSize: '13px', color: 'rgba(248,244,238,0.55)', lineHeight: 1.6 }}>How much common projects recoup at resale — according to the Remodeling 2025 Cost vs. Value Report (<a href="https://www.costvsvalue.com" target="_blank" rel="noopener noreferrer" style={{ color: '#6AAF8A' }}>costvsvalue.com</a>)</p>
+                </div>
               </div>
-            ) : (
               <div style={{ display: 'grid', gap: '12px' }}>
-                <p style={{ fontSize: '13px', color: '#8A8A82' }}>Average prices logged by homeowners{userZip ? ` near ${userZip}` : ''}</p>
-                {Object.entries(pricingBySystem).sort((a, b) => b[1].length - a[1].length).map(([sys, prices]) => {
-                  const sysAvg = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length)
-                  const sysMin = Math.min(...prices)
-                  const sysMax = Math.max(...prices)
-                  const priceRange = getPriceRange(prices)
-                  return (
-                    <div key={sys} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '14px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '2px', textTransform: 'capitalize' }}>{sys}</div>
-                        <div style={{ fontSize: '12px', color: '#8A8A82' }}>{prices.length} job{prices.length !== 1 ? 's' : ''} logged</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#1E3A2F', fontWeight: 600 }}>${sysAvg.toLocaleString()}</div>
-                        <div style={{ fontSize: '11px', color: '#8A8A82' }}>avg · ${sysMin.toLocaleString()} – ${sysMax.toLocaleString()}</div>
-                      </div>
-                      <div style={{ width: '100%', height: '6px', background: '#EDE8E0', borderRadius: '3px' }}>
-                        <div style={{ width: `${Math.min(100, (sysAvg / Math.max(...Object.values(pricingBySystem).map(p => Math.round(p.reduce((a, b) => a + b, 0) / p.length)))) * 100)}%`, height: '100%', background: priceRange?.color || '#3D7A5A', borderRadius: '3px' }} />
+                {[
+                  { project: 'Garage Door Replacement', cost: '$4,672', recouped: 268, context: 'The single best ROI of any project — returns more than 2.5x the investment at resale.' },
+                  { project: 'Vinyl Window Replacement', cost: '$22,073', recouped: 76, context: 'Replaces drafty windows and signals to buyers the home has been maintained.' },
+                  { project: 'Roofing Replacement (Asphalt Shingles)', cost: '$31,871', recouped: 68, context: 'A new roof is one of the first things buyers inspect. Deferred replacement is a red flag.' },
+                  { project: 'Grand Entrance (Fiberglass Door)', cost: '$11,754', recouped: 85, context: 'Curb appeal at the front door pays — fiberglass holds up better than steel in most climates.' },
+                  { project: 'Fiber-Cement Siding Replacement', cost: '$21,485', recouped: 114, context: 'One of the few projects that recoups more than it costs — and dramatically improves curb appeal.' },
+                ].map(item => (
+                  <div key={item.project} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px 18px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 500, color: '#F8F4EE' }}>{item.project}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                        <span style={{ fontSize: '12px', color: 'rgba(248,244,238,0.5)' }}>avg {item.cost}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: item.recouped >= 100 ? 'rgba(106,175,138,0.25)' : item.recouped >= 70 ? 'rgba(196,123,43,0.25)' : 'rgba(155,44,44,0.2)', color: item.recouped >= 100 ? '#6AAF8A' : item.recouped >= 70 ? '#C47B2B' : '#F87171' }}>{item.recouped}% recouped</span>
                       </div>
                     </div>
-                  )
-                })}
+                    <p style={{ fontSize: '12px', color: 'rgba(248,244,238,0.5)', lineHeight: 1.6, margin: 0 }}>{item.context}</p>
+                  </div>
+                ))}
               </div>
-            )}
+              <p style={{ fontSize: '11px', color: 'rgba(248,244,238,0.25)', marginTop: '20px', lineHeight: 1.6 }}>
+                © 2025 Zonda Media, a Delaware Corporation. Complete data from the Remodeling 2025 Cost vs. Value Report can be downloaded free at <a href="https://www.costvsvalue.com" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(248,244,238,0.35)' }}>costvsvalue.com</a>.
+              </p>
+            </div>
+
           </div>
         )}
 
