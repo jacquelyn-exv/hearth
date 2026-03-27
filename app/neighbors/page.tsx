@@ -132,7 +132,7 @@ export default function Neighbors() {
   const [userSystems, setUserSystems] = useState<string[]>([])
   const [jobs, setJobs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'pricing' | 'reviews' | 'leaderboard'>('neighborhood')
+const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'pricing' | 'leaderboard'>('neighborhood')
   const [search, setSearch] = useState('')
   const [zipSearch, setZipSearch] = useState('')
   const [nearbyZips, setNearbyZips] = useState<string[]>([])
@@ -330,7 +330,6 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
           <div style={{ display: 'flex', gap: '2px' }}>
             {[
             { key: 'neighborhood', label: '🏘️ My Area' },
-            { key: 'reviews',      label: '⭐ Reviews' },
             { key: 'contractors',  label: '🔍 Find a Pro' },
             { key: 'pricing',      label: '💰 Pricing Trends' },
             { key: 'leaderboard',  label: '✦ Top Neighbors' },
@@ -363,12 +362,12 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
           <div style={{ display: 'grid', gap: '24px' }}>
 
             {/* Stats row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
               {[
-                { label: 'Jobs in your area', value: zipJobs.length || '0', color: '#3D7A5A' },
+                { label: 'Jobs in your area', value: String(zipJobs.length || 0), color: '#3D7A5A' },
                 { label: 'Avg job cost', value: zipJobs.filter((j:any)=>j.final_price).length > 0 ? `$${Math.round(zipJobs.filter((j:any)=>j.final_price).reduce((a:number,b:any)=>a+Number(b.final_price),0)/zipJobs.filter((j:any)=>j.final_price).length).toLocaleString()}` : '—', color: '#1E3A2F' },
                 { label: 'Would refer rate', value: zipJobs.length > 0 ? `${Math.round((zipJobs.filter((j:any)=>j.would_refer==='yes').length/zipJobs.length)*100)}%` : '—', color: '#3D7A5A' },
-                { label: 'Contractors reviewed', value: String(new Set(zipJobs.map((j:any)=>j.company_name?.toLowerCase()).filter(Boolean)).size) || '0', color: '#C47B2B' },
+                { label: 'Contractors reviewed', value: String(new Set(zipJobs.map((j:any)=>j.company_name?.toLowerCase()).filter(Boolean)).size), color: '#C47B2B' },
               ].map(s => (
                 <div key={s.label} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '14px', padding: '16px 18px' }}>
                   <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: s.color, marginBottom: '4px' }}>{s.value}</div>
@@ -377,33 +376,36 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
               ))}
             </div>
 
-            {/* Two column: recent jobs + pricing summary */}
+            {/* Two col: recent jobs + pricing */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
 
-              {/* Recent jobs */}
+              {/* Recent jobs nearby */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#1E3A2F' }}>Recent jobs nearby</h3>
-                  <button onClick={() => setActiveView('reviews')} style={{ fontSize: '12px', color: '#3D7A5A', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>See all →</button>
+                  <div>
+                    <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#1E3A2F', marginBottom: '2px' }}>Recent jobs nearby</h3>
+                    <p style={{ fontSize: '12px', color: '#8A8A82' }}>Within 50 miles · most recent first</p>
+                  </div>
+                  <button onClick={() => setActiveView('contractors')} style={{ fontSize: '12px', color: '#3D7A5A', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500, whiteSpace: 'nowrap' }}>See all →</button>
                 </div>
                 {zipJobs.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                    <div style={{ fontSize: '32px', marginBottom: '10px' }}>⭐</div>
+                    <div style={{ fontSize: '32px', marginBottom: '10px' }}>📋</div>
                     <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '14px' }}>No jobs logged in your area yet.</p>
-                    <button onClick={() => user ? setActiveView('reviews') : window.location.href='/signup'} style={{ background: '#C47B2B', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
-                      Log the first one
+                    <button onClick={() => window.location.href = user ? '/dashboard' : '/signup'} style={{ background: '#C47B2B', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                      Be the first to log one
                     </button>
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gap: '12px' }}>
                     {zipJobs.slice(0, 4).map((job:any) => (
                       <div key={job.id} style={{ paddingBottom: '12px', borderBottom: '1px solid rgba(30,58,47,0.06)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3px' }}>
                           <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{job.company_name}</span>
-                          {job.final_price && <span style={{ fontSize: '13px', color: '#C47B2B', fontWeight: 500 }}>${Number(job.final_price).toLocaleString()}</span>}
+                          {job.final_price && <span style={{ fontSize: '13px', color: '#C47B2B', fontWeight: 500, flexShrink: 0, marginLeft: '8px' }}>${Number(job.final_price).toLocaleString()}</span>}
                         </div>
                         <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '5px' }}>
-                          {job.system_type?.replace(/_/g, ' ')} · {job.zip}
+                          {job.system_type?.replace(/_/g,' ')} · {job.zip}{job.job_date ? ` · ${new Date(job.job_date).toLocaleDateString('en-US',{month:'short',year:'numeric'})}` : ''}
                         </div>
                         {job.tags?.length > 0 && (
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -416,29 +418,33 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
                 )}
               </div>
 
-              {/* Pricing summary */}
+              {/* What neighbors paid */}
               <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#1E3A2F' }}>What neighbors paid</h3>
-                  <button onClick={() => setActiveView('pricing')} style={{ fontSize: '12px', color: '#3D7A5A', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>Full trends →</button>
+                  <div>
+                    <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#1E3A2F', marginBottom: '2px' }}>What neighbors paid</h3>
+                    <p style={{ fontSize: '12px', color: '#8A8A82' }}>By project type · your area</p>
+                  </div>
+                  <button onClick={() => setActiveView('pricing')} style={{ fontSize: '12px', color: '#3D7A5A', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500, whiteSpace: 'nowrap' }}>Full trends →</button>
                 </div>
                 {Object.keys(pricingBySystem).length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '10px' }}>💰</div>
                     <p style={{ fontSize: '13px', color: '#8A8A82' }}>No pricing data yet for your area.</p>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gap: '10px' }}>
-                    {Object.entries(pricingBySystem).slice(0, 4).map(([sys, prices]: [string, any]) => {
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {Object.entries(pricingBySystem).slice(0,5).map(([sys, prices]:any) => {
                       const avg = Math.round(prices.reduce((a:number,b:number)=>a+b,0)/prices.length)
-                      const max = Math.max(...Object.values(pricingBySystem).map((p:any) => Math.round(p.reduce((a:number,b:number)=>a+b,0)/p.length)))
+                      const maxAvg = Math.max(...Object.values(pricingBySystem).map((p:any)=>Math.round(p.reduce((a:number,b:number)=>a+b,0)/p.length)))
                       return (
                         <div key={sys}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                             <span style={{ fontSize: '13px', color: '#1E3A2F', textTransform: 'capitalize' }}>{sys.replace(/_/g,' ')}</span>
-                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>${avg.toLocaleString()}</span>
+                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>${avg.toLocaleString()} <span style={{ fontSize: '11px', color: '#8A8A82', fontWeight: 400 }}>avg · {prices.length} job{prices.length!==1?'s':''}</span></span>
                           </div>
                           <div style={{ height: '6px', background: '#EDE8E0', borderRadius: '3px' }}>
-                            <div style={{ width: `${Math.min(100,(avg/max)*100)}%`, height: '100%', background: '#3D7A5A', borderRadius: '3px' }} />
+                            <div style={{ width: `${Math.min(100,(avg/maxAvg)*100)}%`, height: '100%', background: '#3D7A5A', borderRadius: '3px' }} />
                           </div>
                         </div>
                       )
@@ -449,16 +455,16 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
             </div>
 
             {/* Quick actions */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
               {[
-                { icon: '⭐', title: 'Help your neighbors', body: "Log a job you've had done and share pricing with your community.", action: 'Log a job', onClick: () => window.location.href = user ? '/dashboard' : '/signup' },
-                { icon: '🔍', title: 'Hire a pro', body: 'Search contractors reviewed by homeowners in your area.', action: 'Find contractors', onClick: () => setActiveView('contractors') },
-                { icon: '💰', title: 'See pricing trends', body: 'How project costs have shifted from 2019 to today.', action: 'View trends', onClick: () => setActiveView('pricing') },
-                { icon: '📊', title: 'Cost vs. Value', body: 'Which projects add the most equity when you sell.', action: 'See benchmarks', onClick: () => setActiveView('pricing') },
+                { icon: '⭐', title: 'Help your neighbors', body: "Log a job and share what you paid. Takes 2 minutes.", action: 'Log a job', onClick: () => window.location.href = user ? '/dashboard' : '/signup' },
+                { icon: '🔍', title: 'Hire a pro', body: 'Find contractors reviewed by homeowners in your area.', action: 'Find a pro', onClick: () => setActiveView('contractors') },
+                { icon: '📈', title: 'See price trends', body: 'How project costs have shifted from 2019 to today.', action: 'View trends', onClick: () => setActiveView('pricing') },
+                { icon: '💡', title: 'What adds value?', body: 'Which projects recoup the most when you sell.', action: 'Cost vs. Value', onClick: () => setActiveView('pricing') },
               ].map(qa => (
                 <div key={qa.title} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '14px', padding: '18px' }}>
-                  <div style={{ fontSize: '22px', marginBottom: '10px' }}>{qa.icon}</div>
-                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '6px' }}>{qa.title}</div>
+                  <div style={{ fontSize: '20px', marginBottom: '10px' }}>{qa.icon}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F', marginBottom: '6px' }}>{qa.title}</div>
                   <div style={{ fontSize: '12px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '12px' }}>{qa.body}</div>
                   <button onClick={qa.onClick} style={{ fontSize: '12px', fontWeight: 500, color: '#3D7A5A', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0 }}>{qa.action} →</button>
                 </div>
@@ -473,12 +479,12 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
                   <button onClick={() => setActiveView('leaderboard')} style={{ fontSize: '12px', color: '#6AAF8A', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>See all →</button>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
-                  {leaderboard.slice(0, 4).map((nb:any, i:number) => (
-                    <div key={nb.user_id} style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: i === 0 ? '#C47B2B' : 'rgba(248,244,238,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: '#F8F4EE', fontWeight: 600, flexShrink: 0 }}>{i + 1}</div>
+                  {leaderboard.slice(0,4).map((nb:any, i:number) => (
+                    <div key={nb.user_id} style={{ background: 'rgba(255,255,255,0.07)', borderRadius: '10px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: i===0?'#C47B2B':i===1?'rgba(248,244,238,0.2)':i===2?'rgba(196,123,43,0.3)':'rgba(248,244,238,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: '#F8F4EE', fontWeight: 600, flexShrink: 0 }}>{i+1}</div>
                       <div>
-                        <div style={{ fontSize: '13px', color: '#F8F4EE', fontWeight: 500 }}>Neighbor {i + 1}</div>
-                        <div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)' }}>{nb.total_points || 0} pts · {nb.theirJobs?.length || 0} jobs</div>
+                        <div style={{ fontSize: '13px', color: '#F8F4EE', fontWeight: 500 }}>Neighbor {i+1}</div>
+                        <div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)' }}>{nb.total_points||0} pts · {nb.theirJobs?.length||0} jobs shared</div>
                       </div>
                     </div>
                   ))}
@@ -636,7 +642,60 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
                 })}
               </div>
             )}
+          {/* Recent jobs in this area */}
+          <div style={{ marginTop: '32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Recent jobs nearby</h3>
+                <p style={{ fontSize: '12px', color: '#8A8A82' }}>What homeowners in this area are hiring for</p>
+              </div>
+            </div>
+            {filtered.length === 0 ? (
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontSize: '36px', marginBottom: '12px' }}>📋</div>
+                <h4 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>No jobs logged in this area yet</h4>
+                <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '16px' }}>Be the first to log a job and help your neighbors.</p>
+                <button onClick={() => window.location.href = user ? '/dashboard' : '/signup'} style={{ background: '#C47B2B', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                  {user ? 'Log a job' : 'Create account to contribute'}
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {filtered.slice(0, 20).map(job => (
+                  <div key={job.id} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '14px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F' }}>{job.company_name}</span>
+                        <span style={{ fontSize: '11px', padding: '1px 7px', borderRadius: '20px', background: '#EDE8E0', color: '#8A8A82', textTransform: 'capitalize' }}>{job.system_type?.replace(/_/g, ' ')}</span>
+                        {job.zip && <span style={{ fontSize: '11px', color: '#8A8A82' }}>{job.zip}</span>}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '6px' }}>
+                        {job.service_description}
+                        {job.job_date ? ` · ${new Date(job.job_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}` : ''}
+                      </div>
+                      {job.tags?.length > 0 && (
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {job.tags.map((tag: string) => <span key={tag} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>{tag}</span>)}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      {job.final_price && (
+                        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', color: '#1E3A2F', fontWeight: 600 }}>${Number(job.final_price).toLocaleString()}</div>
+                      )}
+                      {job.quality_rating > 0 && (
+                        <div style={{ fontSize: '12px', color: '#C47B2B' }}>{'★'.repeat(job.quality_rating)}{'☆'.repeat(5 - job.quality_rating)}</div>
+                      )}
+                      <div style={{ fontSize: '11px', color: job.would_refer === 'yes' ? '#3D7A5A' : job.would_refer === 'no' ? '#9B2C2C' : '#8A8A82', marginTop: '2px' }}>
+                        {job.would_refer === 'yes' ? '✓ Would refer' : job.would_refer === 'no' ? '✕ Would not refer' : ''}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+        </div>
         )}
 
         {/* PRICING TRENDS VIEW */}
@@ -738,73 +797,7 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
         )}
 
         {/* RECENT REVIEWS VIEW */}
-        {activeView === 'reviews' && (
-          <div>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              <input value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, flex: 2, minWidth: '180px' }} placeholder="Search reviews..." />
-              <input value={zipSearch} onChange={e => handleZipChange(e.target.value)} style={{ ...inputStyle, width: '110px' }} placeholder="ZIP code" />
-              <select value={filterSystem} onChange={e => setFilterSystem(e.target.value)} style={inputStyle}>
-                {SYSTEMS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-
-            {/* Trend bar */}
-            {filtered.length >= 2 && (
-              <div style={{ background: '#1E3A2F', borderRadius: '14px', padding: '18px 22px', marginBottom: '20px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(248,244,238,0.45)', marginBottom: '12px' }}>
-                  {filtered.length} review{filtered.length !== 1 ? 's' : ''}{filterSystem !== 'All systems' ? ` · ${filterSystem}` : ''}{zipSearch ? ` · ${zipSearch}` : ''}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
-                  {avgPrice && <div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#F8F4EE' }}>${avgPrice.toLocaleString()}</div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)' }}>Average price</div></div>}
-                  {minPrice && maxPrice && <div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#F8F4EE' }}>${minPrice.toLocaleString()} – ${maxPrice.toLocaleString()}</div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)' }}>Price range</div></div>}
-                  {referRatio !== null && <div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', color: '#F8F4EE' }}>{referRatio}%</div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)' }}>Would refer</div></div>}
-                </div>
-              </div>
-            )}
-
-            {filtered.length === 0 ? (
-              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
-                <div style={{ fontSize: '40px', marginBottom: '16px' }}>⭐</div>
-                <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>No reviews yet</h3>
-                <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '20px' }}>Be the first to share a contractor review in your area.</p>
-                <a href={user ? '/log' : '/signup'} style={{ display: 'inline-block', background: '#C47B2B', color: '#fff', textDecoration: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 500 }}>
-                  {user ? 'Log a job' : 'Create account to contribute'}
-                </a>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {filtered.slice(0, 30).map(job => (
-                  <div key={job.id} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '14px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F' }}>{job.company_name}</span>
-                        <span style={{ fontSize: '11px', padding: '1px 7px', borderRadius: '20px', background: '#EDE8E0', color: '#8A8A82', textTransform: 'capitalize' }}>{job.system_type?.replace(/_/g, ' ')}</span>
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '6px' }}>
-                        {job.service_description}
-                        {job.job_date ? ` · ${new Date(job.job_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}` : ''}
-                        {job.zip ? ` · ${job.zip}` : ''}
-                      </div>
-                      {job.tags?.length > 0 && (
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                          {job.tags.map((tag: string) => <span key={tag} style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '20px', background: '#EAF2EC', color: '#3D7A5A' }}>{tag}</span>)}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '2px' }}>{job.final_price ? `$${Number(job.final_price).toLocaleString()}` : '—'}</div>
-                      <div style={{ color: '#C47B2B', fontSize: '12px' }}>{'★'.repeat(job.quality_rating)}</div>
-                      <div style={{ fontSize: '11px', marginTop: '2px', color: job.would_refer === 'yes' ? '#3D7A5A' : job.would_refer === 'no' ? '#9B2C2C' : '#7A4A10' }}>
-                        {job.would_refer === 'yes' ? '✓ Would refer' : job.would_refer === 'no' ? '✕ Would not refer' : '~ With reservations'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-{activeView === 'leaderboard' && (
+        {activeView === 'leaderboard' && (
           <div>
             <div style={{ marginBottom: '24px' }}>
               <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#8A8A82', marginBottom: '14px' }}>Badge directory</div>
