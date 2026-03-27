@@ -159,11 +159,8 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
           setUserZip(homes[0].zip || '')
           const initialZip = homes[0].zip || ''
           setZipSearch(initialZip)
-          if (initialZip) {
-            fetch(`/api/nearby-zips?zip=${initialZip}&radius=50`)
-              .then(r => r.json())
-              .then(d => setNearbyZips(d.zips || [initialZip]))
-              .catch(() => setNearbyZips([initialZip]))
+          if (typeof window !== 'undefined' && initialZip) {
+            localStorage.setItem('hearth_neighbor_zip', initialZip)
           }
           const { data: systems } = await supabase.from('home_systems').select('system_type').eq('home_id', homes[0].id)
           setUserSystems(systems?.map(s => s.system_type) || [])
@@ -196,17 +193,35 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
       }
 
       const { data } = await supabase.from('public_contractor_jobs').select('*').order('created_at', { ascending: false })
-      setJobs(data || [])
+      const jobData = data || []
+      setJobs(jobData)
       setLoading(false)
+      // Now load nearby zips with job zips as candidates
+      const defaultZip = (await supabase.auth.getUser()).data.user
+        ? null : null // zip already set above
+      const storedZip = localStorage.getItem('hearth_neighbor_zip')
+      const zipToUse = storedZip || ''
+      if (zipToUse) {
+        const candidateZips = [...new Set(jobData.map((j: any) => j.zip).filter(Boolean))].join(',')
+        fetch(`/api/nearby-zips?zip=${zipToUse}&radius=50&candidates=${candidateZips}`)
+          .then(r => r.json())
+          .then(d => setNearbyZips(d.zips || [zipToUse]))
+          .catch(() => {})
+      }
     }
     load()
   }, [])
 
-  const loadNearbyZips = async (zip: string) => {
+  const loadNearbyZips = async (zip: string, jobList?: any[]) => {
     if (!zip || zip.length !== 5) return
     setLoadingZips(true)
     try {
-      const res = await fetch(`/api/nearby-zips?zip=${zip}&radius=50`)
+      const source = jobList || jobs
+      const candidateZips = [...new Set(source.map((j: any) => j.zip).filter(Boolean))].join(',')
+      const url = candidateZips
+        ? `/api/nearby-zips?zip=${zip}&radius=50&candidates=${candidateZips}`
+        : `/api/nearby-zips?zip=${zip}&radius=50`
+      const res = await fetch(url)
       const data = await res.json()
       setNearbyZips(data.zips || [zip])
     } catch {
@@ -217,8 +232,9 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
 
   const handleZipChange = async (newZip: string) => {
     setZipSearch(newZip)
+    if (typeof window !== 'undefined') localStorage.setItem('hearth_neighbor_zip', newZip)
     if (newZip.length === 5) {
-      await loadNearbyZips(newZip)
+      await loadNearbyZips(newZip, jobs)
     }
   }
 
