@@ -7,26 +7,100 @@ const SYSTEMS = [
   { key: 'roof',          icon: '🏠', label: 'Roof' },
   { key: 'hvac',          icon: '🌡️', label: 'HVAC' },
   { key: 'water_heater',  icon: '🔥', label: 'Water Heater' },
-  { key: 'plumbing',      icon: '💧', label: 'Plumbing' },
-  { key: 'electrical',    icon: '⚡', label: 'Electrical' },
   { key: 'windows',       icon: '🪟', label: 'Windows' },
-  { key: 'doors',         icon: '🚪', label: 'Exterior Doors' },
+  { key: 'entry_door',    icon: '🚪', label: 'Entry Door' },
+  { key: 'sliding_door',  icon: '🪟', label: 'Sliding Door' },
   { key: 'siding',        icon: '🏗️', label: 'Siding' },
-  { key: 'gutters',       icon: '🌧️', label: 'Gutters' },
+  { key: 'gutters',       icon: '🌧️', label: 'Gutters & Trim' },
   { key: 'deck',          icon: '🪵', label: 'Deck / Patio' },
   { key: 'driveway',      icon: '🛣️', label: 'Driveway' },
   { key: 'fencing',       icon: '🔒', label: 'Fencing' },
   { key: 'sump_pump',     icon: '💦', label: 'Sump Pump' },
-  { key: 'chimney',       icon: '🔥', label: 'Chimney' },
+  { key: 'chimney',       icon: '🔥', label: 'Chimney / Fireplace' },
+  { key: 'refrigerator',  icon: '🧊', label: 'Refrigerator' },
+  { key: 'dishwasher',    icon: '🍽️', label: 'Dishwasher' },
   { key: 'landscaping',   icon: '🌿', label: 'Landscaping' },
 ]
 
 const LIFESPANS: Record<string, number> = {
   roof: 27, hvac: 17, water_heater: 11, windows: 22,
-  deck: 17, electrical: 35, plumbing: 50, siding: 30,
-  doors: 30, gutters: 20, driveway: 25, fencing: 20,
+  deck: 17, siding: 30, entry_door: 35, sliding_door: 28,
+  gutters: 20, driveway: 25, fencing: 20,
   chimney: 50, sump_pump: 10, landscaping: 20,
+  refrigerator: 13, dishwasher: 12,
 }
+
+const HOMEOWNER_TYPES = [
+  {
+    key: 'first_time',
+    emoji: '🏠',
+    label: 'First-time homeowner',
+    description: 'Just bought my first home',
+  },
+  {
+    key: 'new_to_home',
+    emoji: '🔑',
+    label: 'New to this home',
+    description: "I've owned before, just moved here",
+  },
+  {
+    key: 'established',
+    emoji: '🏡',
+    label: 'Established here',
+    description: "Owned this home for a few years",
+  },
+  {
+    key: 'long_term',
+    emoji: '🌳',
+    label: 'Long-term owner',
+    description: 'Owned this home 10+ years',
+  },
+  {
+    key: 'investor',
+    emoji: '🏢',
+    label: 'Investor / multiple properties',
+    description: 'I manage several properties',
+  },
+]
+
+const GOALS = [
+  {
+    key: 'maintain',
+    emoji: '🏡',
+    label: 'Maintain and protect',
+    description: 'Keep my home in great shape long-term',
+  },
+  {
+    key: 'protect_value',
+    emoji: '🏷️',
+    label: 'Prepare to sell',
+    description: 'Get my home ready to sell at full value',
+  },
+  {
+    key: 'renovate',
+    emoji: '🔨',
+    label: 'Renovate and improve',
+    description: 'Upgrade and improve my home',
+  },
+  {
+    key: 'new_owner',
+    emoji: '📚',
+    label: 'Learn as a new homeowner',
+    description: 'Understand my home and build good habits',
+  },
+  {
+    key: 'maximize_value',
+    emoji: '📈',
+    label: 'Maximize long-term value',
+    description: "Build and protect my home's value over time",
+  },
+  {
+    key: 'budget',
+    emoji: '💰',
+    label: 'Control my maintenance costs',
+    description: 'Stay on top of maintenance without overspending',
+  },
+]
 
 export default function Onboarding() {
   const [step, setStep] = useState(1)
@@ -52,18 +126,20 @@ export default function Onboarding() {
   const [stateVal, setStateVal] = useState('')
   const [zip, setZip] = useState('')
   const [yearBuilt, setYearBuilt] = useState('')
-  const [homeType, setHomeType] = useState('single_family')
+  const [homeownerType, setHomeownerType] = useState('')
 
   // Step 2 — systems checklist
   const [selectedSystems, setSelectedSystems] = useState<Set<string>>(new Set())
   const [dontKnowSystems, setDontKnowSystems] = useState<Set<string>>(new Set())
+
+  // Step 3 — goals
+  const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const check = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setCheckingHome(false); return }
 
-      // Load existing profile name
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('first_name, last_name')
@@ -111,13 +187,25 @@ export default function Onboarding() {
     })
   }
 
+  const toggleGoal = (key: string) => {
+    setSelectedGoals(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        if (next.size < 3) next.add(key)
+      }
+      return next
+    })
+  }
+
   const handleStep1Continue = async () => {
     setError('')
     if (!firstName.trim() || !lastName.trim()) { setError('Please enter your first and last name.'); return }
     if (!address.trim() || !city.trim() || !stateVal.trim() || !zip.trim()) { setError('Please fill in your full address.'); return }
     if (!yearBuilt.trim()) { setError('Please enter the year your home was built.'); return }
+    if (!homeownerType) { setError('Please tell us about your homeowner experience.'); return }
 
-    // Check for duplicate
     const { data: matches } = await supabase.rpc('find_home_by_address', {
       p_address: address, p_city: city, p_state: stateVal, p_zip: zip
     })
@@ -160,11 +248,13 @@ export default function Onboarding() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { window.location.href = '/login'; return }
 
-      // Save name to user_profiles
+      // Save name + homeowner type + goals to user_profiles
       await supabase.from('user_profiles').upsert({
         user_id: user.id,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
+        homeowner_type: homeownerType || null,
+        homeowner_goal: selectedGoals.size > 0 ? Array.from(selectedGoals) : null,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
 
@@ -173,7 +263,6 @@ export default function Onboarding() {
         user_id: user.id,
         address, city, state: stateVal, zip,
         year_built: parseInt(yearBuilt) || null,
-        home_type: homeType,
         is_primary: existingHomes.length === 0,
       }).select().single()
       if (homeError) throw homeError
@@ -227,7 +316,7 @@ export default function Onboarding() {
 
       await supabase.rpc('recalculate_community_score', { p_user_id: user.id })
 
-      setStep(3)
+      setStep(4)
     } catch (e: any) {
       setError(e.message)
     }
@@ -251,6 +340,8 @@ export default function Onboarding() {
       <p style={{ color: '#8A8A82' }}>Loading...</p>
     </div>
   )
+
+  const totalSteps = 3
 
   return (
     <main style={{ background: '#F8F4EE', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif", padding: '24px' }}>
@@ -301,7 +392,7 @@ export default function Onboarding() {
             <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
               {[
                 { title: 'I live here too', desc: 'Request co-owner access. The current owner will be notified and can approve your request.', action: handleRequestCoOwnership, label: 'Request co-owner access', style: { background: '#1E3A2F', color: '#F8F4EE', border: 'none' } },
-                { title: 'I just bought this home', desc: 'Request ownership transfer. If they don\'t respond within 30 days, ownership transfers automatically.', action: handleRequestTransfer, label: 'Request ownership transfer', style: { background: '#C47B2B', color: '#fff', border: 'none' }, hasMessage: true },
+                { title: 'I just bought this home', desc: "Request ownership transfer. If they don't respond within 30 days, ownership transfers automatically.", action: handleRequestTransfer, label: 'Request ownership transfer', style: { background: '#C47B2B', color: '#fff', border: 'none' }, hasMessage: true },
                 { title: 'I just want to view this home', desc: 'Request view-only access to see all home details and history.', action: handleRequestViewOnly, label: 'Request view-only access', style: { background: 'none', color: '#1E3A2F', border: '1px solid rgba(30,58,47,0.2)' } },
               ].map((opt, i) => (
                 <div key={i} style={{ background: '#F8F4EE', borderRadius: '12px', padding: '18px' }}>
@@ -326,7 +417,7 @@ export default function Onboarding() {
               {requestType === 'transfer' ? 'Transfer requested' : requestType === 'co_owner' ? 'Request sent' : 'View access requested'}
             </h2>
             <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.7, marginBottom: '24px', maxWidth: '380px', margin: '0 auto 24px' }}>
-              {requestType === 'transfer' ? 'The current owner has been notified. If they don\'t respond within 30 days, ownership transfers automatically.' : 'The current owner has been notified and needs to approve your request.'}
+              {requestType === 'transfer' ? "The current owner has been notified. If they don't respond within 30 days, ownership transfers automatically." : 'The current owner has been notified and needs to approve your request.'}
             </p>
             <a href="/dashboard" style={{ display: 'block', background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, textAlign: 'center' }}>Go to my dashboard</a>
           </div>
@@ -336,15 +427,19 @@ export default function Onboarding() {
         {(existingHomes.length === 0 || addingAnother) && !showDuplicateScreen && !requestingSent && (
           <div>
 
-            {/* Progress bar */}
-            {step < 3 && (
+            {/* Progress bar — steps 1-3 */}
+            {step < 4 && (
               <div style={{ marginBottom: '28px' }}>
                 <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
-                  {[1, 2].map(s => (
-                    <div key={s} style={{ flex: 1, height: '4px', borderRadius: '2px', background: s <= step ? '#1E3A2F' : '#EDE8E0', transition: 'background 0.3s' }} />
+                  {[1, 2, 3].map(s => (
+                    <div key={s} style={{
+                      flex: 1, height: '4px', borderRadius: '2px',
+                      background: s <= step ? '#1E3A2F' : '#EDE8E0',
+                      transition: 'background 0.3s'
+                    }} />
                   ))}
                 </div>
-                <div style={{ fontSize: '12px', color: '#8A8A82' }}>Step {step} of 2</div>
+                <div style={{ fontSize: '12px', color: '#8A8A82' }}>Step {step} of {totalSteps}</div>
               </div>
             )}
 
@@ -352,17 +447,17 @@ export default function Onboarding() {
               <div style={{ background: '#FDECEA', color: '#9B2C2C', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>{error}</div>
             )}
 
-            {/* STEP 1 — Identity + Home */}
+            {/* ── STEP 1 — Identity + Home ── */}
             {step === 1 && (
               <div>
                 <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>
                   Let&apos;s set up your home
                 </h2>
                 <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '24px', lineHeight: 1.6 }}>
-                  Just a few basics to get started — you can add more details anytime.
+                  Just a few basics to get started — you can add more details anytime from your dashboard.
                 </p>
 
-                <div style={{ display: 'grid', gap: '14px' }}>
+                <div style={{ display: 'grid', gap: '16px' }}>
 
                   {/* Name */}
                   <div>
@@ -384,20 +479,44 @@ export default function Onboarding() {
                     </div>
                   </div>
 
-                  {/* Year built + type */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <div>
-                      <label style={labelStyle}>Year built</label>
-                      <input value={yearBuilt} onChange={e => setYearBuilt(e.target.value)} style={inputStyle} placeholder="e.g. 1998" />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Home type</label>
-                      <select value={homeType} onChange={e => setHomeType(e.target.value)} style={inputStyle}>
-                        <option value="single_family">Single family</option>
-                        <option value="townhouse">Townhouse</option>
-                        <option value="condo">Condo</option>
-                        <option value="multi_family">Multi-family</option>
-                      </select>
+                  {/* Year built */}
+                  <div>
+                    <label style={labelStyle}>Year built</label>
+                    <input value={yearBuilt} onChange={e => setYearBuilt(e.target.value)} style={{ ...inputStyle, maxWidth: '160px' }} placeholder="e.g. 1998" />
+                  </div>
+
+                  {/* Homeowner experience — replaces home type */}
+                  <div>
+                    <label style={labelStyle}>What&apos;s your homeowner experience?</label>
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      {HOMEOWNER_TYPES.map(type => (
+                        <div
+                          key={type.key}
+                          onClick={() => setHomeownerType(type.key)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px 14px',
+                            border: `2px solid ${homeownerType === type.key ? '#1E3A2F' : 'rgba(30,58,47,0.15)'}`,
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            background: homeownerType === type.key ? '#F0F5F2' : '#fff',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          <span style={{ fontSize: '20px', flexShrink: 0 }}>{type.emoji}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '14px', fontWeight: homeownerType === type.key ? 600 : 400, color: '#1E3A2F' }}>{type.label}</div>
+                            <div style={{ fontSize: '12px', color: '#8A8A82', marginTop: '1px' }}>{type.description}</div>
+                          </div>
+                          {homeownerType === type.key && (
+                            <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#1E3A2F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span style={{ color: '#fff', fontSize: '10px' }}>✓</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -408,7 +527,7 @@ export default function Onboarding() {
               </div>
             )}
 
-            {/* STEP 2 — Systems checklist */}
+            {/* ── STEP 2 — Systems checklist ── */}
             {step === 2 && (
               <div>
                 <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>
@@ -418,7 +537,7 @@ export default function Onboarding() {
                   Tap everything that applies. You can add details later from your dashboard.
                 </p>
                 <p style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '20px', fontStyle: 'italic' }}>
-                  Check "Don&apos;t know details" if you have the system but aren&apos;t sure about install year or condition.
+                  Check &quot;Don&apos;t know details&quot; if you have the system but aren&apos;t sure about install year or condition.
                 </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px', marginBottom: '24px' }}>
@@ -454,7 +573,7 @@ export default function Onboarding() {
                               display: 'block', width: '100%', textAlign: 'center',
                             }}
                           >
-                            {dontKnow ? '? No details' : 'Don\'t know details'}
+                            {dontKnow ? '? No details' : "Don't know details"}
                           </button>
                         )}
                         {selected && !dontKnow && (
@@ -476,9 +595,77 @@ export default function Onboarding() {
 
                 <div style={{ display: 'grid', gap: '10px' }}>
                   <button
+                    onClick={() => setStep(3)}
+                    style={{ width: '100%', background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    Continue →
+                  </button>
+                  <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#8A8A82', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '4px' }}>← Back</button>
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP 3 — Goals ── */}
+            {step === 3 && (
+              <div>
+                <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>
+                  What&apos;s your main goal right now?
+                </h2>
+                <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '6px', lineHeight: 1.6 }}>
+                  Select up to 3. This helps us personalize what we surface for you.
+                </p>
+                <p style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '20px', fontStyle: 'italic' }}>
+                  You can always change your goals from the dashboard.
+                </p>
+
+                <div style={{ display: 'grid', gap: '8px', marginBottom: '20px' }}>
+                  {GOALS.map(goal => {
+                    const selected = selectedGoals.has(goal.key)
+                    const atMax = selectedGoals.size >= 3 && !selected
+                    return (
+                      <div
+                        key={goal.key}
+                        onClick={() => !atMax && toggleGoal(goal.key)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '14px 16px',
+                          border: `2px solid ${selected ? '#1E3A2F' : 'rgba(30,58,47,0.15)'}`,
+                          borderRadius: '12px',
+                          cursor: atMax ? 'not-allowed' : 'pointer',
+                          background: selected ? '#F0F5F2' : atMax ? '#FAFAFA' : '#fff',
+                          opacity: atMax ? 0.5 : 1,
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <span style={{ fontSize: '22px', flexShrink: 0 }}>{goal.emoji}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '14px', fontWeight: selected ? 600 : 400, color: '#1E3A2F' }}>{goal.label}</div>
+                          <div style={{ fontSize: '12px', color: '#8A8A82', marginTop: '2px' }}>{goal.description}</div>
+                        </div>
+                        {selected && (
+                          <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#1E3A2F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span style={{ color: '#fff', fontSize: '11px' }}>✓</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {selectedGoals.size > 0 && (
+                  <div style={{ background: '#EAF2EC', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: '#3D7A5A' }}>
+                    ✓ {selectedGoals.size} goal{selectedGoals.size !== 1 ? 's' : ''} selected
+                    {selectedGoals.size < 3 && <span style={{ color: '#8A8A82' }}> · you can select up to {3 - selectedGoals.size} more</span>}
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  <button
                     onClick={() => handleFinish(false)}
                     disabled={saving}
-                    style={{ width: '100%', background: '#C47B2B', color: '#fff', border: 'none', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.7 : 1 }}
+                    style={{ width: '100%', background: '#C47B2B', color: '#fff', border: 'none', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.7 : 1 }}
                   >
                     {saving ? 'Setting up your home...' : 'Get my home score →'}
                   </button>
@@ -487,15 +674,15 @@ export default function Onboarding() {
                     disabled={saving}
                     style={{ width: '100%', background: 'none', border: '1px solid rgba(30,58,47,0.2)', color: '#8A8A82', padding: '11px', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
                   >
-                    Skip for now — I&apos;ll add systems later
+                    Skip — I&apos;ll set goals later
                   </button>
-                  <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#8A8A82', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '4px' }}>← Back</button>
+                  <button onClick={() => setStep(2)} style={{ background: 'none', border: 'none', color: '#8A8A82', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '4px' }}>← Back</button>
                 </div>
               </div>
             )}
 
-            {/* STEP 3 — Score reveal */}
-            {step === 3 && (
+            {/* ── STEP 4 — Score reveal ── */}
+            {step === 4 && (
               <div style={{ textAlign: 'center' }}>
                 <p style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#6AAF8A', marginBottom: '16px' }}>Your home health score</p>
                 <div style={{ position: 'relative', width: '140px', height: '140px', margin: '0 auto 24px' }}>
@@ -513,19 +700,47 @@ export default function Onboarding() {
                 <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>
                   Welcome{firstName ? `, ${firstName}` : ''}!
                 </h2>
-                <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.7, maxWidth: '380px', margin: '0 auto 12px' }}>
-                  {score >= 80 ? 'Your home is in great shape.' : score >= 60 ? 'Your home is doing well.' : 'Your home needs some attention.'}
-                  {' '}Log contractor jobs and update system details from your dashboard to improve your score over time.
+
+                {/* Personalized message based on homeowner type and goals */}
+                <p style={{ fontSize: '14px', color: '#8A8A82', lineHeight: 1.7, maxWidth: '400px', margin: '0 auto 16px' }}>
+                  {homeownerType === 'first_time' || homeownerType === 'new_to_home'
+                    ? "Your home is set up and ready. We've got a First 30 Days checklist waiting for you — it covers everything new homeowners need to know and do."
+                    : score >= 80
+                      ? "Your home is in great shape. Keep logging maintenance and your score will stay strong."
+                      : score >= 60
+                        ? "Your home is doing well. A few things to stay on top of — we'll surface them on your dashboard."
+                        : "Your home needs some attention. We'll help you prioritize what matters most."
+                  }
                 </p>
+
+                {/* Goals summary */}
+                {selectedGoals.size > 0 && (
+                  <div style={{ background: '#F8F4EE', borderRadius: '12px', padding: '14px 16px', marginBottom: '20px', maxWidth: '400px', margin: '0 auto 20px', textAlign: 'left' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', color: '#8A8A82', marginBottom: '8px' }}>Your goals</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {Array.from(selectedGoals).map(key => {
+                        const goal = GOALS.find(g => g.key === key)
+                        return goal ? (
+                          <span key={key} style={{ background: '#1E3A2F', color: '#F8F4EE', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 500 }}>
+                            {goal.emoji} {goal.label}
+                          </span>
+                        ) : null
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {selectedSystems.size === 0 && (
                   <p style={{ fontSize: '13px', color: '#C47B2B', marginBottom: '16px' }}>
-                    💡 Add your home systems to get a more accurate score.
+                    💡 Add your home systems from the dashboard to get a more accurate score.
                   </p>
                 )}
 
-                <a href="/dashboard" style={{ display: 'block', background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, textAlign: 'center', maxWidth: '380px', margin: '0 auto' }}>
-                  Go to my dashboard →
+                <a href="/dashboard" style={{ display: 'block', background: '#1E3A2F', color: '#F8F4EE', textDecoration: 'none', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, textAlign: 'center', maxWidth: '400px', margin: '0 auto' }}>
+                  {homeownerType === 'first_time' || homeownerType === 'new_to_home'
+                    ? 'Start my First 30 Days →'
+                    : 'Go to my dashboard →'
+                  }
                 </a>
               </div>
             )}
