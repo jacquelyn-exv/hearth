@@ -172,8 +172,9 @@ export default function GuidesIndexPage() {
         <div style={{ position: 'absolute', top: '-80px', right: '-60px', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(196,123,43,0.12) 0%, transparent 68%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '-100px', left: '-80px', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(106,175,138,0.08) 0%, transparent 68%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(30px, 5vw, 50px)', fontWeight: 400, color: '#F8F4EE', lineHeight: 1.1, marginBottom: '16px' }}>Home Guide</h1>
-          <p style={{ fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: '16px', color: 'rgba(248,244,238,0.65)', lineHeight: 1.7, maxWidth: '520px', fontWeight: 300, marginBottom: '32px' }}>Deep-dive guides on every major home system. Written for homeowners who want to actually understand their home.</p>
+          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(30px, 5vw, 50px)', fontWeight: 400, color: '#F8F4EE', lineHeight: 1.1, marginBottom: '16px' }}>Guides</h1>
+          <p style={{ fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: '16px', color: 'rgba(248,244,238,0.65)', lineHeight: 1.75, maxWidth: '580px', fontWeight: 300, marginBottom: '8px' }}>The manual nobody gave you when you bought your home.</p>
+          <p style={{ fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: '15px', color: 'rgba(248,244,238,0.45)', lineHeight: 1.75, maxWidth: '580px', fontWeight: 300, marginBottom: '32px' }}>Deep-dive guides on every major system — what fails, when to repair vs. replace, what things should cost, and how to deal with contractors without getting taken advantage of.</p>
 
           <div style={{ position: 'relative', maxWidth: '560px', marginBottom: '32px' }}>
             <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', pointerEvents: 'none' }}>🔍</span>
