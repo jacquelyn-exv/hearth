@@ -848,6 +848,8 @@ export default function Dashboard() {
   const [homeMembers,setHomeMembers]=useState<any[]>([])
   const [showInviteForm,setShowInviteForm]=useState(false)
   const [inviteEmail,setInviteEmail]=useState('')
+  const [inviteFirstName,setInviteFirstName]=useState('')
+  const [inviteLastName,setInviteLastName]=useState('')
   const [inviteRole,setInviteRole]=useState('co_owner')
   const [inviteSending,setInviteSending]=useState(false)
   const [inviteSent,setInviteSent]=useState(false)
@@ -1034,11 +1036,13 @@ export default function Dashboard() {
     if(!inviteEmail.trim()||!home?.id)return
     setInviteSending(true)
     const token=Math.random().toString(36).substring(2)+Date.now().toString(36)
-    await supabase.from('home_invites').insert({home_id:home.id,invited_by:user.id,email:inviteEmail.trim().toLowerCase(),role:inviteRole,token,status:'pending'})
-    await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:inviteEmail.trim(),role:inviteRole,inviterName:displayName||user?.email?.split('@')[0]||'Your co-owner',homeAddress:home?.address||'your home',token})})
+    await supabase.from('home_invites').insert({home_id:home.id,invited_by:user.id,email:inviteEmail.trim().toLowerCase(),role:inviteRole,token,status:'pending',first_name:inviteFirstName.trim()||null,last_name:inviteLastName.trim()||null})
+    await fetch('/api/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:inviteEmail.trim(),role:inviteRole,inviterName:displayName||user?.email?.split('@')[0]||'Your co-owner',homeAddress:home?.address||'your home',token,firstName:inviteFirstName.trim(),lastName:inviteLastName.trim()})})
     setInviteSent(true)
     setInviteSending(false)
     setInviteEmail('')
+    setInviteFirstName('')
+    setInviteLastName('')
     setTimeout(()=>{setInviteSent(false);setShowInviteForm(false)},3000)
   }
 
@@ -1438,6 +1442,14 @@ export default function Dashboard() {
                     <div style={{background:'#EAF2EC',border:'1px solid rgba(61,122,90,0.2)',borderRadius:'8px',padding:'12px 16px',fontSize:'13px',color:'#3D7A5A',textAlign:'center'}}>Invitation sent to {inviteEmail}</div>
                   ):(
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                      <div>
+                        <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'4px'}}>First name</label>
+                        <input type="text" value={inviteFirstName} onChange={e=>setInviteFirstName(e.target.value)} placeholder="Jane" style={{width:'100%',padding:'8px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'8px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',boxSizing:'border-box' as const}}/>
+                      </div>
+                      <div>
+                        <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'4px'}}>Last name</label>
+                        <input type="text" value={inviteLastName} onChange={e=>setInviteLastName(e.target.value)} placeholder="Smith" style={{width:'100%',padding:'8px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'8px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',boxSizing:'border-box' as const}}/>
+                      </div>
                       <div style={{gridColumn:'1/-1'}}>
                         <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'4px'}}>Email address</label>
                         <input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="colleague@example.com" style={{width:'100%',padding:'8px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'8px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',boxSizing:'border-box' as const}}/>
@@ -1469,7 +1481,8 @@ export default function Dashboard() {
                     <div key={m.user_id} style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 20px',borderBottom:'1px solid rgba(30,58,47,0.06)'}}>
                       <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#1E3A2F',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',color:'#F8F4EE',flexShrink:0,fontWeight:500}}>{(m.email||'?')[0].toUpperCase()}</div>
                       <div style={{flex:1}}>
-                        <div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{m.email}</div>
+                        <div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{m.first_name&&m.last_name?m.first_name+' '+m.last_name:m.email}</div>
+                        {m.first_name&&<div style={{fontSize:'11px',color:'#8A8A82'}}>{m.email}</div>}
                         <div style={{fontSize:'11px',color:'#8A8A82',textTransform:'capitalize'}}>{(m.role||'').replace(/_/g,' ')}</div>
                       </div>
                       <span style={{fontSize:'11px',padding:'3px 8px',borderRadius:'20px',background:'#EAF2EC',color:'#3D7A5A',fontWeight:500}}>Active</span>

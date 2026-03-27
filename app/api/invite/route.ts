@@ -4,7 +4,8 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(request: Request) {
-  const { email, role, inviterName, homeAddress, token } = await request.json()
+  const { email, role, inviterName, homeAddress, token, firstName, lastName } = await request.json()
+  const inviteeName = firstName && lastName ? firstName + ' ' + lastName : firstName || null
 
   const roleLabel = role === 'co_owner' ? 'co-owner' : role === 'property_manager' ? 'property manager' : 'viewer'
   const acceptUrl = `https://homehearth.app/invite/${token}`
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
       from: 'Hearth <hello@homehearth.app>',
       to: email,
       subject: `${inviterName} invited you to a home on Hearth`,
+      replyTo: 'hello@homehearth.app',
       html: `
         <!DOCTYPE html>
         <html>
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
                 <tr>
                   <td style="padding:40px;">
                     <div style="font-size:40px;text-align:center;margin-bottom:20px;">🏡</div>
-                    <h1 style="font-family:Georgia,serif;font-size:24px;font-weight:400;color:#1E3A2F;margin:0 0 12px;text-align:center;">You've been invited</h1>
+                    <h1 style="font-family:Georgia,serif;font-size:24px;font-weight:400;color:#1E3A2F;margin:0 0 12px;text-align:center;">${inviteeName ? 'Hi ' + inviteeName + ', you' : 'You'}'ve been invited</h1>
                     <p style="font-size:15px;color:#4A4A44;line-height:1.75;margin:0 0 24px;text-align:center;">
                       <strong>${inviterName}</strong> has invited you to access their home on Hearth as a <strong>${roleLabel}</strong>.
                     </p>
