@@ -928,7 +928,7 @@ export default function Dashboard() {
   const recalculateScore=async()=>{if(!home?.id)return;await supabase.rpc('recalculate_health_score',{p_home_id:home.id});const {data}=await supabase.from('health_scores').select('*').eq('home_id',home.id).order('calculated_at',{ascending:false}).limit(1);if(data&&data.length>0)setScore(data[0])}
 
   const startEditSection=(section:string)=>{
-    setHomeEdits({address:home?.address||'',city:home?.city||'',state:home?.state||'',zip:home?.zip||'',year_built:home?.year_built||'',home_type:details?.home_type||home?.home_type||'',sqft:details?.sqft||home?.sqft||'',bedrooms:details?.bedrooms||'',bathrooms:details?.bathrooms||'',stories:details?.stories||'',lot_size:details?.lot_size||'',foundation_type:details?.foundation_type||'',garage:details?.garage||'',has_fireplace:details?.has_fireplace||false,has_sump_pump:details?.has_sump_pump||false,has_pool:details?.has_pool||false,has_solar:details?.has_solar||false,has_septic:details?.has_septic||false,has_well_water:details?.has_well_water||false,has_hoa:details?.has_hoa||false,tree_coverage:details?.tree_coverage||''})
+    setHomeEdits({address:home?.address||'',city:home?.city||'',state:home?.state||'',zip:home?.zip||'',year_built:home?.year_built||'',home_type:details?.home_type||home?.home_type||'',sqft:details?.sqft||home?.sqft||'',bedrooms:details?.bedrooms||'',bathrooms:details?.bathrooms||'',stories:details?.stories||'',lot_size:details?.lot_size||'',foundation_type:details?.foundation_type||'',garage:details?.garage||'',has_fireplace:details?.has_fireplace||false,has_sump_pump:details?.has_sump_pump||false,has_pool:details?.has_pool||false,has_solar:details?.has_solar||false,has_septic:details?.has_septic||false,has_well_water:details?.has_well_water||false,has_hoa:details?.has_hoa||false,tree_coverage:details?.tree_coverage||'',occupancy_status:home?.occupancy_status||'owner_occupied'})
     setEditingHomeSection(section)
     setExpandedSections(prev=>{const n=new Set(prev);n.add(section);return n})
   }
@@ -937,7 +937,7 @@ export default function Dashboard() {
     setSaving(true)
     try{
       if(section==='about'){
-        const {data:uh,error:he}=await supabase.from('homes').update({address:homeEdits.address,city:homeEdits.city,state:homeEdits.state,zip:homeEdits.zip,year_built:parseInt(homeEdits.year_built)||null}).eq('id',home.id).select().single()
+        const {data:uh,error:he}=await supabase.from('homes').update({address:homeEdits.address,city:homeEdits.city,state:homeEdits.state,zip:homeEdits.zip,year_built:parseInt(homeEdits.year_built)||null,occupancy_status:homeEdits.occupancy_status||'owner_occupied'}).eq('id',home.id).select().single()
         if(he){console.error('homes update:',he);alert('Save failed: '+he.message);setSaving(false);return}
         if(uh)setHome(uh)
       }
@@ -1188,35 +1188,50 @@ export default function Dashboard() {
       <Nav/>
 
       {/* HEADER */}
-      <div style={{background:'#1E3A2F',padding:'28px 28px 0'}}>
-        <div style={{paddingBottom:'20px'}}>
-          <div style={{fontSize:'11px',fontWeight:500,letterSpacing:'1.5px',textTransform:'uppercase',color:'rgba(248,244,238,0.45)',marginBottom:'4px'}}>Welcome back</div>
-          <div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'26px',color:'#F8F4EE',fontWeight:400}}>{dnf}</div>
-          {allHomes.length>0&&(
-            <div style={{display:'flex',gap:'8px',flexWrap:'wrap',marginTop:'12px',alignItems:'center'}}>
-              {allHomes.map((h:any)=>(
-                <div key={h.id} style={{position:'relative'}}>
-                  <div style={{display:'flex',alignItems:'center'}}>
-                    <button onClick={()=>switchHome(h)} style={{background:h.id===home?.id?'#C47B2B':'rgba(248,244,238,0.1)',border:`1px solid ${h.id===home?.id?'#C47B2B':'rgba(248,244,238,0.2)'}`,borderRight:'none',color:h.id===home?.id?'#fff':'rgba(248,244,238,0.7)',padding:'6px 12px',borderRadius:'20px 0 0 20px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",fontWeight:h.id===home?.id?500:400,display:'flex',alignItems:'center',gap:'6px'}}>
-                      {h.is_primary&&<span style={{fontSize:'10px'}}>⭐</span>}
-                      {h.address}{h.city?`, ${h.city}`:''}
-                    </button>
-                    <button onClick={()=>setPropertyMenuOpen(propertyMenuOpen===h.id?null:h.id)} style={{background:h.id===home?.id?'#B36B20':'rgba(248,244,238,0.08)',border:`1px solid ${h.id===home?.id?'#C47B2B':'rgba(248,244,238,0.2)'}`,color:h.id===home?.id?'#fff':'rgba(248,244,238,0.7)',padding:'6px 8px',borderRadius:'0 20px 20px 0',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>•••</button>
+      <div style={{background:'#1E3A2F',padding:'0 28px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',paddingTop:'20px',paddingBottom:'16px',gap:'16px'}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:'11px',fontWeight:500,letterSpacing:'1.5px',textTransform:'uppercase',color:'rgba(248,244,238,0.40)',marginBottom:'4px'}}>My Home</div>
+            <div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'24px',color:'#F8F4EE',fontWeight:400,lineHeight:1.1}}>{dnf}</div>
+            {home&&<div style={{fontSize:'12px',color:'rgba(248,244,238,0.50)',marginTop:'3px'}}>{home.address}{home.city?`, ${home.city}`:''}{home.state?` ${home.state}`:''}</div>}
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:'8px',flexShrink:0}}>
+            {allHomes.length>1&&(
+              <div style={{position:'relative'}}>
+                <button onClick={()=>setPropertyMenuOpen(propertyMenuOpen==='switcher'?null:'switcher')} style={{background:'rgba(248,244,238,0.08)',border:'1px solid rgba(248,244,238,0.15)',color:'rgba(248,244,238,0.75)',padding:'7px 12px',borderRadius:'8px',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",display:'flex',alignItems:'center',gap:'6px'}}>
+                  <span>Switch property</span>
+                  <span style={{fontSize:'10px',opacity:0.6}}>{propertyMenuOpen==='switcher'?'▲':'▼'}</span>
+                </button>
+                {propertyMenuOpen==='switcher'&&(
+                  <div style={{position:'absolute',top:'38px',right:0,background:'#fff',borderRadius:'12px',boxShadow:'0 8px 32px rgba(0,0,0,0.18)',border:'1px solid rgba(30,58,47,0.11)',overflow:'hidden',zIndex:300,minWidth:'260px'}}>
+                    {allHomes.map((h:any)=>(
+                      <div key={h.id} style={{borderBottom:'1px solid rgba(30,58,47,0.06)'}}>
+                        <button onClick={()=>{switchHome(h);setPropertyMenuOpen(null)}} style={{display:'block',width:'100%',padding:'12px 16px',background:h.id===home?.id?'#F0F5F2':'none',border:'none',cursor:'pointer',textAlign:'left',fontFamily:"'DM Sans', sans-serif"}}>
+                          <div style={{fontSize:'13px',fontWeight:h.id===home?.id?500:400,color:'#1E3A2F',display:'flex',alignItems:'center',gap:'6px'}}>
+                            {h.is_primary&&<span style={{fontSize:'10px'}}>⭐</span>}
+                            {h.id===home?.id&&<span style={{fontSize:'10px',color:'#3D7A5A'}}>✓</span>}
+                            {h.address}
+                          </div>
+                          {h.city&&<div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>{h.city}{h.state?`, ${h.state}`:''}</div>}
+                          <div style={{marginTop:'4px'}}><span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'10px',fontWeight:500,background:h.occupancy_status==='rental'?'#E6F2F8':h.occupancy_status==='former'?'#F5F5F5':'#EAF2EC',color:h.occupancy_status==='rental'?'#3A7CA8':h.occupancy_status==='former'?'#8A8A82':'#3D7A5A'}}>{h.occupancy_status==='rental'?'Rental':h.occupancy_status==='former'?'Former home':'Primary'}</span></div>
+                        </button>
+                        <div style={{display:'flex',borderTop:'1px solid rgba(30,58,47,0.04)'}}>
+                          {!h.is_primary&&<button onClick={()=>setPrimaryHome(h.id)} style={{flex:1,padding:'7px 12px',background:'none',border:'none',cursor:'pointer',fontSize:'11px',color:'#8A8A82',fontFamily:"'DM Sans', sans-serif",textAlign:'left'}}>⭐ Set primary</button>}
+                          {h.status!=='for_transfer'&&<button onClick={()=>markForTransfer(h.id)} style={{flex:1,padding:'7px 12px',background:'none',border:'none',cursor:'pointer',fontSize:'11px',color:'#C47B2B',fontFamily:"'DM Sans', sans-serif",textAlign:'left'}}>🔑 Mark former</button>}
+                        </div>
+                      </div>
+                    ))}
+                    <a href="/onboarding" style={{display:'block',padding:'11px 16px',fontSize:'12px',color:'#1E3A2F',textDecoration:'none',fontFamily:"'DM Sans', sans-serif",borderTop:'1px solid rgba(30,58,47,0.06)'}}>+ Add another property</a>
                   </div>
-                  {propertyMenuOpen===h.id&&(
-                    <div style={{position:'absolute',top:'36px',left:0,background:'#fff',borderRadius:'12px',boxShadow:'0 8px 32px rgba(0,0,0,0.18)',border:'1px solid rgba(30,58,47,0.11)',overflow:'hidden',zIndex:300,minWidth:'220px'}}>
-                      {!h.is_primary&&<button onClick={()=>setPrimaryHome(h.id)} style={{display:'block',width:'100%',padding:'11px 16px',background:'none',border:'none',borderBottom:'1px solid rgba(30,58,47,0.06)',cursor:'pointer',textAlign:'left',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",color:'#1E3A2F'}}>⭐ Set as primary residence</button>}
-                      {h.status!=='for_transfer'&&<button onClick={()=>markForTransfer(h.id)} style={{display:'block',width:'100%',padding:'11px 16px',background:'none',border:'none',borderBottom:'1px solid rgba(30,58,47,0.06)',cursor:'pointer',textAlign:'left',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",color:'#C47B2B'}}>🔑 Mark as former property</button>}
-                      <button onClick={()=>setPropertyMenuOpen(null)} style={{display:'block',width:'100%',padding:'11px 16px',background:'none',border:'none',cursor:'pointer',textAlign:'left',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",color:'#8A8A82'}}>Cancel</button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              <a href="/onboarding" style={{background:'none',border:'1px dashed rgba(248,244,238,0.25)',color:'rgba(248,244,238,0.5)',padding:'6px 14px',borderRadius:'20px',fontSize:'13px',textDecoration:'none',fontFamily:"'DM Sans', sans-serif"}}>+ Add property</a>
-            </div>
-          )}
+                )}
+              </div>
+            )}
+            {allHomes.length===1&&(
+              <a href="/onboarding" style={{background:'rgba(248,244,238,0.08)',border:'1px solid rgba(248,244,238,0.15)',color:'rgba(248,244,238,0.60)',padding:'7px 12px',borderRadius:'8px',fontSize:'12px',textDecoration:'none',fontFamily:"'DM Sans', sans-serif"}}>+ Add property</a>
+            )}
+          </div>
         </div>
-        <div style={{display:'flex',gap:'2px',overflowX:'auto'}}>
+                <div style={{display:'flex',gap:'2px',overflowX:'auto'}}>
           {tabs.map(tab=>(
             <button key={tab} onClick={()=>setActiveTab(tab)} style={{background:'none',border:'none',color:activeTab===tab?'#F8F4EE':'rgba(248,244,238,0.5)',fontFamily:"'DM Sans', sans-serif",fontSize:'13px',padding:'9px 14px 13px',cursor:'pointer',whiteSpace:'nowrap',borderBottom:activeTab===tab?'2px solid #C47B2B':'2px solid transparent',fontWeight:activeTab===tab?500:400,position:'relative',bottom:'-1px',transition:'color 0.2s'}}>{tl[tab]}</button>
           ))}
@@ -1394,11 +1409,13 @@ export default function Dashboard() {
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
                         {[{label:'Street address',key:'address'},{label:'City',key:'city'},{label:'State',key:'state'},{label:'ZIP',key:'zip'},{label:'Year built',key:'year_built'},{label:'Square footage',key:'sqft'},{label:'Bedrooms',key:'bedrooms'},{label:'Bathrooms',key:'bathrooms'},{label:'Stories',key:'stories'},{label:'Lot size',key:'lot_size'}].map(f=>(<div key={f.key}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>{f.label}</label><input value={homeEdits[f.key]||''} onChange={e=>setHomeEdits((p:any)=>({...p,[f.key]:e.target.value}))} style={iS}/></div>))}
                         <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Home type</label><select value={homeEdits.home_type||''} onChange={e=>setHomeEdits((p:any)=>({...p,home_type:e.target.value}))} style={iS}><option value="">Unknown</option><option value="single_family">Single family</option><option value="townhouse">Townhouse</option><option value="condo">Condo</option><option value="multi_family">Multi-family</option><option value="mobile_home">Mobile home</option></select></div>
+                        <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>My relationship to this home</label><div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>{[{value:'owner_occupied',label:'🏡 I live here'},{value:'rental',label:'🔑 I rent this out'},{value:'former',label:'📦 Former home'}].map(opt=>(<button key={opt.value} type="button" onClick={()=>setHomeEdits((p:any)=>({...p,occupancy_status:opt.value}))} style={{padding:'8px 14px',borderRadius:'8px',fontSize:'13px',border:`1px solid ${homeEdits.occupancy_status===opt.value?'#1E3A2F':'rgba(30,58,47,0.2)'}`,background:homeEdits.occupancy_status===opt.value?'#1E3A2F':'#fff',color:homeEdits.occupancy_status===opt.value?'#F8F4EE':'#1E3A2F',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",fontWeight:homeEdits.occupancy_status===opt.value?500:400}}>{opt.label}</button>))}</div></div>
                         <div style={{gridColumn:'1/-1',display:'flex',gap:'8px',marginTop:'4px'}}><button onClick={()=>saveHomeSection('about')} disabled={saving} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'9px 20px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{saving?'Saving...':'Save'}</button><button onClick={()=>setEditingHomeSection(null)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'9px 16px',borderRadius:'8px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button></div>
                       </div>
                     ):(
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
-                        {[{label:'Address',value:home?.address},{label:'City / State / ZIP',value:`${home?.city||''}${home?.state?`, ${home.state}`:''}${home?.zip?` ${home.zip}`:''}`},{label:'Year built',value:home?.year_built},{label:'Home type',value:(details?.home_type||home?.home_type)?.replace('_',' ')},{label:'Sq ft',value:details?.sqft?`${details.sqft.toLocaleString()} sq ft`:null},{label:'Beds / Baths',value:details?.bedrooms?`${details.bedrooms} bd · ${details.bathrooms||'?'} ba`:null},{label:'Stories',value:details?.stories},{label:'Lot size',value:details?.lot_size}].filter(s=>s.value).map(stat=>(<div key={stat.label} style={{fontSize:'13px'}}><span style={{color:'#8A8A82'}}>{stat.label}: </span><span style={{fontWeight:500,textTransform:'capitalize'}}>{stat.value}</span></div>))}
+                        <div style={{gridColumn:'1/-1',marginBottom:'8px'}}><span style={{display:'inline-flex',alignItems:'center',gap:'6px',padding:'5px 12px',borderRadius:'20px',fontSize:'12px',fontWeight:500,background:home?.occupancy_status==='rental'?'#E6F2F8':home?.occupancy_status==='former'?'#F5F5F5':'#EAF2EC',color:home?.occupancy_status==='rental'?'#3A7CA8':home?.occupancy_status==='former'?'#8A8A82':'#3D7A5A'}}>{home?.occupancy_status==='rental'?'🔑 I rent this out':home?.occupancy_status==='former'?'📦 Former home':'🏡 I live here'}</span></div>
+                      {[{label:'Address',value:home?.address},{label:'City / State / ZIP',value:`${home?.city||''}${home?.state?`, ${home.state}`:''}${home?.zip?` ${home.zip}`:''}`},{label:'Year built',value:home?.year_built},{label:'Home type',value:(details?.home_type||home?.home_type)?.replace('_',' ')},{label:'Sq ft',value:details?.sqft?`${details.sqft.toLocaleString()} sq ft`:null},{label:'Beds / Baths',value:details?.bedrooms?`${details.bedrooms} bd · ${details.bathrooms||'?'} ba`:null},{label:'Stories',value:details?.stories},{label:'Lot size',value:details?.lot_size}].filter(s=>s.value).map(stat=>(<div key={stat.label} style={{fontSize:'13px'}}><span style={{color:'#8A8A82'}}>{stat.label}: </span><span style={{fontWeight:500,textTransform:'capitalize'}}>{stat.value}</span></div>))}
                       </div>
                     )}
                   </div>

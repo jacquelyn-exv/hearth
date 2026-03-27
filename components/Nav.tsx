@@ -151,8 +151,6 @@ export default function Nav() {
               <a href="/admin" style={{ ...linkStyle, color: '#C47B2B' }}>Admin</a>
             )}
             <a href="/dashboard" style={linkStyle}>My Home</a>
-            <a href="/log" style={linkStyle}>Contractor Log</a>
-            <a href="/report" style={linkStyle}>Report Card</a>
 
             {/* Notification bell */}
             <div ref={bellRef} style={{ position: 'relative', marginLeft: '4px' }}>
