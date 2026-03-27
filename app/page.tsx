@@ -1,6 +1,147 @@
 'use client'
 
+import { useState } from 'react'
 import Nav from '@/components/Nav'
+
+
+const PILLARS = [
+  {
+    icon: '📊',
+    color: '#EAF2EC',
+    iconColor: '#3D7A5A',
+    title: 'Know exactly where your home stands',
+    body: 'A live health score across every major system — system risk, maintenance history, value protection, and seasonal readiness. Not a guess. A real picture of your home\'s condition.',
+    cta: 'Set up my home',
+    href: '/signup',
+    modalTitle: 'Home Health Score',
+    modalContent: 'Your Home Health Score is a live 0–100 rating calculated across four dimensions: System Risk, Maintenance History, Value Protection, and Seasonal Readiness. It updates every time you log a job, add a system, or complete a task.',
+    howTo: [
+      'Go to My Home → Overview tab',
+      'Your score appears at the top of the page with a breakdown by dimension',
+      'Each dimension shows what\'s driving it and what to do next',
+      'Click any dimension to jump to the relevant tab',
+    ],
+    nav: 'My Home → Overview'
+  },
+  {
+    icon: '📋',
+    color: '#FBF0DC',
+    iconColor: '#C47B2B',
+    title: 'Build a record that travels with your home',
+    body: 'Every repair, upgrade, inspection, and maintenance task — logged in one place. When you sell, it\'s proof of care. When something breaks, you have the history. It transfers with ownership.',
+    cta: 'Start your home record',
+    href: '/signup',
+    modalTitle: 'Home Maintenance Log',
+    modalContent: 'The log captures everything done to your home — contractor jobs, DIY work, maintenance, inspections, and upgrades. Entries are organized by type and stay permanently attached to the property, not your account.',
+    howTo: [
+      'Go to My Home → Log tab',
+      'Click "+ Log entry" and choose the type: Upgrade, Repair, Maintenance, or Inspection',
+      'Select DIY or hired a contractor — the form adapts to capture the right details',
+      'Contractor jobs can be shared anonymously with the Neighbor Network',
+    ],
+    nav: 'My Home → Log'
+  },
+  {
+    icon: '👥',
+    color: '#E6F2F8',
+    iconColor: '#3A7CA8',
+    title: 'Never overpay for contractor work again',
+    body: 'Real prices from real homeowners in your zip code, tied to verified logged jobs. No contractors paying for placement. No anonymous reviews. Just what people like you actually paid.',
+    cta: 'Browse neighbor pricing',
+    href: '/neighbors',
+    modalTitle: 'Neighbor Network',
+    modalContent: 'Every review in the Neighbor Network is tied to a verified logged job. Homeowners share pricing anonymously — only zip code, contractor name, system, price, and rating are visible. Your identity and address are never shown.',
+    howTo: [
+      'Go to Neighbor Network in the main nav',
+      'Browse by system type or contractor name',
+      'See what homeowners near you paid and how they rated the work',
+      'To contribute: log a job in My Home → Log and toggle "Share with neighbors"',
+    ],
+    nav: 'Neighbor Network (top nav)'
+  },
+  {
+    icon: '📖',
+    color: '#F5EAE7',
+    iconColor: '#8B3A2A',
+    title: 'Guides written from inside the industry',
+    body: 'Not generic home improvement content. Deep guides on every system — lifespans, failure timelines, what questions to ask, what red flags to look for — from 13 years inside manufacturing, installation, and contracting.',
+    cta: 'Read the guides',
+    href: '/guides',
+    modalTitle: 'Home Guides',
+    modalContent: 'Hearth\'s guides are written from 13 years inside home services — manufacturing, installation, construction technology, and national-scale contracting. Each guide covers the full lifecycle of a system: materials, lifespan, failure signs, repair vs. replace, what to ask contractors, and what to avoid.',
+    howTo: [
+      'Go to Guides in the main nav',
+      'Filter by your homeowner goal or search by system or topic',
+      'Each pillar guide links to deeper cluster articles on specific questions',
+      'The guides index shows recommended articles based on your saved goals',
+    ],
+    nav: 'Guides (top nav)'
+  },
+]
+
+function PillarsSection() {
+  const [activeModal, setActiveModal] = useState<number | null>(null)
+  const pillar = activeModal !== null ? PILLARS[activeModal] : null
+
+  return (
+    <section style={{ padding: '80px 32px', background: '#F8F4EE' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '52px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: '#3D7A5A', marginBottom: '12px' }}>What Hearth gives you</div>
+          <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 400, color: '#1E3A2F', lineHeight: 1.2 }}>
+            The information advantage<br />your home deserves.
+          </h2>
+          <p style={{ fontSize: '14px', color: '#8A8A82', marginTop: '12px' }}>Click any card to learn where to find it in the platform.</p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+          {PILLARS.map((pillar, i) => (
+            <div key={pillar.title} onClick={() => setActiveModal(i)} style={{ background: '#fff', borderRadius: '20px', padding: '32px', border: '1px solid rgba(30,58,47,0.08)', cursor: 'pointer', transition: 'all 0.15s ease', position: 'relative' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(30,58,47,0.10)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(30,58,47,0.18)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(30,58,47,0.08)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: pillar.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>{pillar.icon}</div>
+                <span style={{ fontSize: '11px', color: '#8A8A82', background: '#F8F4EE', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(30,58,47,0.10)' }}>Learn more →</span>
+              </div>
+              <h3 style={{ fontSize: '17px', fontWeight: 500, color: '#1E3A2F', marginBottom: '10px', lineHeight: 1.3 }}>{pillar.title}</h3>
+              <p style={{ fontSize: '13px', color: '#8A8A82', lineHeight: 1.75, marginBottom: '20px' }}>{pillar.body}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#8A8A82' }}>Find it at:</span>
+                <span style={{ fontSize: '12px', fontWeight: 500, color: pillar.iconColor, background: pillar.color, padding: '2px 8px', borderRadius: '20px' }}>{pillar.nav}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {activeModal !== null && pillar && (
+        <div onClick={() => setActiveModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '24px', padding: '40px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: pillar.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>{pillar.icon}</div>
+                <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F' }}>{pillar.modalTitle}</h3>
+              </div>
+              <button onClick={() => setActiveModal(null)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#8A8A82', lineHeight: 1 }}>×</button>
+            </div>
+            <p style={{ fontSize: '14px', color: '#4A4A44', lineHeight: 1.8, marginBottom: '24px' }}>{pillar.modalContent}</p>
+            <div style={{ background: '#F8F4EE', borderRadius: '14px', padding: '20px', marginBottom: '24px' }}>
+              <p style={{ fontSize: '11px', fontWeight: 600, color: '#8A8A82', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>How to find it</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {pillar.howTo.map((step, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: pillar.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, color: pillar.iconColor, flexShrink: 0, marginTop: '1px' }}>{i + 1}</div>
+                    <span style={{ fontSize: '13px', color: '#1A1A18', lineHeight: 1.5 }}>{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <a href={pillar.href} style={{ display: 'block', background: '#1E3A2F', color: '#F8F4EE', textAlign: 'center', padding: '13px', borderRadius: '10px', fontSize: '14px', fontWeight: 500, textDecoration: 'none' }}>{pillar.cta}</a>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
 
 export default function Home() {
   return (
@@ -14,10 +155,6 @@ export default function Home() {
 
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '56px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(106,175,138,0.15)', borderRadius: '20px', padding: '6px 14px', marginBottom: '28px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#6AAF8A' }} />
-              <span style={{ fontSize: '12px', color: '#6AAF8A', fontWeight: 500 }}>Free for homeowners</span>
-            </div>
             <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(36px, 5vw, 56px)', lineHeight: 1.08, color: '#F8F4EE', marginBottom: '24px', fontWeight: 400 }}>
               Your home is your<br />biggest investment.<br />
               <em style={{ color: '#C47B2B', fontStyle: 'italic' }}>Start treating it like one.</em>
@@ -32,38 +169,39 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Score viz */}
+          {/* Score viz — report card style */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ position: 'relative', width: '320px', height: '320px' }}>
-              <div style={{ position: 'absolute', inset: '-20px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(106,175,138,0.12) 0%, transparent 70%)' }} />
-              <svg width="320" height="320" style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
-                <circle cx="160" cy="160" r="120" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="20" />
-                {(() => {
-                  const r = 120, circ = 2 * Math.PI * r, gap = 4
-                  const segs = [{ pct: 0.35, color: '#6AAF8A' }, { pct: 0.30, color: '#C47B2B' }, { pct: 0.20, color: '#3A7CA8' }, { pct: 0.15, color: 'rgba(248,244,238,0.35)' }]
-                  let offset = 0
-                  return segs.map((s, i) => { const dash = circ * s.pct - gap; const el = <circle key={i} cx="160" cy="160" r={r} fill="none" stroke={s.color} strokeWidth="20" strokeDasharray={`${dash} ${circ}`} strokeDashoffset={-offset} strokeLinecap="butt" />; offset += circ * s.pct; return el })
-                })()}
-              </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '64px', color: '#F8F4EE', fontWeight: 600, lineHeight: 1 }}>74</div>
-                <div style={{ fontSize: '12px', color: 'rgba(248,244,238,0.5)', marginTop: '6px', letterSpacing: '1px', textTransform: 'uppercase' }}>Health score</div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '32px 28px', width: '340px' }}>
+              {/* Total score */}
+              <div style={{ textAlign: 'center', marginBottom: '28px', paddingBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase', color: 'rgba(248,244,238,0.4)', marginBottom: '8px' }}>Home Health Score</div>
+                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '72px', color: '#F8F4EE', fontWeight: 600, lineHeight: 1 }}>74</div>
+                <div style={{ fontSize: '13px', color: '#6AAF8A', marginTop: '6px', fontWeight: 500 }}>Good shape — a few things to watch</div>
               </div>
-              <div style={{ position: 'absolute', top: '30px', right: '-90px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6AAF8A', flexShrink: 0 }} /><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.7)', fontWeight: 500, whiteSpace: 'nowrap' }}>System Risk</div></div>
-                <div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.35)', marginLeft: '14px' }}>35% of score</div>
+              {/* Dimension bars */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {[
+                  { label: 'Systems', score: 82, color: '#6AAF8A', pct: '35%' },
+                  { label: 'Maintenance', score: 71, color: '#C47B2B', pct: '30%' },
+                  { label: 'Value Protection', score: 68, color: '#3A7CA8', pct: '20%' },
+                  { label: 'Seasonal Readiness', score: 55, color: 'rgba(248,244,238,0.5)', pct: '15%' },
+                ].map(dim => (
+                  <div key={dim.label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '12px', color: 'rgba(248,244,238,0.65)', fontWeight: 500 }}>{dim.label}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '11px', color: 'rgba(248,244,238,0.35)' }}>{dim.pct} of score</span>
+                        <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '16px', color: '#F8F4EE', fontWeight: 600, minWidth: '28px', textAlign: 'right' }}>{dim.score}</span>
+                      </div>
+                    </div>
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px' }}>
+                      <div style={{ width: `${dim.score}%`, height: '100%', background: dim.color, borderRadius: '3px' }} />
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div style={{ position: 'absolute', bottom: '60px', right: '-90px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C47B2B', flexShrink: 0 }} /><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.7)', fontWeight: 500, whiteSpace: 'nowrap' }}>Maintenance</div></div>
-                <div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.35)', marginLeft: '14px' }}>30% of score</div>
-              </div>
-              <div style={{ position: 'absolute', bottom: '60px', left: '-100px', textAlign: 'right' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.7)', fontWeight: 500, whiteSpace: 'nowrap' }}>Value Protection</div><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3A7CA8', flexShrink: 0 }} /></div>
-                <div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.35)', marginRight: '14px' }}>20% of score</div>
-              </div>
-              <div style={{ position: 'absolute', top: '30px', left: '-80px', textAlign: 'right' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.7)', fontWeight: 500, whiteSpace: 'nowrap' }}>Seasonal</div><div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'rgba(248,244,238,0.35)', flexShrink: 0 }} /></div>
-                <div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.35)', marginRight: '14px' }}>15% of score</div>
+              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'rgba(248,244,238,0.3)' }}>Updates live as you log and track your home</span>
               </div>
             </div>
           </div>
