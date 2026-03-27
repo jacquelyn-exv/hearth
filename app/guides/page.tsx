@@ -172,11 +172,7 @@ export default function GuidesIndexPage() {
         <div style={{ position: 'absolute', top: '-80px', right: '-60px', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(196,123,43,0.12) 0%, transparent 68%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '-100px', left: '-80px', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(106,175,138,0.08) 0%, transparent 68%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(106,175,138,0.15)', borderRadius: '20px', padding: '6px 14px', marginBottom: '20px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#6AAF8A' }} />
-            <span style={{ fontSize: '12px', color: '#6AAF8A', fontWeight: 500 }}>Free, no login required</span>
-          </div>
-          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(30px, 5vw, 50px)', fontWeight: 400, color: '#F8F4EE', lineHeight: 1.1, marginBottom: '16px' }}>The Hearth Home Guide</h1>
+          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(30px, 5vw, 50px)', fontWeight: 400, color: '#F8F4EE', lineHeight: 1.1, marginBottom: '16px' }}>Home Guide</h1>
           <p style={{ fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: '16px', color: 'rgba(248,244,238,0.65)', lineHeight: 1.7, maxWidth: '520px', fontWeight: 300, marginBottom: '32px' }}>Deep-dive guides on every major home system. Written for homeowners who want to actually understand their home.</p>
 
           <div style={{ position: 'relative', maxWidth: '560px', marginBottom: '32px' }}>
