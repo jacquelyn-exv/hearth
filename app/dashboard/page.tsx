@@ -1423,6 +1423,62 @@ export default function Dashboard() {
               {expandedSections.has('auto')&&(<div style={{padding:'16px 20px'}}><div style={{display:'flex',flexWrap:'wrap',gap:'8px'}}>{[{label:`Climate Zone ${details?.climate_zone||'detecting...'}`,icon:'🌡️',bg:'#E6F2F8',color:'#3A7CA8'},{label:details?.hard_water_zone?'Hard water area':'Standard water',icon:'💧',bg:'#E6F2F8',color:'#3A7CA8'},{label:details?.wildfire_zone?'⚠️ Wildfire zone':'Low wildfire risk',icon:'🔥',bg:details?.wildfire_zone?'#FDECEA':'#EAF2EC',color:details?.wildfire_zone?'#9B2C2C':'#3D7A5A'},{label:details?.coastal_zone?'Coastal / high wind':'Inland',icon:'🌊',bg:'#E6F2F8',color:'#3A7CA8'}].map(badge=>(<span key={badge.label} style={{background:badge.bg,color:badge.color,padding:'5px 12px',borderRadius:'20px',fontSize:'12px',fontWeight:500}}>{badge.icon} {badge.label}</span>))}</div><p style={{fontSize:'11px',color:'#8A8A82',marginTop:'10px'}}>These signals affect your maintenance recommendations and storm alerts.</p></div>)}
             </div>
 
+            {/* Home Members */}
+            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden',marginBottom:'24px'}}>
+              <div style={{padding:'16px 20px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div>
+                  <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',fontWeight:400,color:'#1E3A2F'}}>Home Members</h3>
+                  <p style={{fontSize:'11px',color:'#8A8A82',marginTop:'2px'}}>People with access to this home</p>
+                </div>
+                <button onClick={()=>{setShowInviteForm(!showInviteForm);setInviteSent(false)}} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'7px 14px',borderRadius:'8px',fontSize:'12px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>+ Invite member</button>
+              </div>
+              {showInviteForm&&(
+                <div style={{padding:'16px 20px',background:'#F8F4EE',borderBottom:'1px solid rgba(30,58,47,0.08)'}}>
+                  {inviteSent?(
+                    <div style={{background:'#EAF2EC',border:'1px solid rgba(61,122,90,0.2)',borderRadius:'8px',padding:'12px 16px',fontSize:'13px',color:'#3D7A5A',textAlign:'center'}}>Invitation sent to {inviteEmail}</div>
+                  ):(
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                      <div style={{gridColumn:'1/-1'}}>
+                        <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'4px'}}>Email address</label>
+                        <input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="colleague@example.com" style={{width:'100%',padding:'8px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'8px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',boxSizing:'border-box' as const}}/>
+                      </div>
+                      <div>
+                        <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'4px'}}>Role</label>
+                        <select value={inviteRole} onChange={e=>setInviteRole(e.target.value)} style={{width:'100%',padding:'8px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'8px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',background:'#fff'}}>
+                          <option value="co_owner">Co-owner</option>
+                          <option value="property_manager">Property manager</option>
+                          <option value="viewer">Viewer</option>
+                        </select>
+                      </div>
+                      <div style={{display:'flex',gap:'8px',alignItems:'flex-end'}}>
+                        <button onClick={sendInvite} disabled={inviteSending||!inviteEmail.trim()} style={{flex:1,background:inviteEmail.trim()?'#C47B2B':'rgba(196,123,43,0.3)',color:'#fff',border:'none',padding:'8px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:inviteEmail.trim()?'pointer':'not-allowed',fontFamily:"'DM Sans', sans-serif"}}>{inviteSending?'Sending...':'Send invite'}</button>
+                        <button onClick={()=>setShowInviteForm(false)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'8px 12px',borderRadius:'8px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {homeMembers.length===0&&!showInviteForm&&(
+                <div style={{padding:'20px',textAlign:'center'}}>
+                  <p style={{fontSize:'13px',color:'#8A8A82',lineHeight:1.6}}>No other members yet. Invite a co-owner, property manager, or viewer.</p>
+                </div>
+              )}
+              {homeMembers.length>0&&(
+                <div>
+                  {homeMembers.map((m:any)=>(
+                    <div key={m.user_id} style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 20px',borderBottom:'1px solid rgba(30,58,47,0.06)'}}>
+                      <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#1E3A2F',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',color:'#F8F4EE',flexShrink:0,fontWeight:500}}>{(m.email||'?')[0].toUpperCase()}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{m.email}</div>
+                        <div style={{fontSize:'11px',color:'#8A8A82',textTransform:'capitalize'}}>{(m.role||'').replace(/_/g,' ')}</div>
+                      </div>
+                      <span style={{fontSize:'11px',padding:'3px 8px',borderRadius:'20px',background:'#EAF2EC',color:'#3D7A5A',fontWeight:500}}>Active</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div style={{marginBottom:'8px'}}><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F'}}>Home Systems</h3></div>
             {ALL_SYSTEMS.map(st=>{const ex=systems.find(s=>s.system_type===st);if(ex){if(ex.not_applicable&&!showHiddenSystems)return null;return renderSystemCard(ex)}return<div key={st} style={{background:'#fff',border:'1px dashed rgba(30,58,47,0.2)',borderRadius:'12px',padding:'14px 18px',marginBottom:'8px',display:'flex',alignItems:'center',gap:'12px',cursor:'pointer',opacity:0.6}} onClick={()=>addSystem(st)}><div style={{fontSize:'22px'}}>{SYSTEM_ICONS[st]||'🔧'}</div><span style={{fontSize:'14px',color:'#1E3A2F'}}>+ Add {SYSTEM_DISPLAY_NAMES[st]||st}</span></div>})}
             {systems.some(s=>s.not_applicable)&&<button onClick={()=>setShowHiddenSystems(!showHiddenSystems)} style={{background:'none',border:'none',color:'#8A8A82',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",padding:'8px 0',marginBottom:'20px'}}>{showHiddenSystems?'Hide not applicable systems':`Show ${systems.filter(s=>s.not_applicable).length} hidden systems`}</button>}
