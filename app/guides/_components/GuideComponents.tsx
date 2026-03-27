@@ -1,183 +1,208 @@
+import React from 'react'
+
+const T = {
+  bg: '#F8F4EE',
+  dark: '#1E3A2F',
+  amber: '#C47B2B',
+  green: '#6AAF8A',
+  text: '#1A1A18',
+  muted: '#8A8A82',
+  border: 'rgba(30,58,47,0.10)',
+  white: '#ffffff',
+  red: '#9B2C2C',
+  serif: "'Playfair Display', Georgia, serif",
+  sans: "'DM Sans', system-ui, sans-serif",
+}
+
+// ─── LIFESPAN TABLE ──────────────────────────────────────────
+
 interface LifespanRow {
-  material: string;
-  lifespan: string;
-  notes?: string;
-  quality?: "good" | "better" | "best";
+  material: string
+  lifespan: string
+  notes?: string
+  quality?: 'good' | 'better' | 'best'
 }
 
 export function LifespanTable({ title, rows }: { title?: string; rows: LifespanRow[] }) {
-  const qualityColors = { good: "text-amber-600", better: "text-green-600", best: "text-emerald-700" };
+  const qualityColor = { good: T.muted, better: T.amber, best: T.green }
   return (
-    <div className="my-8 rounded-2xl border border-stone-200 overflow-hidden bg-white">
-      {title && <div className="px-5 py-4 border-b border-stone-100 bg-stone-50"><p className="font-semibold text-stone-900 text-sm">{title}</p></div>}
-      <div className="divide-y divide-stone-100">
-        {rows.map((row, i) => (
-          <div key={i} className="flex items-center justify-between px-5 py-3.5 hover:bg-stone-50 transition-colors">
-            <div className="flex-1">
-              <span className="font-medium text-stone-800 text-sm">{row.material}</span>
-              {row.notes && <span className="text-stone-400 text-xs ml-2">{row.notes}</span>}
-            </div>
-            <div className="flex items-center gap-3">
-              {row.quality && <span className={`text-xs font-medium capitalize ${qualityColors[row.quality]}`}>{row.quality}</span>}
-              <span className="font-bold text-stone-900 text-sm tabular-nums">{row.lifespan}</span>
-            </div>
+    <div style={{ margin: '32px 0', borderRadius: '16px', border: `1px solid ${T.border}`, overflow: 'hidden', background: T.white }}>
+      {title && (
+        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${T.border}`, background: T.bg }}>
+          <p style={{ fontFamily: T.sans, fontWeight: 500, fontSize: '13px', color: T.dark }}>{title}</p>
+        </div>
+      )}
+      {rows.map((row, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: i < rows.length - 1 ? `1px solid ${T.border}` : 'none' }}>
+          <div>
+            <span style={{ fontFamily: T.sans, fontSize: '14px', fontWeight: 500, color: T.text }}>{row.material}</span>
+            {row.notes && <span style={{ fontFamily: T.sans, fontSize: '12px', color: T.muted, marginLeft: '8px' }}>{row.notes}</span>}
           </div>
-        ))}
-      </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {row.quality && (
+              <span style={{ fontFamily: T.sans, fontSize: '11px', fontWeight: 500, color: qualityColor[row.quality], textTransform: 'capitalize' }}>{row.quality}</span>
+            )}
+            <span style={{ fontFamily: T.sans, fontSize: '14px', fontWeight: 700, color: T.dark }}>{row.lifespan}</span>
+          </div>
+        </div>
+      ))}
     </div>
-  );
+  )
 }
 
+// ─── FAILURE TIMELINE ────────────────────────────────────────
+
 interface TimelineStage {
-  age: string;
-  label: string;
-  description: string;
-  color: "green" | "amber" | "orange" | "red";
+  age: string
+  label: string
+  description: string
+  color: 'green' | 'amber' | 'orange' | 'red'
 }
 
 export function FailureTimeline({ title, stages }: { title?: string; stages: TimelineStage[] }) {
   const colorMap = {
-    green: { dot: "bg-green-500", text: "text-green-700", bg: "bg-green-50 border-green-200" },
-    amber: { dot: "bg-amber-400", text: "text-amber-700", bg: "bg-amber-50 border-amber-200" },
-    orange: { dot: "bg-orange-500", text: "text-orange-700", bg: "bg-orange-50 border-orange-200" },
-    red: { dot: "bg-red-500", text: "text-red-700", bg: "bg-red-50 border-red-200" },
-  };
+    green: { dot: T.green, text: '#1E5C34', bg: 'rgba(106,175,138,0.08)', border: 'rgba(106,175,138,0.20)' },
+    amber: { dot: T.amber, text: '#7A4A10', bg: 'rgba(196,123,43,0.08)', border: 'rgba(196,123,43,0.20)' },
+    orange: { dot: '#D4722A', text: '#7A3810', bg: 'rgba(212,114,42,0.08)', border: 'rgba(212,114,42,0.20)' },
+    red: { dot: T.red, text: T.red, bg: 'rgba(155,44,44,0.06)', border: 'rgba(155,44,44,0.15)' },
+  }
   return (
-    <div className="my-8">
-      {title && <h4 className="font-semibold text-stone-900 mb-4 text-sm uppercase tracking-wide">{title}</h4>}
-      <div className="relative">
-        <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-stone-200 hidden sm:block" />
-        <div className="space-y-4">
-          {stages.map((stage, i) => {
-            const c = colorMap[stage.color];
-            return (
-              <div key={i} className="flex gap-4 items-start relative">
-                <div className={`w-12 h-12 rounded-full ${c.dot} flex items-center justify-center flex-shrink-0 z-10 shadow-sm`}>
-                  <span className="text-white font-bold text-xs text-center leading-tight px-1">{stage.age}</span>
-                </div>
-                <div className={`flex-1 rounded-xl border p-4 ${c.bg}`}>
-                  <p className={`font-semibold text-sm ${c.text}`}>{stage.label}</p>
-                  <p className="text-stone-600 text-sm mt-1 leading-relaxed">{stage.description}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface RedFlag {
-  flag: string;
-  severity?: "watch" | "urgent" | "emergency";
-}
-
-export function RedFlagChecklist({ title, flags }: { title?: string; flags: RedFlag[] }) {
-  const severityConfig = {
-    watch: { icon: "👁", color: "text-amber-600" },
-    urgent: { icon: "⚠️", color: "text-orange-700" },
-    emergency: { icon: "🚨", color: "text-red-700" },
-  };
-  return (
-    <div className="my-8 rounded-2xl border border-red-100 bg-red-50 overflow-hidden">
-      <div className="px-5 py-4 border-b border-red-100 flex items-center gap-2">
-        <span>🚩</span>
-        <p className="font-semibold text-red-900 text-sm">{title || "Red flags to watch for"}</p>
-      </div>
-      <div className="divide-y divide-red-100">
-        {flags.map((flag, i) => {
-          const s = flag.severity ? severityConfig[flag.severity] : null;
+    <div style={{ margin: '32px 0' }}>
+      {title && <p style={{ fontFamily: T.sans, fontSize: '11px', fontWeight: 500, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>{title}</p>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {stages.map((stage, i) => {
+          const c = colorMap[stage.color]
           return (
-            <div key={i} className="px-5 py-3 flex items-start gap-3">
-              <span className="text-red-400 mt-0.5 flex-shrink-0">{s ? s.icon : "•"}</span>
-              <span className={`text-sm leading-relaxed ${s ? s.color : "text-red-800"}`}>{flag.flag}</span>
+            <div key={i} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+              <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: c.dot, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.10)' }}>
+                <span style={{ fontFamily: T.sans, color: T.white, fontWeight: 700, fontSize: '11px', textAlign: 'center', lineHeight: 1.2, padding: '0 4px' }}>{stage.age}</span>
+              </div>
+              <div style={{ flex: 1, background: c.bg, border: `1px solid ${c.border}`, borderRadius: '12px', padding: '14px 18px' }}>
+                <p style={{ fontFamily: T.sans, fontWeight: 600, fontSize: '14px', color: c.text, marginBottom: '4px' }}>{stage.label}</p>
+                <p style={{ fontFamily: T.sans, fontSize: '13px', color: T.text, lineHeight: 1.65 }}>{stage.description}</p>
+              </div>
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }
 
+// ─── RED FLAG CHECKLIST ──────────────────────────────────────
+
+interface RedFlag {
+  flag: string
+  severity?: 'watch' | 'urgent' | 'emergency'
+}
+
+export function RedFlagChecklist({ title, flags }: { title?: string; flags: RedFlag[] }) {
+  const severityIcon = { watch: '👁', urgent: '⚠️', emergency: '🚨' }
+  const severityColor = { watch: '#7A4A10', urgent: '#7A3810', emergency: T.red }
+  return (
+    <div style={{ margin: '32px 0', borderRadius: '16px', border: '1px solid rgba(155,44,44,0.15)', background: 'rgba(155,44,44,0.04)', overflow: 'hidden' }}>
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(155,44,44,0.10)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span>🚩</span>
+        <p style={{ fontFamily: T.sans, fontWeight: 600, fontSize: '13px', color: T.red }}>{title || 'Red flags to watch for'}</p>
+      </div>
+      {flags.map((flag, i) => (
+        <div key={i} style={{ padding: '12px 20px', borderBottom: i < flags.length - 1 ? '1px solid rgba(155,44,44,0.08)' : 'none', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+          <span style={{ flexShrink: 0, marginTop: '1px' }}>{flag.severity ? severityIcon[flag.severity] : '•'}</span>
+          <span style={{ fontFamily: T.sans, fontSize: '13px', lineHeight: 1.6, color: flag.severity ? severityColor[flag.severity] : T.red }}>{flag.flag}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── CONTRACTOR QUESTIONS ────────────────────────────────────
+
 interface ContractorQuestion {
-  question: string;
-  whyItMatters: string;
+  question: string
+  whyItMatters: string
 }
 
 export function ContractorQuestions({ title, questions }: { title?: string; questions: ContractorQuestion[] }) {
   return (
-    <div className="my-8">
-      <div className="flex items-center gap-2 mb-4">
+    <div style={{ margin: '32px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
         <span>🔨</span>
-        <h4 className="font-semibold text-stone-900">{title || "Questions to ask your contractor"}</h4>
+        <h4 style={{ fontFamily: T.sans, fontWeight: 600, fontSize: '15px', color: T.dark }}>{title || 'Questions to ask your contractor'}</h4>
       </div>
-      <div className="space-y-3">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {questions.map((q, i) => (
-          <div key={i} className="bg-white rounded-xl border border-stone-200 p-4">
-            <p className="font-medium text-stone-900 text-sm mb-1">"{q.question}"</p>
-            <p className="text-stone-500 text-xs leading-relaxed">{q.whyItMatters}</p>
+          <div key={i} style={{ background: T.white, borderRadius: '12px', border: `1px solid ${T.border}`, padding: '16px 18px' }}>
+            <p style={{ fontFamily: T.sans, fontWeight: 500, fontSize: '14px', color: T.dark, marginBottom: '6px' }}>"{q.question}"</p>
+            <p style={{ fontFamily: T.sans, fontSize: '12px', color: T.muted, lineHeight: 1.6 }}>{q.whyItMatters}</p>
           </div>
         ))}
       </div>
     </div>
-  );
+  )
 }
 
-type CalloutVariant = "tip" | "warning" | "insight" | "money";
+// ─── CALLOUT ─────────────────────────────────────────────────
 
-const CALLOUT_CONFIG: Record<CalloutVariant, { icon: string; bg: string; border: string; title: string; text: string }> = {
-  tip: { icon: "💡", bg: "bg-blue-50", border: "border-blue-200", title: "text-blue-900", text: "text-blue-800" },
-  warning: { icon: "⚠️", bg: "bg-amber-50", border: "border-amber-200", title: "text-amber-900", text: "text-amber-800" },
-  insight: { icon: "🔍", bg: "bg-stone-50", border: "border-stone-200", title: "text-stone-900", text: "text-stone-700" },
-  money: { icon: "💰", bg: "bg-green-50", border: "border-green-200", title: "text-green-900", text: "text-green-800" },
-};
+type CalloutVariant = 'tip' | 'warning' | 'insight' | 'money'
 
-export function Callout({ variant = "tip", label, children }: { variant?: CalloutVariant; label?: string; children: React.ReactNode }) {
-  const c = CALLOUT_CONFIG[variant];
+const CALLOUT_CONFIG: Record<CalloutVariant, { icon: string; bg: string; border: string; titleColor: string; textColor: string }> = {
+  tip: { icon: '💡', bg: 'rgba(58,124,168,0.07)', border: 'rgba(58,124,168,0.18)', titleColor: '#1A4A6E', textColor: '#2A5A80' },
+  warning: { icon: '⚠️', bg: 'rgba(196,123,43,0.08)', border: 'rgba(196,123,43,0.20)', titleColor: '#7A4A10', textColor: '#7A4A10' },
+  insight: { icon: '🔍', bg: T.bg, border: T.border, titleColor: T.dark, textColor: T.text },
+  money: { icon: '💰', bg: 'rgba(106,175,138,0.08)', border: 'rgba(106,175,138,0.20)', titleColor: '#1E5C34', textColor: '#2A6040' },
+}
+
+export function Callout({ variant = 'tip', label, children }: { variant?: CalloutVariant; label?: string; children: React.ReactNode }) {
+  const c = CALLOUT_CONFIG[variant]
   return (
-    <div className={`my-6 rounded-xl border ${c.border} ${c.bg} px-5 py-4 flex gap-3`}>
-      <span className="flex-shrink-0 text-lg">{c.icon}</span>
+    <div style={{ margin: '24px 0', borderRadius: '14px', border: `1px solid ${c.border}`, background: c.bg, padding: '18px 20px', display: 'flex', gap: '14px' }}>
+      <span style={{ fontSize: '18px', flexShrink: 0 }}>{c.icon}</span>
       <div>
-        {label && <p className={`font-semibold text-sm mb-1 ${c.title}`}>{label}</p>}
-        <div className={`text-sm leading-relaxed ${c.text}`}>{children}</div>
+        {label && <p style={{ fontFamily: T.sans, fontWeight: 600, fontSize: '13px', color: c.titleColor, marginBottom: '6px' }}>{label}</p>}
+        <div style={{ fontFamily: T.sans, fontSize: '13px', lineHeight: 1.7, color: c.textColor }}>{children}</div>
       </div>
     </div>
-  );
+  )
 }
 
-interface StatCardProps { stat: string; label: string; context?: string; }
+// ─── STAT ROW ────────────────────────────────────────────────
+
+interface StatCardProps { stat: string; label: string; context?: string }
 
 export function StatRow({ stats }: { stats: StatCardProps[] }) {
   return (
-    <div className={`my-8 grid gap-4 ${stats.length === 2 ? "grid-cols-2" : stats.length === 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4"}`}>
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(stats.length, 4)}, 1fr)`, gap: '16px', margin: '32px 0' }}>
       {stats.map((s, i) => (
-        <div key={i} className="bg-white rounded-xl border border-stone-200 p-4 text-center">
-          <p className="text-3xl font-bold text-stone-900">{s.stat}</p>
-          <p className="text-sm font-medium text-stone-700 mt-1">{s.label}</p>
-          {s.context && <p className="text-xs text-stone-400 mt-0.5">{s.context}</p>}
+        <div key={i} style={{ background: T.white, borderRadius: '14px', border: `1px solid ${T.border}`, padding: '20px', textAlign: 'center' }}>
+          <p style={{ fontFamily: T.serif, fontSize: '32px', fontWeight: 400, color: T.dark, lineHeight: 1 }}>{s.stat}</p>
+          <p style={{ fontFamily: T.sans, fontSize: '13px', fontWeight: 500, color: T.text, marginTop: '6px' }}>{s.label}</p>
+          {s.context && <p style={{ fontFamily: T.sans, fontSize: '11px', color: T.muted, marginTop: '3px' }}>{s.context}</p>}
         </div>
       ))}
     </div>
-  );
+  )
 }
+
+// ─── SECTION HEADER ──────────────────────────────────────────
 
 export function SectionHeader({ id, icon, title, subtitle }: { id: string; icon?: string; title: string; subtitle?: string }) {
   return (
-    <div id={id} className="pt-12 pb-4 border-b border-stone-200 mb-6 scroll-mt-20">
-      <div className="flex items-center gap-2 mb-2">
-        {icon && <span className="text-2xl">{icon}</span>}
-        <h2 className="text-2xl font-bold text-stone-900">{title}</h2>
+    <div id={id} style={{ paddingTop: '56px', paddingBottom: '16px', borderBottom: `2px solid ${T.border}`, marginBottom: '24px', scrollMarginTop: '32px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+        {icon && <span style={{ fontSize: '24px' }}>{icon}</span>}
+        <h2 style={{ fontFamily: T.serif, fontSize: '28px', fontWeight: 400, color: T.dark }}>{title}</h2>
       </div>
-      {subtitle && <p className="text-stone-500 text-base leading-relaxed">{subtitle}</p>}
+      {subtitle && <p style={{ fontFamily: T.sans, fontSize: '15px', color: T.muted, lineHeight: 1.6 }}>{subtitle}</p>}
     </div>
-  );
+  )
 }
+
+// ─── PROSE SECTION ───────────────────────────────────────────
 
 export function ProseSection({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-stone-700 text-base leading-relaxed space-y-4 [&>p]:text-stone-700 [&>h3]:font-semibold [&>h3]:text-stone-900 [&>h3]:text-lg [&>h3]:mt-6 [&>h3]:mb-2">
+    <div style={{ fontFamily: T.sans, fontSize: '15px', lineHeight: 1.75, color: T.text }}>
       {children}
     </div>
-  );
+  )
 }
