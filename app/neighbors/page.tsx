@@ -647,103 +647,179 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
 
         {/* PRICING TRENDS VIEW */}
         {activeView === 'pricing' && (
-          <div style={{ display: 'grid', gap: '32px' }}>
+          <div style={{ display: 'grid', gap: '28px' }}>
 
-            {/* COMMUNITY PRICING */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-                <div>
-                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>What neighbors paid</h3>
-                  <p style={{ fontSize: '13px', color: '#8A8A82' }}>Real prices logged by verified homeowners{userZip ? ` near ${userZip}` : ''}</p>
+            {/* STAT ROW */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+              {[
+                { label: 'Avg neighbor job cost', value: Object.keys(pricingBySystem).length > 0 ? `$${Math.round(Object.values(pricingBySystem).flat().reduce((a: number, b: number) => a + b, 0) / Object.values(pricingBySystem).flat().length).toLocaleString()}` : '—', sub: `${Object.values(pricingBySystem).flat().length} jobs logged nearby` },
+                { label: 'National cost trend', value: '+4.2%', sub: '2024 → 2025 avg across projects' },
+                { label: 'Best ROI project', value: '268%', sub: 'Garage door replacement', green: true },
+                { label: 'Market conditions', value: 'Elevated', sub: 'Tariff + labor pressure', amber: true },
+              ].map(s => (
+                <div key={s.label} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '14px', padding: '16px 18px' }}>
+                  <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '6px' }}>{s.label}</div>
+                  <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: (s as any).green ? '#3D7A5A' : (s as any).amber ? '#C47B2B' : '#1E3A2F', marginBottom: '3px' }}>{s.value}</div>
+                  <div style={{ fontSize: '11px', color: '#8A8A82' }}>{s.sub}</div>
                 </div>
-                <input value={zipSearch} onChange={e => handleZipChange(e.target.value)} style={{ ...inputStyle, width: '130px' }} placeholder="Filter by ZIP" />
+              ))}
+            </div>
+
+            {/* TWO COL: TREND CHART + ROI */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+
+              {/* Price trend chart */}
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Project cost trends 2019–2025</h3>
+                  <p style={{ fontSize: '12px', color: '#8A8A82' }}>National averages · hover a year to see what drove prices</p>
+                </div>
+                <PriceTrendChart />
               </div>
 
-              {Object.keys(pricingBySystem).length === 0 ? (
-                <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '36px', marginBottom: '12px' }}>📊</div>
-                  <h4 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1E3A2F', marginBottom: '8px' }}>No pricing data yet for this area</h4>
-                  <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '16px' }}>Be the first to log a job and help your neighbors.</p>
-                  <a href={user ? '/dashboard' : '/signup'} style={{ display: 'inline-block', background: '#C47B2B', color: '#fff', textDecoration: 'none', padding: '10px 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 500 }}>
-                    {user ? 'Log a job' : 'Create account to contribute'}
-                  </a>
+              {/* ROI YoY */}
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>ROI trend 2024 → 2025</h3>
+                  <p style={{ fontSize: '12px', color: '#8A8A82' }}>Cost recouped at resale · year-over-year change</p>
                 </div>
-              ) : (
                 <div style={{ display: 'grid', gap: '10px' }}>
-                  {Object.entries(pricingBySystem).sort((a, b) => b[1].length - a[1].length).map(([sys, prices]) => {
-                    const sysAvg = Math.round(prices.reduce((a: number, b: number) => a + b, 0) / prices.length)
-                    const sysMin = Math.min(...prices)
-                    const sysMax = Math.max(...prices)
-                    const maxAvg = Math.max(...Object.values(pricingBySystem).map((p: number[]) => Math.round(p.reduce((a: number, b: number) => a + b, 0) / p.length)))
-                    const barPct = Math.min(100, (sysAvg / maxAvg) * 100)
+                  {[
+                    { project: 'Garage door replacement', pct: 268, prev: 194, cost: '$4,672' },
+                    { project: 'Fiber-cement siding', pct: 114, prev: 88, cost: '$21,485' },
+                    { project: 'Fiberglass entry door', pct: 85, prev: 97, cost: '$11,754' },
+                    { project: 'Vinyl windows', pct: 76, prev: 67, cost: '$22,073' },
+                    { project: 'Asphalt roof', pct: 68, prev: 57, cost: '$31,871' },
+                    { project: 'Solar installation', pct: 30, prev: 0, cost: '$55,937' },
+                  ].map(item => {
+                    const delta = item.prev > 0 ? item.pct - item.prev : null
+                    const barColor = item.pct >= 100 ? '#3D7A5A' : item.pct >= 70 ? '#C47B2B' : '#9B2C2C'
                     return (
-                      <div key={sys} style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '14px', padding: '18px 22px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                          <div>
-                            <div style={{ fontSize: '14px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px', textTransform: 'capitalize' }}>{sys.replace(/_/g, ' ')}</div>
-                            <div style={{ fontSize: '11px', color: '#8A8A82' }}>{prices.length} job{prices.length !== 1 ? 's' : ''} logged in your area</div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', color: '#1E3A2F', fontWeight: 600 }}>${sysAvg.toLocaleString()}</div>
-                            <div style={{ fontSize: '11px', color: '#8A8A82' }}>range: ${sysMin.toLocaleString()} – ${sysMax.toLocaleString()}</div>
+                      <div key={item.project}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                          <span style={{ fontSize: '12px', color: '#1E3A2F' }}>{item.project}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                            {delta !== null && (
+                              <span style={{ fontSize: '10px', fontWeight: 500, padding: '2px 6px', borderRadius: '10px', background: delta > 0 ? '#EAF2EC' : delta < 0 ? '#FDECEA' : '#F5F5F5', color: delta > 0 ? '#3D7A5A' : delta < 0 ? '#9B2C2C' : '#8A8A82' }}>
+                                {delta > 0 ? `▲${delta}pts` : delta < 0 ? `▼${Math.abs(delta)}pts` : '—'}
+                              </span>
+                            )}
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: barColor, minWidth: '36px', textAlign: 'right' }}>{item.pct}%</span>
                           </div>
                         </div>
-                        <div style={{ height: '8px', background: '#EDE8E0', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${barPct}%`, height: '100%', background: '#3D7A5A', borderRadius: '4px', transition: 'width 0.4s ease' }} />
+                        <div style={{ height: '6px', background: '#EDE8E0', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.min(100, item.pct / 2.68)}%`, height: '100%', background: barColor, borderRadius: '3px' }} />
                         </div>
+                        <div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '2px' }}>avg {item.cost}</div>
                       </div>
                     )
                   })}
                 </div>
-              )}
+                <p style={{ fontSize: '10px', color: '#8A8A82', marginTop: '14px', lineHeight: 1.6 }}>
+                  Source: Remodeling 2025 Cost vs. Value Report (<a href="https://www.costvsvalue.com" target="_blank" rel="noopener noreferrer" style={{ color: '#3D7A5A' }}>costvsvalue.com</a>). © 2025 Zonda Media.
+                </p>
+              </div>
             </div>
 
-            {/* PRICE TRENDS */}
-            <div>
+            {/* MARKET CONDITIONS */}
+            <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px' }}>
               <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Project cost trends 2019–2025</h3>
-                <p style={{ fontSize: '13px', color: '#8A8A82' }}>How project costs and resale returns have shifted over 7 years. Hover over a year to see what was driving prices.</p>
+                <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Market conditions affecting your projects</h3>
+                <p style={{ fontSize: '12px', color: '#8A8A82' }}>Macro factors driving costs right now · 2025</p>
               </div>
-              <PriceTrendChart />
-            </div>
-
-            {/* NATIONAL BENCHMARKS */}
-            <div style={{ background: '#1E3A2F', borderRadius: '20px', padding: '32px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
-                <div>
-                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 400, color: '#F8F4EE', marginBottom: '6px' }}>National resale benchmarks</h3>
-                  <p style={{ fontSize: '13px', color: 'rgba(248,244,238,0.55)', lineHeight: 1.6 }}>How much common projects recoup at resale — according to the Remodeling 2025 Cost vs. Value Report (<a href="https://www.costvsvalue.com" target="_blank" rel="noopener noreferrer" style={{ color: '#6AAF8A' }}>costvsvalue.com</a>)</p>
-                </div>
-              </div>
-              <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
                 {[
-                  { project: 'Garage Door Replacement', cost: '$4,672', recouped: 268, context: 'The single best ROI of any project — returns more than 2.5x the investment at resale.' },
-                  { project: 'Vinyl Window Replacement', cost: '$22,073', recouped: 76, context: 'Replaces drafty windows and signals to buyers the home has been maintained.' },
-                  { project: 'Roofing Replacement (Asphalt Shingles)', cost: '$31,871', recouped: 68, context: 'A new roof is one of the first things buyers inspect. Deferred replacement is a red flag.' },
-                  { project: 'Grand Entrance (Fiberglass Door)', cost: '$11,754', recouped: 85, context: 'Curb appeal at the front door pays — fiberglass holds up better than steel in most climates.' },
-                  { project: 'Fiber-Cement Siding Replacement', cost: '$21,485', recouped: 114, context: 'One of the few projects that recoups more than it costs — and dramatically improves curb appeal.' },
+                  { system: 'Roofing', status: 'Rising', statusColor: '#9B2C2C', statusBg: '#FDECEA', body: 'Shingle prices up 6–10% in 2025. Petroleum-based materials responding to oil price volatility. New shingles contain less asphalt than older stock.' },
+                  { system: 'Windows & doors', status: 'Elevated', statusColor: '#7A4A10', statusBg: '#FBF0DC', body: 'Triple-pane demand surging — 87% of installs in some markets. Wholesale prices up 49–59% since Jan 2020. Tariff pressure on glass spacers.' },
+                  { system: 'Steel & aluminum', status: 'Watch', statusColor: '#7A4A10', statusBg: '#FBF0DC', body: 'New tariff pressure in 2025. Affects garage doors, entry doors, gutters, and flashing. Not yet fully reflected in contractor quotes.' },
+                  { system: 'Lumber', status: 'Stabilizing', statusColor: '#3D7A5A', statusBg: '#EAF2EC', body: 'Back near pre-pandemic levels after 300%+ surge in 2021. Good time for deck, framing, and wood-intensive projects. Concrete still rising.' },
                 ].map(item => (
-                  <div key={item.project} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '16px 18px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '14px', fontWeight: 500, color: '#F8F4EE' }}>{item.project}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                        <span style={{ fontSize: '12px', color: 'rgba(248,244,238,0.5)' }}>avg {item.cost}</span>
-                        <span style={{ fontSize: '13px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: item.recouped >= 100 ? 'rgba(106,175,138,0.25)' : item.recouped >= 70 ? 'rgba(196,123,43,0.25)' : 'rgba(155,44,44,0.2)', color: item.recouped >= 100 ? '#6AAF8A' : item.recouped >= 70 ? '#C47B2B' : '#F87171' }}>{item.recouped}% recouped</span>
-                      </div>
+                  <div key={item.system} style={{ padding: '14px 16px', border: '0.5px solid rgba(30,58,47,0.11)', borderRadius: '12px', borderLeft: `3px solid ${item.statusColor}`, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{item.system}</span>
+                      <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '10px', background: item.statusBg, color: item.statusColor }}>{item.status}</span>
                     </div>
-                    <p style={{ fontSize: '12px', color: 'rgba(248,244,238,0.5)', lineHeight: 1.6, margin: 0 }}>{item.context}</p>
+                    <p style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, margin: 0 }}>{item.body}</p>
                   </div>
                 ))}
               </div>
-              <p style={{ fontSize: '11px', color: 'rgba(248,244,238,0.25)', marginTop: '20px', lineHeight: 1.6 }}>
-                © 2025 Zonda Media, a Delaware Corporation. Complete data from the Remodeling 2025 Cost vs. Value Report can be downloaded free at <a href="https://www.costvsvalue.com" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(248,244,238,0.35)' }}>costvsvalue.com</a>.
+            </div>
+
+            {/* BOTTOM ROW: community pricing + timing signals */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+
+              {/* Community pricing */}
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>What neighbors paid nearby</h3>
+                  <p style={{ fontSize: '12px', color: '#8A8A82' }}>Logged jobs · {userZip || 'your area'}{nearbyZips.length > 1 ? ` + ${nearbyZips.length - 1} surrounding zips` : ''}</p>
+                </div>
+                {Object.keys(pricingBySystem).length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '10px' }}>📊</div>
+                    <p style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '14px' }}>No pricing data yet for your area.</p>
+                    <button onClick={() => window.location.href = user ? '/dashboard' : '/signup'} style={{ background: '#C47B2B', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                      {user ? 'Log a job' : 'Create account'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {Object.entries(pricingBySystem).sort((a, b) => b[1].length - a[1].length).map(([sys, prices]) => {
+                      const avg = Math.round((prices as number[]).reduce((a: number, b: number) => a + b, 0) / (prices as number[]).length)
+                      const maxAvg = Math.max(...Object.values(pricingBySystem).map((p: any) => Math.round(p.reduce((a: number, b: number) => a + b, 0) / p.length)))
+                      return (
+                        <div key={sys}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '13px', color: '#1E3A2F', textTransform: 'capitalize' }}>{sys.replace(/_/g, ' ')}</span>
+                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>${avg.toLocaleString()} <span style={{ fontSize: '10px', color: '#8A8A82', fontWeight: 400 }}>· {(prices as number[]).length} job{(prices as number[]).length !== 1 ? 's' : ''}</span></span>
+                          </div>
+                          <div style={{ height: '6px', background: '#EDE8E0', borderRadius: '3px' }}>
+                            <div style={{ width: `${Math.min(100, (avg / maxAvg) * 100)}%`, height: '100%', background: '#3D7A5A', borderRadius: '3px' }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Should I act now */}
+              <div style={{ background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#1E3A2F', marginBottom: '4px' }}>Should I act now?</h3>
+                  <p style={{ fontSize: '12px', color: '#8A8A82' }}>Timing signals based on current market conditions</p>
+                </div>
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {[
+                    { project: 'Roofing', signal: 'Act now — costs still rising', color: '#9B2C2C', bg: '#FDECEA' },
+                    { project: 'Windows', signal: 'Get quotes now before tariffs land', color: '#7A4A10', bg: '#FBF0DC' },
+                    { project: 'Garage door', signal: 'Watch — steel tariff pressure', color: '#7A4A10', bg: '#FBF0DC' },
+                    { project: 'Decking & framing', signal: 'Good time — lumber stable', color: '#3D7A5A', bg: '#EAF2EC' },
+                    { project: 'Siding (fiber-cement)', signal: 'Strong ROI — 114% recouped', color: '#3D7A5A', bg: '#EAF2EC' },
+                  ].map(item => (
+                    <div key={item.project} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: item.bg, borderRadius: '10px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 500, color: item.color }}>{item.project}</span>
+                      <span style={{ fontSize: '11px', color: item.color, textAlign: 'right', maxWidth: '140px' }}>{item.signal}</span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: '10px', color: '#8A8A82', marginTop: '12px', lineHeight: 1.6 }}>
+                  These are general signals, not financial advice. Local conditions and contractor availability vary.
+                </p>
+              </div>
+            </div>
+
+            {/* Important context */}
+            <div style={{ background: 'rgba(30,58,47,0.04)', border: '1px solid rgba(30,58,47,0.10)', borderRadius: '12px', padding: '16px 20px' }}>
+              <p style={{ fontSize: '13px', color: '#4A4A44', lineHeight: 1.7, margin: 0 }}>
+                <strong style={{ color: '#1E3A2F' }}>Important:</strong> National resale figures reflect upscale and midrange upgrades done with quality materials — not cheap like-for-like replacements or builder-grade products. A $300 garage door swap will not return 268%. These are projects done right, with quality materials, that buyers actually notice and value at resale.
               </p>
             </div>
 
           </div>
         )}
 
-        {/* RECENT REVIEWS VIEW */}
+
         {activeView === 'leaderboard' && (
           <div>
             <div style={{ marginBottom: '24px' }}>
