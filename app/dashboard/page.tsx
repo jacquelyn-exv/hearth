@@ -338,6 +338,7 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
   const [newCost,setNewCost]=useState('')
   const [newNotes,setNewNotes]=useState('')
   const [newPriority,setNewPriority]=useState('medium')
+  const [newTimeline,setNewTimeline]=useState('within_2_years')
   const [editingId,setEditingId]=useState<string|null>(null)
   const [editEdits,setEditEdits]=useState<any>({})
   const [saving,setSaving]=useState(false)
@@ -352,29 +353,61 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
   const addProject=async(title?:string,category?:string,estimatedCost?:string)=>{
     const t=title||newTitle;if(!t.trim())return
     setSaving(true)
-    const {data}=await supabase.from('home_projects').insert({home_id:homeId,created_by:userId,title:t.trim(),category:category||newCategory,estimated_cost:estimatedCost||newCost||null,notes:newNotes||null,priority:newPriority,status:'wishlist'}).select().single()
+    const {data}=await supabase.from('home_projects').insert({home_id:homeId,created_by:userId,title:t.trim(),category:category||newCategory,estimated_cost:estimatedCost||newCost||null,notes:newNotes||null,priority:newPriority,timeline:newTimeline,status:'wishlist'}).select().single()
     if(data)setProjects((prev:any[])=>[data,...prev])
-    setNewTitle('');setNewCategory('maintenance');setNewCost('');setNewNotes('');setNewPriority('medium');setShowAddForm(false);setShowTemplates(false);setSaving(false)
+    setNewTitle('');setNewCategory('maintenance');setNewCost('');setNewNotes('');setNewPriority('medium');setNewTimeline('within_2_years');setShowAddForm(false);setShowTemplates(false);setSaving(false)
   }
 
-  const startEdit=(p:any)=>{setEditingId(p.id);setEditEdits({title:p.title,category:p.category,estimated_cost:p.estimated_cost||'',notes:p.notes||'',priority:p.priority||'medium',status:p.status||'wishlist'})}
-
+  const startEdit=(p:any)=>{setEditingId(p.id);setEditEdits({title:p.title,category:p.category,estimated_cost:p.estimated_cost||'',notes:p.notes||'',priority:p.priority||'medium',timeline:p.timeline||'within_2_years',status:p.status||'wishlist'})}
   const saveEdit=async()=>{
     if(!editingId)return;setSaving(true)
     const {data}=await supabase.from('home_projects').update(editEdits).eq('id',editingId).select().single()
     if(data)setProjects((prev:any[])=>prev.map(p=>p.id===editingId?data:p))
     setEditingId(null);setSaving(false)
   }
-
   const deleteProject=async(id:string)=>{
     if(!window.confirm('Remove this project?'))return
     await supabase.from('home_projects').delete().eq('id',id)
     setProjects((prev:any[])=>prev.filter(p=>p.id!==id))
   }
-
   const updateStatus=async(id:string,status:string)=>{
     await supabase.from('home_projects').update({status}).eq('id',id)
     setProjects((prev:any[])=>prev.map(p=>p.id===id?{...p,status}:p))
+  }
+
+  const getBestTiming=(title:string,category:string)=>{
+    const t=title.toLowerCase()
+    if(t.includes('deck'))return{when:'April – May',reason:'Contractors less busy, better rates'}
+    if(t.includes('roof'))return{when:'Spring or Fall',reason:'Best contractor availability'}
+    if(t.includes('hvac')||t.includes('furnace'))return{when:'Spring or Fall',reason:'Off-peak season rates'}
+    if(t.includes('gutter'))return{when:'Fall',reason:'Before leaves and winter'}
+    if(t.includes('window'))return{when:'Spring or Fall',reason:'Mild weather for installation'}
+    if(t.includes('generator'))return{when:'Fall',reason:'Before storm season'}
+    if(t.includes('siding'))return{when:'Late Spring or Summer',reason:'Dry conditions required'}
+    if(category==='energy')return{when:'Spring',reason:'Maximize summer savings'}
+    return{when:'Spring or Fall',reason:'Best contractor availability'}
+  }
+
+  const getSavingsGoal=(cost:string,timeline:string)=>{
+    const nums=cost.replace(/[^0-9]/g,' ').trim().split(/s+/).map(Number).filter(n=>n>100)
+    if(!nums.length)return null
+    const mid=nums.length>1?(nums[0]+nums[nums.length-1])/2:nums[0]
+    const months=timeline==='within_1_year'?12:timeline==='within_2_years'?24:timeline==='3_5_years'?48:60
+    const mo=Math.round(mid/months)
+    const label=timeline==='within_1_year'?'1 year':timeline==='within_2_years'?'2 years':timeline==='3_5_years'?'3–5 years':'someday'
+    return{monthly:'$'+mo.toLocaleString()+' / mo',readyIn:'Ready in '+label+' at this rate'}
+  }
+
+  const getGuideLinks=(title:string):{label:string;slug:string}[]=>{
+    const t=title.toLowerCase()
+    if(t.includes('deck'))return[{label:'📖 How to choose deck materials',slug:'deck'},{label:'💡 Composite vs wood: full comparison',slug:'deck'},{label:'🔑 Questions to ask your contractor',slug:'deck'},{label:'📋 Permit requirements',slug:'deck'},{label:'🏠 How decks affect home value',slug:'deck'}]
+    if(t.includes('roof'))return[{label:'📖 Roof material guide',slug:'roof'},{label:'🔑 Questions to ask your roofer',slug:'roof'},{label:'💡 Signs you need a new roof',slug:'roof'},{label:'🏠 Roof ROI at sale',slug:'roof'}]
+    if(t.includes('hvac')||t.includes('furnace'))return[{label:'📖 HVAC buying guide',slug:'hvac'},{label:'💡 Heat pump vs furnace',slug:'hvac'},{label:'🔑 Questions to ask your HVAC tech',slug:'hvac'}]
+    if(t.includes('window'))return[{label:'📖 Window buying guide',slug:'windows'},{label:'💡 Single vs double vs triple pane',slug:'windows'},{label:'🔑 Window installation questions',slug:'windows'}]
+    if(t.includes('siding'))return[{label:'📖 Siding material guide',slug:'siding'},{label:'💡 Fiber cement vs vinyl',slug:'siding'},{label:'🏠 Siding ROI at sale',slug:'siding'}]
+    if(t.includes('gutter'))return[{label:'📖 Gutter material guide',slug:'gutters'},{label:'💡 Do you need gutter guards?',slug:'gutters'}]
+    if(t.includes('door'))return[{label:'📖 Entry door guide',slug:'entry-door'},{label:'💡 Fiberglass vs steel vs wood',slug:'entry-door'}]
+    return[{label:'📖 Browse all guides',slug:''}]
   }
 
   const iS:React.CSSProperties={width:'100%',padding:'7px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'6px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none',background:'#fff',color:'#1A1A18',boxSizing:'border-box'}
@@ -382,43 +415,23 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
 
   return(
     <div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'16px',flexWrap:'wrap',gap:'10px'}}>
-        <div><h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'22px',fontWeight:400,color:'#1E3A2F',marginBottom:'4px'}}>Project Wish List</h2><p style={{fontSize:'13px',color:'#8A8A82'}}>{projects.length} project{projects.length!==1?'s':''}</p></div>
-        <div style={{display:'flex',gap:'8px'}}>
-          <button onClick={()=>setShowTemplates(!showTemplates)} style={{background:'#fff',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'9px 16px',borderRadius:'10px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Browse ideas</button>
-          <button onClick={()=>setShowAddForm(!showAddForm)} style={{background:'#C47B2B',color:'#fff',border:'none',padding:'10px 20px',borderRadius:'10px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>+ Add project</button>
+      <div style={{background:'#1E3A2F',borderRadius:'16px',padding:'24px 28px',marginBottom:'24px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'20px'}}>
+        <div>
+          <h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'24px',fontWeight:400,color:'#F8F4EE',marginBottom:'6px'}}>Your Project Wish List</h2>
+          <p style={{fontSize:'13px',color:'rgba(248,244,238,0.6)',lineHeight:1.6}}>Add projects you are planning — Hearth will show you costs, best timing, neighbor prices, and guides to help you prepare.</p>
         </div>
+        <button onClick={()=>setShowAddForm(!showAddForm)} style={{background:'#C47B2B',color:'#fff',border:'none',padding:'11px 22px',borderRadius:'10px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0,whiteSpace:'nowrap'}}>+ Add project</button>
       </div>
-
-      {showTemplates&&(
-        <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'22px',marginBottom:'20px'}}>
-          <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F',marginBottom:'16px'}}>Common home projects</h3>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:'12px'}}>
-            {PROJECT_TEMPLATES.map(tpl=>(
-              <div key={tpl.title} style={{border:'1px solid rgba(30,58,47,0.11)',borderRadius:'12px',padding:'14px',background:'#F8F4EE'}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'8px'}}>
-                  <span style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F',flex:1}}>{tpl.title}</span>
-                  <button onClick={()=>addProject(tpl.title,tpl.category,tpl.estimatedCost)} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'4px 10px',borderRadius:'6px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0,marginLeft:'8px'}}>+ Add</button>
-                </div>
-                <div style={{display:'grid',gap:'3px',fontSize:'11px',color:'#8A8A82'}}>
-                  <div>💰 {tpl.estimatedCost}</div><div>📈 {tpl.roi}</div><div>📅 Best: {tpl.bestTiming}</div>
-                </div>
-                {tpl.guideSlug&&<a href={`/guides/${tpl.guideSlug}`} style={{display:'inline-block',marginTop:'8px',fontSize:'11px',color:'#3D7A5A',fontWeight:500}}>Read the guide →</a>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {showAddForm&&(
         <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'22px',marginBottom:'20px'}}>
           <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F',marginBottom:'16px'}}>Add a project</h3>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
-            <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Project name *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} style={iS} placeholder="e.g. Replace roof shingles"/></div>
+            <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Project name *</label><input value={newTitle} onChange={e=>setNewTitle(e.target.value)} style={iS} placeholder="e.g. Deck replacement, Kitchen renovation"/></div>
             <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Category</label><select value={newCategory} onChange={e=>setNewCategory(e.target.value)} style={iS}>{PROJECT_CATEGORIES.map(c=><option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}</select></div>
-            <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Priority</label><select value={newPriority} onChange={e=>setNewPriority(e.target.value)} style={iS}><option value="high">🔴 High</option><option value="medium">🟡 Medium</option><option value="low">🟢 Low</option></select></div>
-            <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Estimated cost</label><input value={newCost} onChange={e=>setNewCost(e.target.value)} style={iS} placeholder="e.g. $8,000–15,000"/></div>
-            <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Notes</label><input value={newNotes} onChange={e=>setNewNotes(e.target.value)} style={iS} placeholder="Timing, contractors to call, etc."/></div>
+            <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Timeline</label><select value={newTimeline} onChange={e=>setNewTimeline(e.target.value)} style={iS}><option value="within_1_year">Within 1 year</option><option value="within_2_years">Within 2 years</option><option value="3_5_years">3–5 years</option><option value="someday">Someday</option></select></div>
+            <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Estimated cost</label><input value={newCost} onChange={e=>setNewCost(e.target.value)} style={iS} placeholder="e.g. $12,000–18,000"/></div>
+            <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Notes (optional)</label><input value={newNotes} onChange={e=>setNewNotes(e.target.value)} style={iS} placeholder="Material preference, inspiration, anything else"/></div>
           </div>
           <div style={{display:'flex',gap:'8px',marginTop:'14px'}}>
             <button onClick={()=>addProject()} disabled={saving||!newTitle.trim()} style={{flex:2,background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'10px',borderRadius:'10px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",opacity:saving||!newTitle.trim()?0.6:1}}>{saving?'Saving...':'Add to wish list'}</button>
@@ -427,12 +440,21 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
         </div>
       )}
 
+      {!showAddForm&&<div style={{marginBottom:'20px'}}><button onClick={()=>setShowTemplates(!showTemplates)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'8px 16px',borderRadius:'10px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{showTemplates?'▲ Hide ideas':'▼ Browse common projects'}</button></div>}
+
+      {showTemplates&&(
+        <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'22px',marginBottom:'20px'}}>
+          <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F',marginBottom:'16px'}}>Common home projects</h3>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:'12px'}}>
+            {PROJECT_TEMPLATES.map(tpl=>(<div key={tpl.title} style={{border:'1px solid rgba(30,58,47,0.11)',borderRadius:'12px',padding:'14px',background:'#F8F4EE'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'8px'}}><span style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F',flex:1}}>{tpl.title}</span><button onClick={()=>addProject(tpl.title,tpl.category,tpl.estimatedCost)} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'4px 10px',borderRadius:'6px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0,marginLeft:'8px'}}>+ Add</button></div><div style={{display:'grid',gap:'3px',fontSize:'11px',color:'#8A8A82'}}><div>💰 {tpl.estimatedCost}</div><div>📈 {tpl.roi}</div><div>📅 {tpl.bestTiming}</div></div>{tpl.guideSlug&&<a href={'/guides/'+tpl.guideSlug} style={{display:'inline-block',marginTop:'8px',fontSize:'11px',color:'#3D7A5A',fontWeight:500}}>Read the guide →</a>}</div>))}
+          </div>
+        </div>
+      )}
+
       {projects.length>0&&(
-        <div style={{display:'flex',gap:'8px',flexWrap:'wrap',marginBottom:'16px'}}>
+        <div style={{display:'flex',gap:'8px',flexWrap:'wrap',marginBottom:'20px'}}>
           <button onClick={()=>setFilterCat('all')} style={{padding:'6px 14px',borderRadius:'20px',fontSize:'12px',border:'none',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",background:filterCat==='all'?'#1E3A2F':'#fff',color:filterCat==='all'?'#F8F4EE':'#1E3A2F',outline:'1px solid rgba(30,58,47,0.15)'}}>All ({projects.length})</button>
-          {PROJECT_CATEGORIES.filter(c=>projects.some(p=>p.category===c.key)).map(cat=>(
-            <button key={cat.key} onClick={()=>setFilterCat(cat.key)} style={{padding:'6px 14px',borderRadius:'20px',fontSize:'12px',border:'none',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",background:filterCat===cat.key?'#1E3A2F':'#fff',color:filterCat===cat.key?'#F8F4EE':'#1E3A2F',outline:'1px solid rgba(30,58,47,0.15)'}}>{cat.icon} {cat.label}</button>
-          ))}
+          {PROJECT_CATEGORIES.filter(c=>projects.some(p=>p.category===c.key)).map(cat=>(<button key={cat.key} onClick={()=>setFilterCat(cat.key)} style={{padding:'6px 14px',borderRadius:'20px',fontSize:'12px',border:'none',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",background:filterCat===cat.key?'#1E3A2F':'#fff',color:filterCat===cat.key?'#F8F4EE':'#1E3A2F',outline:'1px solid rgba(30,58,47,0.15)'}}>{cat.icon} {cat.label}</button>))}
         </div>
       )}
 
@@ -440,63 +462,91 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
         <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'48px',textAlign:'center'}}>
           <div style={{fontSize:'44px',marginBottom:'14px'}}>✨</div>
           <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'20px',fontWeight:400,color:'#1E3A2F',marginBottom:'8px'}}>No projects yet</h3>
-          <p style={{fontSize:'13px',color:'#8A8A82',lineHeight:1.7,maxWidth:'360px',margin:'0 auto 20px'}}>Add projects you want to tackle — renovations, repairs, upgrades. Track cost estimates and timing.</p>
+          <p style={{fontSize:'13px',color:'#8A8A82',lineHeight:1.7,maxWidth:'360px',margin:'0 auto 20px'}}>Add projects you want to tackle — Hearth will show you neighbor pricing, best timing, and guides.</p>
           <button onClick={()=>setShowTemplates(true)} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'11px 22px',borderRadius:'10px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Browse project ideas</button>
         </div>
       )}
 
-      <div style={{display:'grid',gap:'12px'}}>
+      <div style={{display:'grid',gap:'16px'}}>
         {filtered.map(p=>{
           const cat=PROJECT_CATEGORIES.find(c=>c.key===p.category)
           const isEditing=editingId===p.id
-          const priorityColor=p.priority==='high'?'#9B2C2C':p.priority==='low'?'#3D7A5A':'#7A4A10'
-          const priorityBg=p.priority==='high'?'#FDECEA':p.priority==='low'?'#EAF2EC':'#FBF0DC'
+          const timing=getBestTiming(p.title,p.category)
+          const savings=p.estimated_cost?getSavingsGoal(p.estimated_cost,p.timeline||'within_2_years'):null
+          const guides=getGuideLinks(p.title)
+          const timelineLabel=(p.timeline||'within_2_years').replace('within_1_year','Within 1 year').replace('within_2_years','Within 2 years').replace('3_5_years','3–5 years').replace('someday','Someday')
+          const catRoi=cat?.key==='value'?'High resale ROI':cat?.key==='maintenance'?'Protects home value':cat?.key==='energy'?'Lowers utility bills':cat?.key==='curb_appeal'?'Strong curb appeal ROI':'Good long-term investment'
           return(
-            <div key={p.id} style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden'}}>
-              <div style={{padding:'16px 20px'}}>
-                <div style={{display:'flex',alignItems:'flex-start',gap:'12px'}}>
-                  <div style={{fontSize:'24px',flexShrink:0}}>{cat?.icon||'📋'}</div>
+            <div key={p.id} style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden'}}>
+              <div style={{padding:'20px 24px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'16px'}}>
+                <div style={{display:'flex',alignItems:'flex-start',gap:'14px',flex:1}}>
+                  <div style={{width:'44px',height:'44px',borderRadius:'12px',background:'#F8F4EE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'22px',flexShrink:0}}>{cat?.icon||'📋'}</div>
                   <div style={{flex:1}}>
-                    {isEditing?(
-                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'12px'}}>
-                        <div style={{gridColumn:'1/-1'}}><input value={editEdits.title} onChange={e=>setEditEdits((prev:any)=>({...prev,title:e.target.value}))} style={iS}/></div>
-                        <div><select value={editEdits.category} onChange={e=>setEditEdits((prev:any)=>({...prev,category:e.target.value}))} style={iS}>{PROJECT_CATEGORIES.map(c=><option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}</select></div>
-                        <div><select value={editEdits.priority} onChange={e=>setEditEdits((prev:any)=>({...prev,priority:e.target.value}))} style={iS}><option value="high">🔴 High</option><option value="medium">🟡 Medium</option><option value="low">🟢 Low</option></select></div>
-                        <div><select value={editEdits.status} onChange={e=>setEditEdits((prev:any)=>({...prev,status:e.target.value}))} style={iS}><option value="wishlist">Wish list</option><option value="planning">Planning</option><option value="in_progress">In progress</option><option value="done">Done</option></select></div>
-                        <div><input value={editEdits.estimated_cost} onChange={e=>setEditEdits((prev:any)=>({...prev,estimated_cost:e.target.value}))} style={iS} placeholder="Estimated cost"/></div>
-                        <div style={{gridColumn:'1/-1'}}><input value={editEdits.notes} onChange={e=>setEditEdits((prev:any)=>({...prev,notes:e.target.value}))} style={iS} placeholder="Notes"/></div>
-                        <div style={{gridColumn:'1/-1',display:'flex',gap:'8px'}}>
-                          <button onClick={saveEdit} disabled={saving} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'8px 18px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{saving?'Saving...':'Save'}</button>
-                          <button onClick={()=>setEditingId(null)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'8px 14px',borderRadius:'8px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button>
-                        </div>
-                      </div>
-                    ):(
-                      <>
-                        <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px',flexWrap:'wrap'}}>
-                          <span style={{fontSize:'15px',fontWeight:500,color:'#1E3A2F'}}>{p.title}</span>
-                          <span style={{fontSize:'10px',padding:'2px 8px',borderRadius:'20px',background:priorityBg,color:priorityColor,fontWeight:500}}>{p.priority}</span>
-                          {p.status&&p.status!=='wishlist'&&<span style={{fontSize:'10px',padding:'2px 8px',borderRadius:'20px',background:'#E6F2F8',color:'#3A7CA8'}}>{p.status.replace('_',' ')}</span>}
-                        </div>
-                        {p.estimated_cost&&<div style={{fontSize:'12px',color:'#8A8A82',marginBottom:'2px'}}>💰 {p.estimated_cost}</div>}
-                        {p.notes&&<div style={{fontSize:'12px',color:'#8A8A82'}}>{p.notes}</div>}
-                      </>
-                    )}
-                  </div>
-                  {!isEditing&&(
-                    <div style={{display:'flex',gap:'6px',flexShrink:0}}>
-                      <button onClick={()=>startEdit(p)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'5px 10px',borderRadius:'7px',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Edit</button>
-                      <button onClick={()=>deleteProject(p.id)} style={{background:'none',border:'1px solid rgba(155,44,44,0.2)',color:'#9B2C2C',padding:'5px 10px',borderRadius:'7px',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Remove</button>
+                    {isEditing?<input value={editEdits.title} onChange={e=>setEditEdits((prev:any)=>({...prev,title:e.target.value}))} style={{...iS,fontSize:'16px',fontWeight:500,marginBottom:'8px'}}/>:<div style={{fontSize:'18px',fontWeight:600,color:'#1E3A2F',marginBottom:'4px'}}>{p.title}</div>}
+                    <div style={{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}}>
+                      <span style={{fontSize:'11px',fontWeight:500,padding:'3px 10px',borderRadius:'20px',background:'#F8F4EE',color:'#1E3A2F',border:'1px solid rgba(30,58,47,0.15)'}}>{timelineLabel}</span>
+                      <span style={{fontSize:'12px',color:'#8A8A82'}}>Added {new Date(p.created_at).toLocaleDateString('en-US',{month:'short',year:'numeric'})}{p.notes?' · '+p.notes:''}</span>
                     </div>
-                  )}
-                </div>
-                {!isEditing&&(
-                  <div style={{display:'flex',gap:'6px',marginTop:'10px',flexWrap:'wrap'}}>
-                    {['wishlist','planning','in_progress','done'].map(s=>(
-                      <button key={s} onClick={()=>updateStatus(p.id,s)} style={{padding:'4px 10px',borderRadius:'20px',fontSize:'11px',border:'none',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",background:p.status===s?'#1E3A2F':'rgba(30,58,47,0.07)',color:p.status===s?'#F8F4EE':'#8A8A82',fontWeight:p.status===s?500:400}}>{s.replace('_',' ')}</button>
-                    ))}
                   </div>
-                )}
+                </div>
+                <div style={{textAlign:'right',flexShrink:0}}>
+                  {p.estimated_cost&&<div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'22px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{p.estimated_cost}</div>}
+                  <div style={{fontSize:'12px',color:'#3D7A5A',fontWeight:500}}>↑ {catRoi}</div>
+                </div>
               </div>
+
+              {!isEditing&&(
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1px',background:'rgba(30,58,47,0.06)'}}>
+                  <div style={{background:'#F8F4EE',padding:'14px 18px'}}>
+                    <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',marginBottom:'6px'}}>Neighbors Paid</div>
+                    <div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>See neighbor data</div>
+                    <div style={{fontSize:'11px',color:'#8A8A82'}}><a href="/neighbors" style={{color:'#3D7A5A',textDecoration:'none'}}>View jobs in your ZIP →</a></div>
+                  </div>
+                  <div style={{background:'#F8F4EE',padding:'14px 18px'}}>
+                    <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',marginBottom:'6px'}}>Best Time to Hire</div>
+                    <div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{timing.when}</div>
+                    <div style={{fontSize:'11px',color:'#8A8A82'}}>{timing.reason}</div>
+                  </div>
+                  <div style={{background:'#F8F4EE',padding:'14px 18px'}}>
+                    <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',marginBottom:'6px'}}>Monthly Savings Goal</div>
+                    {savings?<><div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{savings.monthly}</div><div style={{fontSize:'11px',color:'#8A8A82'}}>{savings.readyIn}</div></>:<div style={{fontSize:'13px',color:'#8A8A82'}}>Add a cost estimate</div>}
+                  </div>
+                </div>
+              )}
+
+              {isEditing&&(
+                <div style={{padding:'16px 24px',background:'#F8F4EE',borderTop:'1px solid rgba(30,58,47,0.06)'}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'12px'}}>
+                    <div><select value={editEdits.category} onChange={e=>setEditEdits((prev:any)=>({...prev,category:e.target.value}))} style={iS}>{PROJECT_CATEGORIES.map(c=><option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}</select></div>
+                    <div><select value={editEdits.timeline||'within_2_years'} onChange={e=>setEditEdits((prev:any)=>({...prev,timeline:e.target.value}))} style={iS}><option value="within_1_year">Within 1 year</option><option value="within_2_years">Within 2 years</option><option value="3_5_years">3–5 years</option><option value="someday">Someday</option></select></div>
+                    <div><select value={editEdits.status||'wishlist'} onChange={e=>setEditEdits((prev:any)=>({...prev,status:e.target.value}))} style={iS}><option value="wishlist">Wish list</option><option value="planning">Planning</option><option value="in_progress">In progress</option><option value="done">Done</option></select></div>
+                    <div><input value={editEdits.estimated_cost||''} onChange={e=>setEditEdits((prev:any)=>({...prev,estimated_cost:e.target.value}))} style={iS} placeholder="Cost estimate"/></div>
+                    <div style={{gridColumn:'1/-1'}}><input value={editEdits.notes||''} onChange={e=>setEditEdits((prev:any)=>({...prev,notes:e.target.value}))} style={iS} placeholder="Notes, material preferences..."/></div>
+                  </div>
+                  <div style={{display:'flex',gap:'8px'}}>
+                    <button onClick={saveEdit} disabled={saving} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'8px 18px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{saving?'Saving...':'Save'}</button>
+                    <button onClick={()=>setEditingId(null)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'8px 14px',borderRadius:'8px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {!isEditing&&(
+                <div style={{padding:'14px 24px',borderTop:'1px solid rgba(30,58,47,0.06)'}}>
+                  <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',marginBottom:'10px'}}>Educational Guides</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'8px',marginBottom:'14px'}}>
+                    {guides.map(g=>(<a key={g.label} href={g.slug?'/guides/'+g.slug:'/guides'} style={{display:'inline-flex',alignItems:'center',gap:'6px',background:'#F8F4EE',border:'1px solid rgba(30,58,47,0.12)',padding:'6px 14px',borderRadius:'20px',fontSize:'12px',color:'#1E3A2F',textDecoration:'none',fontFamily:"'DM Sans', sans-serif"}}>{g.label}</a>))}
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'10px'}}>
+                    <div style={{display:'flex',gap:'6px'}}>
+                      {['wishlist','planning','in_progress','done'].map(s=>(<button key={s} onClick={()=>updateStatus(p.id,s)} style={{padding:'4px 10px',borderRadius:'20px',fontSize:'11px',border:'none',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",background:p.status===s?'#1E3A2F':'rgba(30,58,47,0.07)',color:p.status===s?'#F8F4EE':'#8A8A82',fontWeight:p.status===s?500:400}}>{s.replace('_',' ')}</button>))}
+                    </div>
+                    <div style={{display:'flex',gap:'8px'}}>
+                      <button onClick={()=>startEdit(p)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'5px 12px',borderRadius:'7px',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Edit</button>
+                      <button onClick={()=>deleteProject(p.id)} style={{background:'none',border:'1px solid rgba(155,44,44,0.2)',color:'#9B2C2C',padding:'5px 12px',borderRadius:'7px',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Remove</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}
@@ -755,12 +805,31 @@ export default function Dashboard() {
 
   const saveHomeSection=async(section:string)=>{
     setSaving(true)
-    if(section==='about'){const {data:uh}=await supabase.from('homes').update({address:homeEdits.address,city:homeEdits.city,state:homeEdits.state,zip:homeEdits.zip,year_built:parseInt(homeEdits.year_built)||null}).eq('id',home.id).select().single();if(uh)setHome(uh)}
-    const du:any={}
-    if(section==='about'){du.home_type=homeEdits.home_type;du.sqft=parseInt(homeEdits.sqft)||null;du.bedrooms=parseInt(homeEdits.bedrooms)||null;du.bathrooms=parseFloat(homeEdits.bathrooms)||null;du.stories=parseInt(homeEdits.stories)||null;du.lot_size=homeEdits.lot_size||null}
-    if(section==='features'){du.foundation_type=homeEdits.foundation_type||null;du.garage=homeEdits.garage||null;du.has_fireplace=homeEdits.has_fireplace||false;du.has_sump_pump=homeEdits.has_sump_pump||false;du.has_pool=homeEdits.has_pool||false;du.has_solar=homeEdits.has_solar||false;du.has_septic=homeEdits.has_septic||false;du.has_well_water=homeEdits.has_well_water||false;du.has_hoa=homeEdits.has_hoa||false;du.tree_coverage=homeEdits.tree_coverage||null}
-    if(Object.keys(du).length>0){if(details){const {data:ud}=await supabase.from('home_details').update(du).eq('home_id',home.id).select().single();if(ud)setDetails(ud)}else{const {data:nd}=await supabase.from('home_details').insert({home_id:home.id,...du}).select().single();if(nd)setDetails(nd)}}
-    await recalculateScore();setEditingHomeSection(null);setSaving(false)
+    try{
+      if(section==='about'){
+        const {data:uh,error:he}=await supabase.from('homes').update({address:homeEdits.address,city:homeEdits.city,state:homeEdits.state,zip:homeEdits.zip,year_built:parseInt(homeEdits.year_built)||null}).eq('id',home.id).select().single()
+        if(he){console.error('homes update:',he);alert('Save failed: '+he.message);setSaving(false);return}
+        if(uh)setHome(uh)
+      }
+      const du:any={}
+      if(section==='about'){du.home_type=homeEdits.home_type||null;du.sqft=parseInt(homeEdits.sqft)||null;du.bedrooms=parseInt(homeEdits.bedrooms)||null;du.bathrooms=parseFloat(homeEdits.bathrooms)||null;du.stories=parseInt(homeEdits.stories)||null;du.lot_size=homeEdits.lot_size||null}
+      if(section==='features'){du.foundation_type=homeEdits.foundation_type||null;du.garage=homeEdits.garage||null;du.has_fireplace=homeEdits.has_fireplace||false;du.has_sump_pump=homeEdits.has_sump_pump||false;du.has_pool=homeEdits.has_pool||false;du.has_solar=homeEdits.has_solar||false;du.has_septic=homeEdits.has_septic||false;du.has_well_water=homeEdits.has_well_water||false;du.has_hoa=homeEdits.has_hoa||false;du.tree_coverage=homeEdits.tree_coverage||null}
+      if(Object.keys(du).length>0){
+        const {data:existCheck}=await supabase.from('home_details').select('id').eq('home_id',home.id).maybeSingle()
+        if(existCheck){
+          const {data:ud,error:de}=await supabase.from('home_details').update(du).eq('home_id',home.id).select().single()
+          if(de){console.error('home_details update:',de);alert('Save failed: '+de.message);setSaving(false);return}
+          if(ud)setDetails(ud)
+        }else{
+          const {data:nd,error:ie}=await supabase.from('home_details').insert({home_id:home.id,...du}).select().single()
+          if(ie){console.error('home_details insert:',ie);alert('Save failed: '+ie.message);setSaving(false);return}
+          if(nd)setDetails(nd)
+        }
+      }
+      await recalculateScore()
+      setEditingHomeSection(null)
+    }catch(e:any){console.error('saveHomeSection:',e);alert('Save failed: '+e.message)}
+    setSaving(false)
   }
 
   const startEditSystem=(sys:any)=>{
@@ -774,11 +843,21 @@ export default function Dashboard() {
 
   const saveSystem=async(sysId:string)=>{
     setSaving(true)
-    const effectiveYear=systemEdits.replacement_year||systemEdits.install_year
-    const age=effectiveYear?new Date().getFullYear()-parseInt(effectiveYear):null
-    const {data:updated}=await supabase.from('home_systems').update({...systemEdits,age_years:age,install_year:systemEdits.install_year?parseInt(systemEdits.install_year):null,replacement_year:systemEdits.replacement_year?parseInt(systemEdits.replacement_year):null}).eq('id',sysId).select().single()
-    if(updated)setSystems((prev:any[])=>prev.map(s=>s.id===sysId?updated:s))
-    await recalculateScore();setEditingSystemId(null);setSaving(false)
+    try{
+      const COLS=['id','home_id','system_type','install_year','replacement_year','age_years','material','notes','condition','ever_replaced','under_warranty','not_applicable','known_issues','storm_damage_unaddressed','considering_replacing','quantity','window_count','has_fogged_units','has_skylights','any_broken_glass','any_wood_rot','has_gutter_guards','seamless_or_sectional','fascia_material','has_glass_lites_or_sidelites','hardware_in_working_condition','has_anti_lift','configuration','locking_type','frame_material','glazing_type','fuel_source','filter_size','last_filter_replacement','last_professional_service','furnace_install_year','ac_or_heat_pump_install_year','tank_size_gallons','has_expansion_tank','last_flush','last_anode_rod_inspection','last_tpr_valve_test','last_sweep','last_inspection','last_cleaning','last_seal_stain','last_test','last_battery_replacement','has_battery_backup','has_ice_maker','has_water_dispenser','last_condenser_coil_cleaning','last_water_filter_replacement','last_filter_cleaning','last_cleaner_cycle']
+      const payload:any={}
+      for(const k of Object.keys(systemEdits)){if(COLS.includes(k))payload[k]=systemEdits[k]}
+      const effectiveYear=payload.replacement_year||payload.install_year
+      payload.age_years=effectiveYear?new Date().getFullYear()-parseInt(effectiveYear):null
+      if(payload.install_year)payload.install_year=parseInt(payload.install_year)
+      if(payload.replacement_year)payload.replacement_year=parseInt(payload.replacement_year)
+      const {data:updated,error:se}=await supabase.from('home_systems').update(payload).eq('id',sysId).select().single()
+      if(se){console.error('system update:',se);alert('Save failed: '+se.message);setSaving(false);return}
+      if(updated)setSystems((prev:any[])=>prev.map(s=>s.id===sysId?updated:s))
+      await recalculateScore()
+      setEditingSystemId(null)
+    }catch(e:any){console.error('saveSystem:',e);alert('Save failed: '+e.message)}
+    setSaving(false)
   }
 
   const addSystem=async(systemType:string)=>{
