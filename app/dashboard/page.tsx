@@ -1,4 +1,5 @@
 'use client'
+import { useEffect as _useEffectHash } from 'react'
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -805,7 +806,27 @@ export default function Dashboard() {
   const [docs,setDocs]=useState<any[]>([])
   const [communityScore,setCommunityScore]=useState<any>(null)
   const [loading,setLoading]=useState(true)
-  const [activeTab,setActiveTab]=useState('overview')
+  const [activeTab,setActiveTab]=useState(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#','')
+      const valid = ['overview','home_details','log','financial','projects','maintenance','documents']
+      if (valid.includes(hash)) return hash
+    }
+    return 'overview'
+  })
+  // Sync tab to URL hash
+  _useEffectHash(() => {
+    window.location.hash = activeTab
+  }, [activeTab])
+  _useEffectHash(() => {
+    const onHash = () => {
+      const hash = window.location.hash.replace('#','')
+      const valid = ['overview','home_details','log','financial','projects','maintenance','documents']
+      if (valid.includes(hash)) setActiveTab(hash)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
   const [saving,setSaving]=useState(false)
   const [deletingAccount,setDeletingAccount]=useState(false)
   const [displayName,setDisplayName]=useState('')

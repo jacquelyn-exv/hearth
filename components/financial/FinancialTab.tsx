@@ -36,7 +36,7 @@ const LOW_ROI = [
 
 const iS: any = { width: '100%', padding: '9px 12px', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", background: '#fff', color: '#1A1A18', outline: 'none' }
 const cardS: any = { background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px' }
-const darkCardS: any = { background: '#1E3A2F', border: 'none', borderRadius: '16px', padding: '18px 20px' }
+const darkCardS: any = { background: '#1E3A2F', border: 'none', borderRadius: '16px', padding: '18px 20px', alignSelf: 'start' }
 const statS: any = { background: '#F8F4EE', borderRadius: '8px', padding: '10px', textAlign: 'center' as const }
 const rowS: any = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '0.5px solid rgba(30,58,47,0.08)' }
 const pillG: any = { display: 'inline-block', fontSize: '11px', fontWeight: 500, padding: '3px 9px', borderRadius: '20px', background: '#EAF2EC', color: '#27500A' }
@@ -61,6 +61,19 @@ function InfoTooltipDark({ text }: { text: string }) {
       <button onClick={() => setOpen(!open)} style={{ background: 'rgba(30,58,47,0.1)', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', cursor: 'pointer', color: '#8A8A82', fontWeight: 700, lineHeight: '14px', padding: 0, verticalAlign: 'middle' }}>?</button>
       {open && <div onClick={() => setOpen(false)} style={{ position: 'absolute', bottom: '24px', left: '-8px', background: '#1E3A2F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px 14px', width: '260px', fontSize: '12px', color: 'rgba(248,244,238,0.85)', lineHeight: 1.6, zIndex: 100, cursor: 'pointer' }}>{text}<div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.4)', marginTop: '6px' }}>Tap to close</div></div>}
     </span>
+  )
+}
+
+function ExpandableTip({ title, accentColor, children }: { title: string; accentColor: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ padding: '14px 16px', border: '0.5px solid rgba(30,58,47,0.11)', borderRadius: '12px', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderLeft: `3px solid ${accentColor}`, marginBottom: '12px' }}>
+      <button onClick={() => setOpen(!open)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0, textAlign: 'left' as const }}>
+        <span style={{ fontSize: '13px', fontWeight: 500, color: accentColor === '#3D7A5A' ? '#27500A' : accentColor === '#C47B2B' ? '#7A4A10' : accentColor === '#185FA5' ? '#0C447C' : '#27500A' }}>{title}</span>
+        <span style={{ fontSize: '11px', color: '#8A8A82', flexShrink: 0, marginLeft: '12px' }}>{open ? 'Less ▲' : 'More ▼'}</span>
+      </button>
+      {open && <div style={{ marginTop: '12px' }}>{children}</div>}
+    </div>
   )
 }
 
@@ -281,7 +294,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
       </div>
 
       {/* PURCHASE DETAILS + VALUE + RATES */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', alignItems: 'start' }}>
         <div style={darkCardS}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3px' }}>
             <div style={{ fontSize: '15px', fontWeight: 500, color: '#F8F4EE' }}>Purchase details</div>
@@ -382,7 +395,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
 
       {/* EQUITY MILESTONES + SELL TODAY */}
       {hasBasic && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', alignItems: 'start' }}>
           <div style={cardS}>
             <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Equity milestone tracker<InfoTooltipDark text="Each milestone unlocks new financial options — more equity means lower borrowing costs, better loan terms, and a stronger position when you sell." /></div>
             <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '12px' }}>What each milestone unlocks for you</div>
@@ -447,7 +460,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
               <div><div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Project ROI impact</div><div style={{ fontSize: '12px', color: '#8A8A82' }}>Every logged job · estimated resale value based on national avg ROI</div></div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <span style={pillG}>{jobs.length} job{jobs.length !== 1 ? 's' : ''} logged</span>
-                {totalROIValue > 0 && <span style={{ display: 'inline-block', fontSize: '11px', fontWeight: 500, padding: '3px 9px', borderRadius: '20px', background: '#1E3A2F', color: '#F8F4EE' }}>~{fmt(totalROIValue)} est. at resale</span>}
+                {jobs.length > 0 && <span style={{ display: 'inline-block', fontSize: '11px', fontWeight: 500, padding: '3px 9px', borderRadius: '20px', background: '#1E3A2F', color: '#F8F4EE' }}>{totalROIValue > 0 ? `~${fmt(totalROIValue)} est. at resale` : '$0 direct resale ROI · maintenance value'}</span>}
               </div>
             </div>
           )
@@ -481,8 +494,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
         <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Become a financially savvy homeowner</div>
         <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '1.25rem' }}>Educational strategies to build equity faster and manage costs smarter. This is not financial advice — consult a licensed professional for guidance specific to your situation.</div>
 
-        <div style={{ ...tipS, borderLeft: '3px solid #3D7A5A' }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: '#27500A', marginBottom: '8px' }}>Make one extra mortgage payment per year</div>
+        <ExpandableTip title="Make one extra mortgage payment per year" accentColor="#3D7A5A">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>Most homeowners do not realize that making just one extra mortgage payment per year can dramatically shorten their loan and save tens of thousands in interest — without refinancing or changing lenders. The math works because every extra dollar goes directly to principal, which reduces the balance that future interest is calculated on.</div>
           {hasLoan && extraSavings ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', marginBottom: '12px' }}>
@@ -494,18 +506,16 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
           <div style={{ padding: '10px 12px', background: '#F8F4EE', borderRadius: '8px', fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>How to do it:</strong> Divide your monthly payment by 12 and add that to each monthly payment. Or make one lump extra payment each December. Tell your loan servicer to apply it to the principal balance — not future interest or escrow. Confirm on your statement each month.</div>
           <div style={{ padding: '10px 12px', background: '#FBF0DC', borderRadius: '8px', fontSize: '12px', color: '#7A4A10', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#7A4A10' }}>Check first:</strong> Some mortgages have prepayment penalties, though federal law limits these to the first 3 years on most loans. Make sure you have a solid emergency fund before directing extra money to your mortgage.</div>
           <a href="https://www.consumerfinance.gov/ask-cfpb/how-does-paying-down-a-mortgage-work-en-1943/" target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#3D7A5A', textDecoration: 'none' }}>How paying down a mortgage works · CFPB.gov →</a>
-        </div>
+        </ExpandableTip>
 
-        <div style={{ ...tipS, borderLeft: '3px solid #3D7A5A' }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: '#27500A', marginBottom: '8px' }}>Switch to bi-weekly payments — the extra payment that happens automatically</div>
+        <ExpandableTip title="Switch to bi-weekly payments — the extra payment that happens automatically" accentColor="#3D7A5A">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>Instead of paying your full mortgage once a month, pay half every two weeks. Because there are 52 weeks in a year, you end up making 26 half-payments — which equals 13 full payments instead of 12. That 13th payment happens automatically without you feeling like you made an extra payment.</div>
           {monthlyPmt > 0 && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}><div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '6px' }}>Monthly schedule</div><div style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '3px' }}>12 × {fmt(monthlyPmt)}</div><div style={{ fontSize: '16px', fontWeight: 500, color: '#1E3A2F' }}>{fmt(monthlyPmt * 12)} / yr</div></div><div style={{ background: '#EAF2EC', borderRadius: '8px', padding: '10px' }}><div style={{ fontSize: '11px', color: '#27500A', marginBottom: '6px' }}>Bi-weekly schedule</div><div style={{ fontSize: '13px', color: '#3D7A5A', marginBottom: '3px' }}>26 × {fmt(monthlyPmt / 2)}</div><div style={{ fontSize: '16px', fontWeight: 500, color: '#27500A' }}>{fmt(monthlyPmt * 13)} / yr</div><div style={{ fontSize: '11px', color: '#3D7A5A', marginTop: '4px', fontWeight: 500 }}>+{fmt(monthlyPmt)} extra · automatically</div></div></div>}
           <div style={{ padding: '10px 12px', background: '#F8F4EE', borderRadius: '8px', fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>Why this works:</strong> If you are paid bi-weekly, two months per year you receive 3 paychecks instead of 2 — that is where the 13th payment comes from. Same interest savings as making one extra payment annually.</div>
           <div style={{ padding: '10px 12px', background: '#FBF0DC', borderRadius: '8px', fontSize: '12px', color: '#7A4A10', lineHeight: 1.6 }}><strong style={{ color: '#7A4A10' }}>Important:</strong> Do not pay a third party to set this up — some companies charge $300+ for this service. Contact your loan servicer directly. It is free.</div>
-        </div>
+        </ExpandableTip>
 
-        <div style={{ ...tipS, borderLeft: '3px solid #C47B2B' }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10', marginBottom: '8px' }}>Use your equity to finance projects smartly — not high-interest debt</div>
+        <ExpandableTip title="Use your equity to finance projects smartly — not high-interest debt" accentColor="#C47B2B">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>You have built equity in your home. That equity can work for you when it is time for a major project — at far lower interest rates than personal loans or credit cards. On a $20,000 project the rate difference means thousands of dollars in real savings.</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', marginBottom: '12px' }}>
             <div style={{ background: '#EAF2EC', borderRadius: '8px', padding: '12px', textAlign: 'center' as const }}><div style={{ fontSize: '12px', fontWeight: 500, color: '#27500A', marginBottom: '4px' }}>HELOC</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#27500A' }}>~8%</div><div style={{ fontSize: '11px', color: '#3D7A5A', marginTop: '4px', lineHeight: 1.4 }}>Secured by home · revolving credit</div></div>
@@ -515,34 +525,31 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
           <div style={{ padding: '10px 12px', background: '#F8F4EE', borderRadius: '8px', fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>Cash-out refinancing</strong> is another option — you replace your existing mortgage with a larger one and take the difference as cash. At current rates this means replacing your entire mortgage balance at a higher rate. Run the numbers carefully with a licensed professional first.</div>
           <div style={{ padding: '10px 12px', background: '#FBF0DC', borderRadius: '8px', fontSize: '12px', color: '#7A4A10', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#7A4A10' }}>Critical warning:</strong> A HELOC uses your home as collateral. If you cannot repay it, you risk foreclosure. Only use it for projects that protect or improve your home value. Always borrow the minimum needed and have a clear repayment plan.</div>
           <a href="https://www.consumerfinance.gov/ask-cfpb/what-is-a-home-equity-line-of-credit-heloc-en-1015/" target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#C47B2B', textDecoration: 'none' }}>What is a HELOC? · CFPB.gov →</a>
-        </div>
+        </ExpandableTip>
 
-        <div style={{ ...tipS, borderLeft: '3px solid #C47B2B' }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10', marginBottom: '8px' }}>Budget 1% of your home value annually for maintenance</div>
+        <ExpandableTip title="Budget 1% of your home value annually for maintenance" accentColor="#C47B2B">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>Setting aside 1% of your home value each year creates a maintenance reserve that keeps small problems from becoming expensive emergencies. Deferred maintenance does not stay the same — it compounds. A $500 roof repair ignored for two years can become a $6,000 replacement.</div>
           {budget1pct > 0 && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', marginBottom: '12px' }}><div style={{ background: '#EAF2EC', borderRadius: '8px', padding: '12px', textAlign: 'center' as const }}><div style={{ fontSize: '11px', color: '#27500A', marginBottom: '4px' }}>Your 1% target</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#27500A' }}>{fmt(budget1pct)}</div><div style={{ fontSize: '11px', color: '#3D7A5A', marginTop: '2px' }}>per year</div></div><div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '4px' }}>Monthly reserve</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#1E3A2F' }}>{fmt(budget1pct / 12)}</div><div style={{ fontSize: '11px', color: '#8A8A82', marginTop: '2px' }}>per month</div></div><div style={{ background: thisYearSpend >= budget1pct ? '#EAF2EC' : '#FDECEA', borderRadius: '8px', padding: '12px', textAlign: 'center' as const }}><div style={{ fontSize: '11px', color: thisYearSpend >= budget1pct ? '#27500A' : '#791F1F', marginBottom: '4px' }}>Spent this year</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: thisYearSpend >= budget1pct ? '#27500A' : '#791F1F' }}>{fmt(thisYearSpend)}</div><div style={{ fontSize: '11px', color: thisYearSpend >= budget1pct ? '#3D7A5A' : '#9B2C2C', marginTop: '2px' }}>{thisYearSpend >= budget1pct ? 'On track' : `${fmt(budget1pct - thisYearSpend)} behind`}</div></div></div>}
           <div style={{ padding: '10px 12px', background: '#F8F4EE', borderRadius: '8px', fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>Older homes need more.</strong> If your home was built before 1980 or is in a harsh climate, budget closer to 2% ({budget1pct > 0 ? fmt(budget1pct * 2) : 'double your target'}/year). Major systems like HVAC, roofing, and plumbing have finite lifespans.</div>
           <div style={{ padding: '10px 12px', background: '#F8F4EE', borderRadius: '8px', fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>Tip:</strong> Open a dedicated high-yield savings account labeled home maintenance and automate a monthly transfer of {budget1pct > 0 ? fmt(budget1pct / 12) : 'your target amount'}. When a repair comes up, you are paying from reserves — not your emergency fund or a credit card.</div>
           <a href="https://www.consumerfinance.gov/owning-a-home/process/close/homeownership-costs/" target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#C47B2B', textDecoration: 'none' }}>Homeownership costs guide · CFPB.gov →</a>
-        </div>
+        </ExpandableTip>
 
-        <div style={{ ...tipS, borderLeft: '3px solid #185FA5' }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: '#0C447C', marginBottom: '8px' }}>Mortgage interest may be tax deductible — do not leave money on the table</div>
+        <ExpandableTip title="Mortgage interest may be tax deductible — do not leave money on the table" accentColor="#185FA5">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>If you itemize deductions on your federal tax return, the interest you pay on your mortgage may be deductible — up to $750,000 of loan principal for loans originated after December 2017. In the early years of a mortgage when most of your payment is interest, this deduction can be significant.</div>
           <div style={{ padding: '10px 12px', background: '#E6F1FB', borderRadius: '8px', fontSize: '12px', color: '#0C447C', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#0C447C' }}>For reference:</strong> {hasLoan && interestPaidEst > 0 ? `In year ${yearsPaid} of your loan, roughly ${fmt(Math.round(interestPaidEst / Math.max(1, yearsPaid)))} of your annual payments went toward interest. At a 22% federal tax bracket, that is potentially ${fmt(Math.round(interestPaidEst / Math.max(1, yearsPaid)) * 0.22)} in tax savings if you itemize.` : 'Add your loan details above to see an estimate of your potential interest deduction.'} Your actual benefit depends on whether itemizing beats the standard deduction for your situation.</div>
           <div style={{ padding: '10px 12px', background: '#FBF0DC', borderRadius: '8px', fontSize: '12px', color: '#7A4A10', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#7A4A10' }}>Important:</strong> Tax rules change and individual situations vary. Always consult a licensed tax professional or CPA. Hearth cannot provide tax advice.</div>
           <a href="https://www.irs.gov/publications/p936" target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#185FA5', textDecoration: 'none' }}>IRS Publication 936 — Home mortgage interest deduction →</a>
-        </div>
+        </ExpandableTip>
 
-        <div style={{ ...tipS, borderLeft: '3px solid #3D7A5A', marginBottom: 0 }}>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: '#27500A', marginBottom: '8px' }}>Document everything — it pays off when you sell</div>
+        <ExpandableTip title="Document everything — it pays off when you sell" accentColor="#3D7A5A">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>A buyer who can see every repair, upgrade, inspection, and contractor job logged for your home has no uncertainty to negotiate with. Uncertainty is the buyer most powerful tool — it drives inspection credits, price reductions, and extended closing timelines.</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
             <div style={{ background: '#FDECEA', borderRadius: '8px', padding: '12px' }}><div style={{ fontSize: '12px', fontWeight: 500, color: '#791F1F', marginBottom: '6px' }}>Without records</div>{['Buyer assumes worst case on every system', 'Inspector flags unknowns as risks', 'Buyer requests $10–30k in credits', 'Longer days on market', 'Final price further from asking'].map(t => <div key={t} style={{ fontSize: '11px', color: '#9B2C2C', lineHeight: 1.5, marginBottom: '3px' }}>· {t}</div>)}</div>
             <div style={{ background: '#EAF2EC', borderRadius: '8px', padding: '12px' }}><div style={{ fontSize: '12px', fontWeight: 500, color: '#27500A', marginBottom: '6px' }}>With Hearth records</div>{['Every system history is recorded', 'Inspector has context for every flag', 'Fewer surprises · buyers feel confident', 'Closes 8–12 days faster on average', 'Stronger asking price position'].map(t => <div key={t} style={{ fontSize: '11px', color: '#3D7A5A', lineHeight: 1.5, marginBottom: '3px' }}>· {t}</div>)}</div>
           </div>
           <div style={{ padding: '10px 12px', background: '#F8F4EE', borderRadius: '8px', fontSize: '12px', color: '#4A4A44', lineHeight: 1.6 }}><strong style={{ color: '#1E3A2F' }}>The transfer advantage:</strong> When you are ready to sell, Hearth generates a complete home history report that transfers to the next owner. Every job logged, every system documented, every contractor rated.</div>
-        </div>
+        </ExpandableTip>
 
         <div style={{ marginTop: '14px', padding: '12px 14px', background: '#F8F4EE', borderRadius: '8px', fontSize: '11px', color: '#8A8A82', lineHeight: 1.7 }}>
           All figures are illustrative examples based on publicly available research and mortgage mathematics. Actual interest savings depend on your specific loan balance, interest rate, remaining term, and payment timing. Tax information is general and does not constitute tax advice. This page is educational content only and does not constitute financial, legal, tax, or real estate advice. Hearth is not a licensed financial advisor, lender, real estate broker, or tax professional. Free HUD-approved housing counseling: <a href="https://www.consumerfinance.gov/find-a-housing-counselor/" target="_blank" rel="noopener noreferrer" style={{ color: '#8A8A82' }}>consumerfinance.gov/find-a-housing-counselor</a>
