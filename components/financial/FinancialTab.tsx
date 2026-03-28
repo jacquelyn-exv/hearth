@@ -5,12 +5,17 @@ import { supabase } from '@/lib/supabase'
 import { getAppreciationPct, estimateCurrentValue, STATE_NAMES } from '@/lib/fhfaHpi'
 
 const CVV_PROJECTS: Record<string, { roi: number; context: string; category: 'high' | 'low' | 'mid' }> = {
-  garage_door: { roi: 268, context: 'Best ROI of any project — returns more than 2.5x at resale.', category: 'high' },
-  siding: { roi: 114, context: 'One of the few projects that recoups more than it costs.', category: 'high' },
-  entry_door: { roi: 85, context: 'Curb appeal at the front door pays at resale.', category: 'high' },
-  windows: { roi: 76, context: 'Signals to buyers the home has been maintained.', category: 'high' },
-  roofing: { roi: 68, context: 'A new roof is one of the first things buyers inspect.', category: 'high' },
-  gutters: { roi: 0, context: 'Protects foundation drainage — buyers flag deferred gutters in inspection.', category: 'mid' },
+  // Keys match actual system_type values after toLowerCase().replace(/ \/ /g,'_').replace(/ /g,'_')
+  roof: { roi: 68, context: 'A new roof is one of the first things buyers inspect. Deferred replacement is a red flag.', category: 'high' },
+  siding: { roi: 114, context: 'One of the few projects that recoups more than it costs — dramatically improves curb appeal.', category: 'high' },
+  'gutters_&_trim': { roi: 0, context: 'Protects foundation drainage — buyers flag deferred gutters in inspection. Maintenance value.', category: 'mid' },
+  windows: { roi: 76, context: 'Signals to buyers the home has been maintained. Reduces energy costs.', category: 'high' },
+  entry_door: { roi: 85, context: 'Curb appeal at the front door — fiberglass doors hold up better than steel in most climates.', category: 'high' },
+  sliding_door: { roi: 60, context: 'Improves energy efficiency and security. Good curb appeal impact.', category: 'high' },
+  'deck_/_patio': { roi: 48, context: 'Outdoor living adds lifestyle value but modest resale return. Do for enjoyment.', category: 'low' },
+  driveway: { roi: 0, context: 'Functional improvement. Rarely a major factor in buyer negotiations.', category: 'mid' },
+  hvac: { roi: 0, context: 'Expected by buyers to be functional. Deferred HVAC is a major negotiation point.', category: 'mid' },
+  fencing: { roi: 50, context: 'Adds privacy value. ROI varies significantly by neighborhood and buyer preferences.', category: 'mid' },
 }
 
 const HIGH_ROI = [
@@ -31,7 +36,7 @@ const LOW_ROI = [
 
 const iS: any = { width: '100%', padding: '9px 12px', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", background: '#fff', color: '#1A1A18', outline: 'none' }
 const cardS: any = { background: '#fff', border: '1px solid rgba(30,58,47,0.11)', borderRadius: '16px', padding: '20px' }
-const darkCardS: any = { background: '#1E3A2F', border: 'none', borderRadius: '16px', padding: '20px' }
+const darkCardS: any = { background: '#1E3A2F', border: 'none', borderRadius: '16px', padding: '18px 20px' }
 const statS: any = { background: '#F8F4EE', borderRadius: '8px', padding: '10px', textAlign: 'center' as const }
 const rowS: any = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '0.5px solid rgba(30,58,47,0.08)' }
 const pillG: any = { display: 'inline-block', fontSize: '11px', fontWeight: 500, padding: '3px 9px', borderRadius: '20px', background: '#EAF2EC', color: '#27500A' }
@@ -88,7 +93,8 @@ function ScenarioCalculator({ currentRate, currentBalance, currentTermLeft, mont
     const currentTotalLeft = monthlyPmt * currentTermLeft * 12
     const newTotal = newMonthly * n
     interestSaved = Math.round(currentTotalLeft - newTotal - closing)
-    const monthlySavings = monthlyPmt - newMonthly
+    const derivedCurrentPmt = monthlyPmt > 0 ? monthlyPmt : (currentRate > 0 && currentBalance > 0 ? Math.round(currentBalance * (currentRate/100/12 * Math.pow(1+currentRate/100/12, currentTermLeft*12)) / (Math.pow(1+currentRate/100/12, currentTermLeft*12)-1)) : 0)
+    const monthlySavings = derivedCurrentPmt - newMonthly
     breakEvenMonths = monthlySavings > 0 ? Math.ceil(closing / monthlySavings) : 0
   }
   const iSC: any = { padding: '7px 10px', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", background: '#fff', color: '#1A1A18', outline: 'none', width: '100%' }
@@ -103,7 +109,7 @@ function ScenarioCalculator({ currentRate, currentBalance, currentTermLeft, mont
       {hasScenario && (
         <div style={{ display: 'grid', gap: '8px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Current payment</div><div style={{ fontSize: '18px', fontWeight: 500, color: '#1E3A2F' }}>{monthlyPmt > 0 ? fmt(monthlyPmt) : '—'}</div><div style={{ fontSize: '11px', color: '#8A8A82', marginTop: '2px' }}>{currentRate ? `at ${currentRate}%` : 'rate not set'}</div></div>
+            <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Current payment</div><div style={{ fontSize: '18px', fontWeight: 500, color: '#1E3A2F' }}>{monthlyPmt > 0 ? fmt(monthlyPmt) : currentBalance > 0 && currentRate > 0 ? fmt(Math.round(currentBalance * (currentRate/100/12 * Math.pow(1+currentRate/100/12, currentTermLeft*12)) / (Math.pow(1+currentRate/100/12, currentTermLeft*12)-1))) : '—'}</div><div style={{ fontSize: '11px', color: '#8A8A82', marginTop: '2px' }}>{currentRate ? `at ${currentRate}%` : 'rate not set'}</div></div>
             <div style={{ background: newMonthly < monthlyPmt ? '#EAF2EC' : '#FDECEA', borderRadius: '8px', padding: '10px', textAlign: 'center' as const }}><div style={{ fontSize: '11px', color: newMonthly < monthlyPmt ? '#27500A' : '#791F1F', marginBottom: '3px' }}>New payment</div><div style={{ fontSize: '18px', fontWeight: 500, color: newMonthly < monthlyPmt ? '#27500A' : '#791F1F' }}>{fmt(newMonthly)}</div><div style={{ fontSize: '11px', color: newMonthly < monthlyPmt ? '#3D7A5A' : '#9B2C2C', marginTop: '2px' }}>{newMonthly < monthlyPmt ? `-${fmt(monthlyPmt - newMonthly)}/mo` : newMonthly > monthlyPmt ? `+${fmt(newMonthly - monthlyPmt)}/mo` : 'same'}</div></div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -263,7 +269,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '18px', marginBottom: '20px' }}>
-              <div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)', marginBottom: '5px' }}>Estimated home value</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: '#F8F4EE', marginBottom: '2px' }}>{estValue ? fmt(estValue) : '—'}</div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.4)' }}>{details?.estimated_value_override ? 'Your estimate' : `FHFA HPI · ${STATE_NAMES[stateAbbr] || stateAbbr} +${appreciationPct}% since ${py}`}</div></div>
+              <div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)', marginBottom: '5px' }}>Estimated home value</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: '#F8F4EE', marginBottom: '2px' }}>{estValue ? fmt(estValue) : '—'}</div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.4)' }}>{details?.estimated_value_override ? 'Your estimate' : `FHFA HPI · ${STATE_NAMES[stateAbbr.toUpperCase()] || stateAbbr.toUpperCase()} +${appreciationPct}% since ${py}`}</div></div>
               <div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)', marginBottom: '5px' }}>Estimated equity<InfoTooltip text="Equity is the portion of your home you actually own — the difference between what your home is worth and what you still owe on your mortgage. It grows as your home appreciates and as you pay down your loan." /></div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: '#6AAF8A', marginBottom: '2px' }}>{estEquity ? fmt(estEquity) : '—'}</div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.4)' }}>{remainingBal ? 'Value minus remaining balance' : 'Down payment + appreciation'}</div></div>
               {hasLoan && <div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)', marginBottom: '5px' }}>Remaining balance</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: '#F8F4EE', marginBottom: '2px' }}>{fmt(remainingBal)}</div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.4)' }}>Est. after {yearsPaid} yrs of payments</div></div>}
               {hasLoan && <div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.5)', marginBottom: '5px' }}>Interest paid to date</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '24px', fontWeight: 600, color: '#E2A96A', marginBottom: '2px' }}>{fmt(interestPaidEst)}</div><div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.4)' }}>Of {fmt(totalInterest)} total over loan life</div></div>}
@@ -317,7 +323,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
                 { label: 'Purchase price', req: true, val: pp ? fmt(pp) : null },
                 { label: 'Down payment', req: true, val: dp ? `${fmt(dp)} · ${pp ? Math.round(dp / pp * 100) : 0}%` : null },
                 { label: 'Purchase year', req: true, val: py ? String(py) : null },
-                { label: 'State', val: STATE_NAMES[stateAbbr] || stateAbbr },
+                { label: 'State', val: STATE_NAMES[stateAbbr.toUpperCase()] || stateAbbr.toUpperCase() },
                 { label: 'Loan term', unlock: true, val: details?.loan_term ? `${details.loan_term} yrs` : null },
                 { label: 'Interest rate', unlock: true, val: details?.interest_rate ? `${details.interest_rate}%` : null },
                 { label: 'Refinanced', val: hasRefinanced ? `Yes · ${refiYear} · ${refiTerm}yr · ${refiRate}%` : 'No' },
@@ -339,7 +345,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
         <div style={{ display: 'grid', gap: '12px' }}>
           <div style={cardS}>
             <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Value estimate</div>
-            <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '10px' }}>{fhfaEst ? `${STATE_NAMES[stateAbbr] || stateAbbr} home prices +${appreciationPct}% since ${py} · State-level average, not zip code specific` : 'Add purchase details to see your estimate'}</div>
+            <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '10px' }}>{fhfaEst ? `${STATE_NAMES[stateAbbr.toUpperCase()] || stateAbbr.toUpperCase()} home prices +${appreciationPct}% since ${py} · State-level average, not zip code specific` : 'Add purchase details to see your estimate'}</div>
             {fhfaEst ? (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
@@ -386,15 +392,17 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
             <div style={{ padding: '12px 14px', background: '#F8F4EE', borderRadius: '10px' }}>
               <div style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F', marginBottom: '10px' }}>What else do lenders look at beyond equity?</div>
               {[
-                { label: 'Credit score', desc: '720+ best rates · 680–719 good · <620 limits options', calc: 'Check free: annualcreditreport.com' },
-                { label: 'DTI ratio', desc: 'Total monthly debts below 43% of gross income', calc: 'Calc: monthly debts ÷ gross income × 100' },
-                { label: 'LTV ratio', desc: '80% or below is ideal · under 80% removes PMI', calc: remainingBal && estValue ? `Your current LTV: ~${Math.round(remainingBal / estValue * 100)}%` : 'Calc: loan balance ÷ home value × 100' },
-                { label: 'Payment history', desc: '24 months on-time · no recent late payments', calc: 'View on your free credit report' },
-                { label: 'Income & employment', desc: '2+ yrs same employer · self-employed needs 2 yrs returns', calc: 'Verified via pay stubs, W-2s, or tax returns' },
+                { label: 'Credit score', desc: '720+ gets best rates · 680–719 is good · below 620 significantly limits your options and rate', calc: 'Check yours free at annualcreditreport.com · improving your score before applying can save thousands' },
+                { label: 'DTI ratio', desc: 'Debt-to-income: most lenders want your total monthly debt payments below 43% of gross monthly income · some programs allow up to 50%', calc: `Calc: add all monthly debt payments ÷ gross monthly income × 100. e.g. $2,000 debts ÷ $6,000 income = 33% DTI` },
+                { label: 'LTV ratio', desc: 'Loan-to-value: lower LTV = less risk for lender = better rate · 80% or below removes PMI and unlocks best terms · 60% or below gets premium rates', calc: remainingBal && estValue ? `Your current LTV: ~${Math.round(remainingBal / estValue * 100)}% · Calc: loan balance ÷ home value × 100` : 'Calc: loan balance ÷ home value × 100 · e.g. $300k ÷ $400k = 75% LTV' },
+                { label: 'Payment history', desc: '24 months of on-time payments is the benchmark · a single 30-day late payment in the last 12 months can hurt your approval chances · collections and bankruptcies have multi-year impacts', calc: 'View on your free credit report · dispute any errors you find — they are more common than you think' },
+                { label: 'Cash reserves', desc: 'Lenders want to see 2–6 months of mortgage payments in savings after closing · shows you can handle a financial setback without defaulting', calc: 'Calc: monthly payment × 3 months minimum. e.g. $2,000/mo = $6,000 reserve needed' },
+                { label: 'Income & employment', desc: '2+ years same employer preferred · job changes in the same field are usually acceptable · self-employed requires 2 years of tax returns showing consistent income', calc: 'Verified via pay stubs, W-2s, 1099s, or federal tax returns · gaps in employment may require explanation letters' },
               ].map((item: any, i: number, arr: any[]) => (
-                <div key={item.label} style={{ paddingBottom: '8px', borderBottom: i < arr.length - 1 ? '0.5px solid rgba(30,58,47,0.06)' : 'none', marginBottom: i < arr.length - 1 ? '6px' : 0 }}>
-                  <div style={{ fontSize: '12px', color: '#1E3A2F' }}><strong>{item.label}:</strong> {item.desc}</div>
-                  <div style={{ fontSize: '11px', color: '#C47B2B', marginTop: '2px' }}>{item.calc}</div>
+                <div key={item.label} style={{ paddingBottom: '10px', borderBottom: i < arr.length - 1 ? '0.5px solid rgba(30,58,47,0.06)' : 'none', marginBottom: i < arr.length - 1 ? '8px' : 0 }}>
+                  <div style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>{item.label}</div>
+                  <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '3px' }}>{item.desc}</div>
+                  <div style={{ fontSize: '11px', color: '#C47B2B' }}>{item.calc}</div>
                 </div>
               ))}
               <a href="https://www.consumerfinance.gov/ask-cfpb/what-is-a-debt-to-income-ratio-why-is-the-43-debt-to-income-ratio-important-en-1791/" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: '10px', fontSize: '11px', color: '#3D7A5A', textDecoration: 'none' }}>Understanding DTI and loan qualification · CFPB.gov →</a>
@@ -433,7 +441,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
       {/* PROJECT ROI */}
       <div style={cardS}>
         {(() => {
-          const totalROIValue = jobs.reduce((sum: number, j: any) => { const price = j.final_price || j.quoted_price || 0; const sysKey = j.system_type?.toLowerCase().replace(/ /g, '_'); const cvv = CVV_PROJECTS[sysKey]; if (cvv && cvv.roi > 0 && price > 0) return sum + Math.round(price * (cvv.roi / 100)); return sum }, 0)
+          const totalROIValue = jobs.reduce((sum: number, j: any) => { const price = j.final_price || j.quoted_price || 0; const sysKey = j.system_type?.toLowerCase().replace(/ \/ /g,'_').replace(/ /g,'_'); const cvv = CVV_PROJECTS[sysKey]; if (cvv && cvv.roi > 0 && price > 0) return sum + Math.round(price * (cvv.roi / 100)); return sum }, 0)
           return (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
               <div><div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Project ROI impact</div><div style={{ fontSize: '12px', color: '#8A8A82' }}>Every logged job · estimated resale value based on national avg ROI</div></div>
