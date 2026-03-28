@@ -415,6 +415,59 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
         )}
       </div>
 
+      {/* MAINTENANCE SPENDING — enhanced, moved up */}
+      <div style={cardS}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Maintenance spending</div>
+            <div style={{ fontSize: '12px', color: '#8A8A82' }}>How your maintenance investment connects to home value and sale position</div>
+          </div>
+          <span style={pillG}>{jobs.length} job{jobs.length !== 1 ? 's' : ''} logged</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '14px' }}>
+          <div style={statS}>
+            <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '4px' }}>Spent this year</div>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: '#1E3A2F' }}>{fmt(thisYearSpend)}</div>
+            {budget1pct > 0 && <div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '3px' }}>1% target: {fmt(budget1pct)}/yr</div>}
+          </div>
+          <div style={{ ...statS, background: deferred > 0 ? '#FDECEA' : '#EAF2EC' }}>
+            <div style={{ fontSize: '12px', color: deferred > 0 ? '#9B2C2C' : '#3D7A5A', marginBottom: '4px' }}>Deferred liability</div>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: deferred > 0 ? '#9B2C2C' : '#3D7A5A' }}>{deferred > 0 ? `~${fmt(deferred)}` : '$0'}</div>
+            <div style={{ fontSize: '10px', color: deferred > 0 ? '#9B2C2C' : '#3D7A5A', marginTop: '3px' }}>{deferred > 0 ? 'Grows if left unaddressed' : 'No deferred maintenance'}</div>
+          </div>
+          <div style={{ ...statS, background: deferred > 0 ? '#FAEEDA' : statS.background }}>
+            <div style={{ fontSize: '12px', color: deferred > 0 ? '#854F0B' : '#8A8A82', marginBottom: '4px' }}>Buyer risk at sale</div>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: deferred > 0 ? '#854F0B' : '#3D7A5A' }}>{deferred > 0 ? `~${fmt(deferred * 2.1)}` : '$0'}</div>
+            <div style={{ fontSize: '10px', color: deferred > 0 ? '#854F0B' : '#3D7A5A', marginTop: '3px' }}>{deferred > 0 ? 'Est. negotiation impact' : 'No buyer risk identified'}</div>
+          </div>
+        </div>
+        {budget1pct > 0 && (
+          <div style={{ padding: '10px 12px', background: '#F8F4EE', borderRadius: '8px', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <span style={{ fontSize: '12px', color: '#4A4A44' }}>Progress toward 1% annual maintenance target</span>
+              <span style={{ fontSize: '12px', fontWeight: 500, color: thisYearSpend >= budget1pct ? '#3D7A5A' : '#9B2C2C' }}>{fmt(thisYearSpend)} of {fmt(budget1pct)}</span>
+            </div>
+            <div style={{ height: '8px', background: 'rgba(30,58,47,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(100, budget1pct > 0 ? (thisYearSpend / budget1pct) * 100 : 0)}%`, height: '100%', background: thisYearSpend >= budget1pct ? '#3D7A5A' : '#C47B2B', borderRadius: '4px', transition: 'width 0.4s ease' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#8A8A82', marginTop: '4px' }}>
+              <span>$0 spent</span>
+              <span>1% target: {fmt(budget1pct)}/yr</span>
+            </div>
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+          <div style={{ padding: '12px 14px', background: '#FDECEA', borderRadius: '10px', borderLeft: '3px solid #A32D2D', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
+            <div style={{ fontSize: '12px', fontWeight: 500, color: '#A32D2D', marginBottom: '4px' }}>What deferred maintenance costs you</div>
+            <div style={{ fontSize: '11px', color: '#791F1F', lineHeight: 1.6 }}>Buyers and their inspectors find deferred maintenance. Every dollar of deferred maintenance typically costs $2–3 in buyer negotiation credits at sale. A {fmt(deferred || 5000)} deferred liability can become a {fmt((deferred || 5000) * 2)} price reduction.</div>
+          </div>
+          <div style={{ padding: '12px 14px', background: '#EAF2EC', borderRadius: '10px', borderLeft: '3px solid #3D7A5A', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
+            <div style={{ fontSize: '12px', fontWeight: 500, color: '#3D7A5A', marginBottom: '4px' }}>What staying current earns you</div>
+            <div style={{ fontSize: '11px', color: '#27500A', lineHeight: 1.6 }}>Homes with documented, current maintenance sell 8–12 days faster and closer to asking price. Buyers have no uncertainty to negotiate with — your logged records are your leverage at the table.</div>
+          </div>
+        </div>
+      </div>
+
       {/* PURCHASE DETAILS + VALUE + RATES */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', alignItems: 'start' }}>
         <div style={{ display: 'grid', gap: '16px', alignSelf: 'start' }}>
@@ -664,16 +717,7 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
         </div>
       </div>
 
-      {/* MAINTENANCE SPENDING */}
-      <div style={cardS}>
-        <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '12px' }}>Maintenance spending</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
-          <div style={statS}><div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '4px' }}>Spent this year</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: '#1E3A2F' }}>{fmt(thisYearSpend)}</div></div>
-          <div style={statS}><div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '4px' }}>Deferred liability</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: deferred > 0 ? '#9B2C2C' : '#3D7A5A' }}>{deferred > 0 ? `~${fmt(deferred)}` : '$0'}</div></div>
-          <div style={statS}><div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '4px' }}>Jobs logged total</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: '#1E3A2F' }}>{jobs.length}</div></div>
-          <div style={statS}><div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '4px' }}>Buyer risk at sale</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: deferred > 0 ? '#C47B2B' : '#3D7A5A' }}>{deferred > 0 ? `~${fmt(deferred * 2.1)}` : '$0'}</div></div>
-        </div>
-      </div>
+
 
       {/* FOOTER */}
       <div style={{ fontSize: '11px', color: '#8A8A82', lineHeight: 1.7, padding: '12px 16px', background: '#F8F4EE', borderRadius: '8px' }}>
