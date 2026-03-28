@@ -694,13 +694,56 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
               <ScenarioCalculator currentRate={ir} currentBalance={remainingBal} currentTermLeft={Math.max(1, lt - yearsPaid)} monthlyPmt={monthlyPmt} fmt={fmt} fmtK={fmtK} />
             </div>
           </div>
+
+          {/* Property Tax Tile */}
+          <div style={cardS}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3px' }}>
+              <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F' }}>Est. property taxes</div>
+              <span style={{ display: 'inline-block', fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: taxRankBg, color: taxRankColor }}>{STATE_NAMES[stTax ? (home?.state||'MD').toUpperCase() : 'MD'] || (home?.state||'MD').toUpperCase()} · {stTax.rank} tax state</span>
+            </div>
+            <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '12px' }}>Based on state avg effective rate of {(stTax.rate*100).toFixed(2)}% · enter your actual bill to make this precise</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>{actualTaxBill ? 'Your actual annual tax' : 'Est. annual tax'}</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#1E3A2F' }}>{estAnnualTax > 0 ? `~${fmt(estAnnualTax)}` : '—'}</div><div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '2px' }}>{actualTaxBill ? 'Your input' : `${(stTax.rate*100).toFixed(2)}% × ${fmtK(estValue)}`}</div></div>
+              <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Est. monthly</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#1E3A2F' }}>{estMonthlyTax > 0 ? `~${fmt(estMonthlyTax)}` : '—'}</div><div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '2px' }}>Typically escrowed by lender</div></div>
+            </div>
+            <div style={{ padding: '10px 12px', background: '#E6F1FB', borderRadius: '8px', borderLeft: '3px solid #185FA5', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 500, color: '#0C447C', marginBottom: '3px' }}>{stTax.tipTitle}</div>
+              <div style={{ fontSize: '11px', color: '#185FA5', lineHeight: 1.6 }}>{stTax.tip}{stTax.tipLink && <a href={stTax.tipLink} target="_blank" rel="noopener noreferrer" style={{ color: '#0C447C', fontWeight: 500, marginLeft: '4px' }}>Learn more →</a>}</div>
+            </div>
+            {stTax.assessmentNote && <div style={{ padding: '8px 10px', background: '#F8F4EE', borderRadius: '8px', fontSize: '11px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>Assessment note:</strong> {stTax.assessmentNote}</div>}
+            <div style={{ padding: '8px 10px', background: '#F8F4EE', borderRadius: '8px', fontSize: '11px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>Your right to appeal:</strong> Every homeowner can appeal their property assessment. If your assessed value seems high vs comparable sales, file within your state's appeal window. Success rates are often 30–40%.</div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input value={taxInput} onChange={e => setTaxInput(e.target.value)} style={{ ...iS, flex: 1 }} type="number" placeholder="Enter your actual annual tax bill" />
+              <button onClick={saveTax} disabled={savingTax} style={{ padding: '9px 14px', background: '#1E3A2F', color: '#F8F4EE', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap', opacity: savingTax ? 0.6 : 1 }}>{savingTax ? 'Saving...' : 'Save'}</button>
+            </div>
+            <div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '6px' }}>Estimate uses state avg effective rate. Actual bill set by your county assessor and may differ significantly, especially for long-term owners with assessment caps.</div>
+          </div>
         </div>
         </div>{/* end S3 grid */}
       </div>{/* end S3 */}
 
-      {/* EQUITY MILESTONES + SELL TODAY */}
+      {/* S4: EQUITY POSITION */}
       {hasBasic && (
         <div style={{ display: 'grid', gap: '16px' }}>
+          <div style={secL}>Your equity position</div>
+          {showPMIWarning && (
+            <div style={{ padding: '14px 18px', background: '#FDECEA', border: '1px solid rgba(163,45,45,0.2)', borderRadius: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: '#A32D2D', marginBottom: '4px' }}>💸 You may still be paying PMI</div>
+              <div style={{ fontSize: '12px', color: '#791F1F', lineHeight: 1.6 }}>Your LTV is ~{ltvPct}% — above the 80% threshold where PMI is typically required. At an estimated {fmt(pmiMonthly)}/mo, that's {fmt(pmiMonthly*12)} per year. Once you reach 80% LTV you can formally request removal. At 78% LTV your lender is required by federal law to cancel it automatically.</div>
+              <div style={{ fontSize: '11px', color: '#9B2C2C', marginTop: '6px' }}>Contact your loan servicer to confirm your current PMI amount and the exact LTV required for removal on your specific loan.</div>
+            </div>
+          )}
+          {showPMIClose && (
+            <div style={{ padding: '14px 18px', background: '#FBF0DC', border: '1px solid rgba(196,123,43,0.2)', borderRadius: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: '#633806', marginBottom: '4px' }}>⚠️ You're close to automatic PMI cancellation</div>
+              <div style={{ fontSize: '12px', color: '#7A4A10', lineHeight: 1.6 }}>Your LTV is ~{ltvPct}% — just above the 78% threshold where your lender must automatically cancel PMI by federal law. Contact your servicer to confirm your current status.</div>
+            </div>
+          )}
+          {showPMIClear && (
+            <div style={{ padding: '12px 16px', background: '#EAF2EC', border: '1px solid rgba(61,122,90,0.2)', borderRadius: '12px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 500, color: '#27500A' }}>✓ Your LTV is below 78% — PMI should have been automatically cancelled. If you still see a PMI charge on your statement, contact your loan servicer immediately.</div>
+            </div>
+          )}
           <div style={cardS}>
             <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Equity milestone tracker<InfoTooltipDark text="Each milestone unlocks new financial options — more equity means lower borrowing costs, better loan terms, and a stronger position when you sell." /></div>
             <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '12px' }}>What each milestone unlocks for you</div>
