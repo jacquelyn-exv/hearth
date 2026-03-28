@@ -431,12 +431,12 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
             {budget1pct > 0 && <div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '3px' }}>1% target: {fmt(budget1pct)}/yr</div>}
           </div>
           <div style={{ ...statS, background: deferred > 0 ? '#FDECEA' : '#EAF2EC' }}>
-            <div style={{ fontSize: '12px', color: deferred > 0 ? '#9B2C2C' : '#3D7A5A', marginBottom: '4px' }}>Deferred liability</div>
+            <div style={{ fontSize: '12px', color: deferred > 0 ? '#9B2C2C' : '#3D7A5A', marginBottom: '4px' }}>Deferred liability<InfoTooltipDark text="Deferred liability is the estimated cost of maintenance your home systems need but haven't received. It's calculated based on the age of each system relative to its expected lifespan. Left unaddressed, it compounds — and shows up as buyer negotiation leverage at sale." /></div>
             <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: deferred > 0 ? '#9B2C2C' : '#3D7A5A' }}>{deferred > 0 ? `~${fmt(deferred)}` : '$0'}</div>
             <div style={{ fontSize: '10px', color: deferred > 0 ? '#9B2C2C' : '#3D7A5A', marginTop: '3px' }}>{deferred > 0 ? 'Grows if left unaddressed' : 'No deferred maintenance'}</div>
           </div>
           <div style={{ ...statS, background: deferred > 0 ? '#FAEEDA' : statS.background }}>
-            <div style={{ fontSize: '12px', color: deferred > 0 ? '#854F0B' : '#8A8A82', marginBottom: '4px' }}>Buyer risk at sale</div>
+            <div style={{ fontSize: '12px', color: deferred > 0 ? '#854F0B' : '#8A8A82', marginBottom: '4px' }}>Buyer risk at sale<InfoTooltipDark text="This estimates how much buyers may try to negotiate off your asking price based on deferred maintenance found in inspection. Industry data shows buyers typically request $2–3 in credits for every $1 of deferred maintenance — sometimes as a price reduction, sometimes as repair credits before closing." /></div>
             <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: deferred > 0 ? '#854F0B' : '#3D7A5A' }}>{deferred > 0 ? `~${fmt(deferred * 2.1)}` : '$0'}</div>
             <div style={{ fontSize: '10px', color: deferred > 0 ? '#854F0B' : '#3D7A5A', marginTop: '3px' }}>{deferred > 0 ? 'Est. negotiation impact' : 'No buyer risk identified'}</div>
           </div>
@@ -457,14 +457,12 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
-          <div style={{ padding: '12px 14px', background: '#FDECEA', borderRadius: '10px', borderLeft: '3px solid #A32D2D', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
-            <div style={{ fontSize: '12px', fontWeight: 500, color: '#A32D2D', marginBottom: '4px' }}>What deferred maintenance costs you</div>
-            <div style={{ fontSize: '11px', color: '#791F1F', lineHeight: 1.6 }}>Buyers and their inspectors find deferred maintenance. Every dollar of deferred maintenance typically costs $2–3 in buyer negotiation credits at sale. A {fmt(deferred || 5000)} deferred liability can become a {fmt((deferred || 5000) * 2)} price reduction.</div>
-          </div>
-          <div style={{ padding: '12px 14px', background: '#EAF2EC', borderRadius: '10px', borderLeft: '3px solid #3D7A5A', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>
-            <div style={{ fontSize: '12px', fontWeight: 500, color: '#3D7A5A', marginBottom: '4px' }}>What staying current earns you</div>
-            <div style={{ fontSize: '11px', color: '#27500A', lineHeight: 1.6 }}>Homes with documented, current maintenance sell 8–12 days faster and closer to asking price. Buyers have no uncertainty to negotiate with — your logged records are your leverage at the table.</div>
-          </div>
+          <CollapsibleExplainer title="What deferred maintenance costs you" linkHref="https://www.consumerfinance.gov/owning-a-home/process/close/homeownership-costs/" linkText="Learn more about homeownership costs · CFPB.gov →">
+            Buyers and their inspectors find deferred maintenance. Every dollar of deferred maintenance typically costs $2–3 in buyer negotiation credits at sale. {deferred > 0 ? `Your ~${fmt(deferred)} deferred liability could become a ~${fmt(deferred * 2)} price reduction at the table.` : 'Staying current means buyers have nothing to negotiate with.'}
+          </CollapsibleExplainer>
+          <CollapsibleExplainer title="What staying current earns you">
+            Homes with documented, current maintenance sell 8–12 days faster and closer to asking price. Buyers have no uncertainty to negotiate with — your logged records are your leverage. Every job you log here becomes part of your home's transferable history.
+          </CollapsibleExplainer>
         </div>
       </div>
 
