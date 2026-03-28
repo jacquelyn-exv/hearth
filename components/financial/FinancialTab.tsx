@@ -108,6 +108,110 @@ function calcExtraSavings(principal: number, annualRate: number, termYears: numb
   return { saved: Math.max(0, Math.round(origTotal - totalPaid)), yearsCut: Math.max(0, Math.round((n - months) / 12)) }
 }
 
+
+function ScenarioCalculator({ currentRate, currentBalance, currentTermLeft, monthlyPmt, fmt, fmtK }: {
+  currentRate: number; currentBalance: number; currentTermLeft: number; monthlyPmt: number;
+  fmt: (n: number) => string; fmtK: (n: number) => string
+}) {
+  const [scenarioRate, setScenarioRate] = useState('')
+  const [scenarioTerm, setScenarioTerm] = useState('30')
+  const [closingCosts, setClosingCosts] = useState('4000')
+
+  const newRate = parseFloat(scenarioRate)
+  const newTerm = parseInt(scenarioTerm)
+  const closing = parseFloat(closingCosts) || 0
+
+  const hasScenario = scenarioRate && !isNaN(newRate) && newRate > 0 && currentBalance > 0
+
+  let newMonthly = 0, interestSaved = 0, breakEvenMonths = 0
+  if (hasScenario) {
+    const r = newRate / 100 / 12
+    const n = newTerm * 12
+    newMonthly = r === 0 ? Math.round(currentBalance / n) : Math.round(currentBalance * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1))
+    const currentTotalLeft = monthlyPmt * currentTermLeft * 12
+    const newTotal = newMonthly * n
+    interestSaved = Math.round(currentTotalLeft - newTotal - closing)
+    const monthlySavings = monthlyPmt - newMonthly
+    breakEvenMonths = monthlySavings > 0 ? Math.ceil(closing / monthlySavings) : 0
+  }
+
+  const iS2: any = { padding: '7px 10px', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '8px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", background: '#fff', color: '#1A1A18', outline: 'none', width: '100%' }
+
+  return (
+    <div>
+      {!currentRate && (
+        <div style={{ padding: '8px 10px', background: '#FBF0DC', borderRadius: '8px', fontSize: '11px', color: '#7A4A10', marginBottom: '10px' }}>Add your current interest rate in purchase details above to unlock personalized comparisons.</div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '10px' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Rate you are seeing %</label>
+          <input value={scenarioRate} onChange={e => setScenarioRate(e.target.value)} style={iS2} type="number" step="0.01" placeholder="e.g. 6.25" />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>New loan term</label>
+          <select value={scenarioTerm} onChange={e => setScenarioTerm(e.target.value)} style={iS2}>
+            <option value="30">30 years</option>
+            <option value="25">25 years</option>
+            <option value="20">20 years</option>
+            <option value="15">15 years</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Est. closing costs $</label>
+          <input value={closingCosts} onChange={e => setClosingCosts(e.target.value)} style={iS2} type="number" placeholder="e.g. 4000" />
+          <div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '2px' }}>Typically $3k–$6k to refi</div>
+        </div>
+      </div>
+      {hasScenario && (
+        <div style={{ display: 'grid', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ background: '#F8F4EE', borderRadius: '8px', padding: '10px', textAlign: 'center' as const }}>
+              <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Current payment</div>
+              <div style={{ fontSize: '18px', fontWeight: 500, color: '#1E3A2F' }}>{monthlyPmt > 0 ? fmt(monthlyPmt) : '—'}</div>
+              <div style={{ fontSize: '11px', color: '#8A8A82', marginTop: '2px' }}>{currentRate ? `at ${currentRate}%` : 'rate not set'}</div>
+            </div>
+            <div style={{ background: newMonthly < monthlyPmt ? '#EAF2EC' : '#FDECEA', borderRadius: '8px', padding: '10px', textAlign: 'center' as const }}>
+              <div style={{ fontSize: '11px', color: newMonthly < monthlyPmt ? '#27500A' : '#791F1F', marginBottom: '3px' }}>New payment</div>
+              <div style={{ fontSize: '18px', fontWeight: 500, color: newMonthly < monthlyPmt ? '#27500A' : '#791F1F' }}>{fmt(newMonthly)}</div>
+              <div style={{ fontSize: '11px', color: newMonthly < monthlyPmt ? '#3D7A5A' : '#9B2C2C', marginTop: '2px' }}>
+                {newMonthly < monthlyPmt ? `–${fmt(monthlyPmt - newMonthly)}/mo` : newMonthly > monthlyPmt ? `+${fmt(newMonthly - monthlyPmt)}/mo` : 'same payment'}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ background: interestSaved > 0 ? '#EAF2EC' : '#FDECEA', borderRadius: '8px', padding: '10px', textAlign: 'center' as const }}>
+              <div style={{ fontSize: '11px', color: interestSaved > 0 ? '#27500A' : '#791F1F', marginBottom: '3px' }}>{interestSaved > 0 ? 'Total interest saved' : 'Extra interest cost'}</div>
+              <div style={{ fontSize: '18px', fontWeight: 500, color: interestSaved > 0 ? '#27500A' : '#791F1F' }}>{fmtK(Math.abs(interestSaved))}</div>
+              <div style={{ fontSize: '11px', color: interestSaved > 0 ? '#3D7A5A' : '#9B2C2C', marginTop: '2px' }}>after closing costs</div>
+            </div>
+            <div style={{ background: '#F8F4EE', borderRadius: '8px', padding: '10px', textAlign: 'center' as const }}>
+              <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Break-even point</div>
+              <div style={{ fontSize: '18px', fontWeight: 500, color: '#1E3A2F' }}>{breakEvenMonths > 0 ? `${breakEvenMonths} mo` : newMonthly >= monthlyPmt ? 'Never' : '—'}</div>
+              <div style={{ fontSize: '11px', color: '#8A8A82', marginTop: '2px' }}>{breakEvenMonths > 0 ? 'to recoup closing costs' : newMonthly >= monthlyPmt ? 'payment goes up' : ''}</div>
+            </div>
+          </div>
+          {breakEvenMonths > 0 && breakEvenMonths <= 36 && (
+            <div style={{ padding: '8px 10px', background: '#EAF2EC', borderRadius: '8px', fontSize: '11px', color: '#27500A', lineHeight: 1.6 }}>
+              You would break even on closing costs in {breakEvenMonths} months. If you plan to stay longer than that, refinancing could make sense.
+            </div>
+          )}
+          {breakEvenMonths > 36 && (
+            <div style={{ padding: '8px 10px', background: '#FBF0DC', borderRadius: '8px', fontSize: '11px', color: '#7A4A10', lineHeight: 1.6 }}>
+              Break-even is {breakEvenMonths} months away. Only worth it if you plan to stay in the home that long.
+            </div>
+          )}
+          {newMonthly >= monthlyPmt && newTerm >= currentTermLeft && (
+            <div style={{ padding: '8px 10px', background: '#FDECEA', borderRadius: '8px', fontSize: '11px', color: '#791F1F', lineHeight: 1.6 }}>
+              This rate is higher than your current rate — refinancing would increase your payment and total interest cost.
+            </div>
+          )}
+        </div>
+      )}
+      <div style={{ marginTop: '10px', fontSize: '11px', color: '#8A8A82', lineHeight: 1.6 }}>This calculator is for educational purposes only. Actual refi costs and savings depend on lender fees, your credit profile, and loan specifics. Always get quotes from multiple lenders.</div>
+    </div>
+  )
+}
+
 export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thisYearJobs }: {
   home: any; jobs: any[]; systems: any[]; deferred: number; thisYearSpend: number; thisYearJobs: number
 }) {
@@ -124,6 +228,9 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
   const [refiTerm, setRefiTerm] = useState('30')
   const [refiRate, setRefiRate] = useState('')
   const [saving, setSaving] = useState(false)
+  const [editingSale, setEditingSale] = useState(false)
+  const [agentCommissionPct, setAgentCommissionPct] = useState('5.5')
+  const [closingCostPct, setClosingCostPct] = useState('2.0')
 
   useEffect(() => {
     if (!home?.id) return
@@ -333,6 +440,11 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
                   <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>High</div><div style={{ fontSize: '16px', fontWeight: 500, color: '#1E3A2F' }}>{fmtK(fhfaEst.high)}</div></div>
                 </div>
                 <div style={{ fontSize: '11px', color: '#8A8A82', lineHeight: 1.6, marginBottom: '6px' }}>This uses regional average appreciation from the FHFA HPI. It is not an appraisal and should not be used for financial decisions without professional verification.</div>
+                {appreciationPct > 50 && (
+                  <div style={{ padding: '8px 10px', background: '#FBF0DC', borderRadius: '8px', fontSize: '11px', color: '#7A4A10', lineHeight: 1.6, marginBottom: '6px' }}>
+                    <strong style={{ color: '#7A4A10' }}>Why so high?</strong> Home prices surged nationally during 2020–2022 due to historic low interest rates, remote work demand, and limited housing supply. Maryland saw 19%+ gains in 2021 alone. Prices have not reversed significantly — they stabilized at elevated levels. This is a real regional average, not an error.
+                  </div>
+                )}
               </>
             ) : (
               <div style={{ padding: '20px', textAlign: 'center', color: '#8A8A82', fontSize: '13px' }}>Add purchase price, year and state to see your estimated value range.</div>
@@ -341,18 +453,24 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
           </div>
 
           <div style={cardS}>
-            <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Current avg mortgage rates</div>
-            <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '10px' }}>Freddie Mac weekly survey{ir ? ` · compare to your ${ir}%` : ''}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-              <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>30-year fixed avg</div><div style={{ fontSize: '20px', fontWeight: 500, color: '#1E3A2F' }}>{freddie.rate30}%</div>{ir ? <div style={{ fontSize: '11px', color: '#8A8A82', marginTop: '2px' }}>vs your {ir}%</div> : null}</div>
-              <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>15-year fixed avg</div><div style={{ fontSize: '20px', fontWeight: 500, color: '#1E3A2F' }}>{freddie.rate15}%</div><div style={{ fontSize: '11px', color: '#8A8A82', marginTop: '2px' }}>lower rate, higher payment</div></div>
+            <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Mortgage rates & scenario calculator</div>
+            <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '12px' }}>Current averages from Freddie Mac · plug in any rate to see your scenario</div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>30-yr fixed national avg</div><div style={{ fontSize: '20px', fontWeight: 500, color: '#1E3A2F' }}>{freddie.rate30}%</div>{ir ? <div style={{ fontSize: '11px', color: ir <= freddie.rate30 ? '#3D7A5A' : '#9B2C2C', marginTop: '2px', fontWeight: 500 }}>Your rate: {ir}% {ir <= freddie.rate30 ? '✓ below avg' : '↑ above avg'}</div> : null}</div>
+              <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>15-yr fixed national avg</div><div style={{ fontSize: '20px', fontWeight: 500, color: '#1E3A2F' }}>{freddie.rate15}%</div><div style={{ fontSize: '11px', color: '#8A8A82', marginTop: '2px' }}>Shorter term · higher payment · less total interest</div></div>
             </div>
-            {ir ? (
-              <div style={{ padding: '8px 10px', background: ir <= freddie.rate30 ? '#EAF2EC' : '#FDECEA', borderRadius: '8px', fontSize: '11px', color: ir <= freddie.rate30 ? '#27500A' : '#791F1F', lineHeight: 1.6 }}>
-                {ir <= freddie.rate30 ? `Your rate of ${ir}% is at or below today's 30-yr average. Refinancing likely not beneficial right now unless switching to 15-yr.` : `Your rate of ${ir}% is above today's average of ${freddie.rate30}%. It may be worth exploring refinancing options.`}
-                {' '}<a href="https://www.consumerfinance.gov/owning-a-home/explore-rates/" target="_blank" rel="noopener noreferrer" style={{ color: ir <= freddie.rate30 ? '#27500A' : '#791F1F', fontWeight: 500 }}>Explore rates at CFPB →</a>
-              </div>
-            ) : null}
+
+            <div style={{ padding: '10px 12px', background: '#F8F4EE', borderRadius: '8px', fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '12px' }}>
+              <strong style={{ color: '#1E3A2F' }}>What drives mortgage rates?</strong> Rates are primarily tied to the 10-year U.S. Treasury yield — when Treasury yields rise, mortgage rates follow. The Fed funds rate influences short-term borrowing costs but does not directly set mortgage rates. Lenders also adjust your individual rate based on your credit score, down payment size, loan type, and property type. A 760+ credit score and 20%+ down payment typically get the best available rate.
+              <a href="https://www.consumerfinance.gov/owning-a-home/explore-rates/" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: '6px', color: '#3D7A5A', textDecoration: 'none', fontSize: '11px' }}>Explore how rates are determined · CFPB.gov →</a>
+            </div>
+
+            <div style={{ borderTop: '0.5px solid rgba(30,58,47,0.1)', paddingTop: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F', marginBottom: '4px' }}>Rate scenario calculator</div>
+              <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '10px' }}>See a rate at your bank? Enter it below to compare against your current loan.</div>
+              <ScenarioCalculator currentRate={ir} currentBalance={remainingBal} currentTermLeft={Math.max(1, lt - yearsPaid)} monthlyPmt={monthlyPmt} fmt={fmt} fmtK={fmtK} />
+            </div>
           </div>
         </div>
       </div>
@@ -366,7 +484,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
               <InfoTooltipDark text="Each milestone unlocks new financial options — more equity means lower borrowing costs, better loan terms, and a stronger position when you sell." />
             </div>
             <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '12px' }}>What each milestone unlocks for you</div>
-            <div style={{ display: 'grid', gap: '8px' }}>
+            <div style={{ display: 'grid', gap: '8px', marginBottom: '16px' }}>
               {milestones.map(m => {
                 const reached = equityPct >= m.pct
                 const close = !reached && equityPct >= m.pct - 10
@@ -378,19 +496,62 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
                 )
               })}
             </div>
+            <div style={{ padding: '12px 14px', background: '#F8F4EE', borderRadius: '10px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F', marginBottom: '8px' }}>What else do lenders look at beyond equity?</div>
+              <div style={{ display: 'grid', gap: '6px' }}>
+                {[
+                  { label: 'Credit score', desc: '720+ gets best rates · 680–719 good · below 620 limits options', icon: '📊' },
+                  { label: 'Debt-to-income ratio (DTI)', desc: 'Most lenders want total debt payments below 43% of gross monthly income', icon: '⚖️' },
+                  { label: 'Loan-to-value ratio (LTV)', desc: 'Lower LTV = less risk for lender = better rate. 80% LTV or below is ideal', icon: '🏠' },
+                  { label: 'Payment history', desc: '24 months of on-time payments signals reliability to lenders', icon: '✓' },
+                  { label: 'Income & employment', desc: 'Stable income, ideally 2+ years same employer. Self-employed requires 2 yrs tax returns', icon: '💼' },
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '13px', flexShrink: 0, marginTop: '1px' }}>{item.icon}</span>
+                    <div>
+                      <span style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F' }}>{item.label}: </span>
+                      <span style={{ fontSize: '12px', color: '#8A8A82' }}>{item.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <a href="https://www.consumerfinance.gov/ask-cfpb/what-is-a-debt-to-income-ratio-why-is-the-43-debt-to-income-ratio-important-en-1791/" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: '10px', fontSize: '11px', color: '#3D7A5A', textDecoration: 'none' }}>Understanding DTI and loan qualification · CFPB.gov →</a>
+            </div>
           </div>
 
           <div style={cardS}>
-            <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>
-              If you sold today
-              <InfoTooltipDark text="This is your equity in cash — what you would walk away with after paying off your mortgage and covering the costs of selling. The actual amount varies by agent commission, local closing costs, and your exact payoff balance." />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3px' }}>
+              <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F' }}>
+                If you sold today
+                <InfoTooltipDark text="This is your equity in cash — what you would walk away with after paying off your mortgage and covering the costs of selling. The actual amount varies by agent commission, local closing costs, and your exact payoff balance." />
+              </div>
+              <button onClick={() => setEditingSale(!editingSale)} style={{ fontSize: '12px', color: '#3D7A5A', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0 }}>{editingSale ? 'Done' : 'Edit costs'}</button>
             </div>
             <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '12px' }}>Estimated net proceeds after costs</div>
+            {editingSale && (
+              <div style={{ padding: '12px', background: '#F8F4EE', borderRadius: '10px', marginBottom: '12px', display: 'grid', gap: '10px' }}>
+                <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '4px' }}>
+                  Defaults based on NAR data: avg agent commission ~5.5% (down from 6% after 2024 settlement), typical closing costs 2–3% of sale price. Enter your actuals if you have them.
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Agent commission %</label>
+                    <input value={agentCommissionPct} onChange={e => setAgentCommissionPct(e.target.value)} style={iS} type="number" step="0.1" min="0" max="10" placeholder="5.5" />
+                    <div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '3px' }}>NAR avg: ~5.5% · Some brokers: 1–3%</div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Closing costs %</label>
+                    <input value={closingCostPct} onChange={e => setClosingCostPct(e.target.value)} style={iS} type="number" step="0.1" min="0" max="10" placeholder="2.0" />
+                    <div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '3px' }}>Typical range: 2–3% of sale price</div>
+                  </div>
+                </div>
+              </div>
+            )}
             {estValue ? (
               <>
                 <div style={rowS}><span style={{ fontSize: '13px', color: '#8A8A82' }}>Est. sale price</span><span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{fmt(estValue)}</span></div>
-                <div style={rowS}><span style={{ fontSize: '13px', color: '#8A8A82' }}>Agent commission (~5.5%)</span><span style={{ fontSize: '13px', color: '#791F1F' }}>–{fmt(agentFee)}</span></div>
-                <div style={rowS}><span style={{ fontSize: '13px', color: '#8A8A82' }}>Closing costs (~2%)</span><span style={{ fontSize: '13px', color: '#791F1F' }}>–{fmt(closingCost)}</span></div>
+                <div style={rowS}><span style={{ fontSize: '13px', color: '#8A8A82' }}>Agent commission ({agentCommissionPct}%)</span><span style={{ fontSize: '13px', color: '#791F1F' }}>–{fmt(agentFee)}</span></div>
+                <div style={rowS}><span style={{ fontSize: '13px', color: '#8A8A82' }}>Closing costs ({closingCostPct}%)</span><span style={{ fontSize: '13px', color: '#791F1F' }}>–{fmt(closingCost)}</span></div>
                 {remainingBal > 0 && <div style={rowS}><span style={{ fontSize: '13px', color: '#8A8A82' }}>Remaining mortgage</span><span style={{ fontSize: '13px', color: '#791F1F' }}>–{fmt(remainingBal)}</span></div>}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: netProceeds > 0 ? '#EAF2EC' : '#FDECEA', borderRadius: '8px', marginTop: '10px', marginBottom: '12px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 500, color: netProceeds > 0 ? '#27500A' : '#791F1F' }}>Est. cash in hand</span>
