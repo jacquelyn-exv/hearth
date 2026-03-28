@@ -197,6 +197,19 @@ function CollapsibleExplainer({ title, children, linkHref, linkText }: { title: 
   )
 }
 
+function CollapsibleCard({ title, children }: { title: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ padding: '8px 10px', background: '#F8F4EE', borderRadius: '8px', marginBottom: '8px' }}>
+      <button onClick={() => setOpen(!open)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0 }}>
+        <span style={{ fontSize: '11px', fontWeight: 500, color: '#1E3A2F' }}>{title}</span>
+        <span style={{ fontSize: '10px', color: '#8A8A82' }}>{open ? 'Hide ▲' : 'Show ▼'}</span>
+      </button>
+      {open && <div style={{ marginTop: '6px', fontSize: '11px', color: '#4A4A44', lineHeight: 1.6 }}>{children}</div>}
+    </div>
+  )
+}
+
 function ScenarioCalculator({ currentRate, currentBalance, currentTermLeft, monthlyPmt, fmt, fmtK }: { currentRate: number; currentBalance: number; currentTermLeft: number; monthlyPmt: number; fmt: (n: number) => string; fmtK: (n: number) => string }) {
   const [scenarioRate, setScenarioRate] = useState('')
   const [scenarioTerm, setScenarioTerm] = useState('30')
@@ -710,8 +723,14 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
               <div style={{ fontSize: '11px', fontWeight: 500, color: '#0C447C', marginBottom: '3px' }}>{stTax.tipTitle}</div>
               <div style={{ fontSize: '11px', color: '#185FA5', lineHeight: 1.6 }}>{stTax.tip}{stTax.tipLink && <a href={stTax.tipLink} target="_blank" rel="noopener noreferrer" style={{ color: '#0C447C', fontWeight: 500, marginLeft: '4px' }}>Learn more →</a>}</div>
             </div>
-            {stTax.assessmentNote && <div style={{ padding: '8px 10px', background: '#F8F4EE', borderRadius: '8px', fontSize: '11px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>Assessment note:</strong> {stTax.assessmentNote}</div>}
-            <div style={{ padding: '8px 10px', background: '#F8F4EE', borderRadius: '8px', fontSize: '11px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>Your right to appeal:</strong> Every homeowner can appeal their property assessment. If your assessed value seems high vs comparable sales, file within your state's appeal window. Success rates are often 30–40%.</div>
+            {stTax.assessmentNote && (
+              <CollapsibleCard title="Assessment note">
+                {stTax.assessmentNote}
+              </CollapsibleCard>
+            )}
+            <CollapsibleCard title="Your right to appeal">
+              Every homeowner can appeal their property assessment. If your assessed value seems high vs comparable sales, file within your state's appeal window. Success rates are often 30–40%.
+            </CollapsibleCard>
             <div style={{ display: 'flex', gap: '8px' }}>
               <input value={taxInput} onChange={e => setTaxInput(e.target.value)} style={{ ...iS, flex: 1 }} type="number" placeholder="Enter your actual annual tax bill" />
               <button onClick={saveTax} disabled={savingTax} style={{ padding: '9px 14px', background: '#1E3A2F', color: '#F8F4EE', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap', opacity: savingTax ? 0.6 : 1 }}>{savingTax ? 'Saving...' : 'Save'}</button>
