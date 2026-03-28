@@ -119,6 +119,10 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
   const [loanTerm, setLoanTerm] = useState('30')
   const [interestRate, setInterestRate] = useState('')
   const [valueOverride, setValueOverride] = useState('')
+  const [hasRefinanced, setHasRefinanced] = useState(false)
+  const [refiYear, setRefiYear] = useState('')
+  const [refiTerm, setRefiTerm] = useState('30')
+  const [refiRate, setRefiRate] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -132,6 +136,10 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
         if (data.loan_term) setLoanTerm(String(data.loan_term))
         if (data.interest_rate) setInterestRate(String(data.interest_rate))
         if (data.estimated_value_override) setValueOverride(String(data.estimated_value_override))
+        if (data.has_refinanced) setHasRefinanced(true)
+        if (data.refi_year) setRefiYear(String(data.refi_year))
+        if (data.refi_term) setRefiTerm(String(data.refi_term))
+        if (data.refi_rate) setRefiRate(String(data.refi_rate))
       }
     })
   }, [home?.id])
@@ -145,6 +153,10 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
       loan_term: loanTerm ? parseInt(loanTerm) : null,
       interest_rate: interestRate ? parseFloat(interestRate) : null,
       estimated_value_override: valueOverride ? parseFloat(valueOverride) : null,
+      has_refinanced: hasRefinanced,
+      refi_year: refiYear ? parseInt(refiYear) : null,
+      refi_term: refiTerm ? parseInt(refiTerm) : null,
+      refi_rate: refiRate ? parseFloat(refiRate) : null,
     }).eq('home_id', home.id)
     const { data } = await supabase.from('home_details').select('*').eq('home_id', home.id).single()
     if (data) {
@@ -155,6 +167,10 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
       if (data.loan_term) setLoanTerm(String(data.loan_term))
       if (data.interest_rate) setInterestRate(String(data.interest_rate))
       if (data.estimated_value_override) setValueOverride(String(data.estimated_value_override))
+      if (data.has_refinanced) setHasRefinanced(!!data.has_refinanced)
+      if (data.refi_year) setRefiYear(String(data.refi_year))
+      if (data.refi_term) setRefiTerm(String(data.refi_term))
+      if (data.refi_rate) setRefiRate(String(data.refi_rate))
     }
     setSaving(false)
     setEditing(false)
@@ -163,23 +179,28 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
   const pp = details?.purchase_price || 0
   const dp = details?.down_payment || 0
   const py = details?.purchase_year || 0
-  const lt = details?.loan_term || 30
-  const ir = details?.interest_rate || 0
   const stateAbbr = home?.state || 'MD'
   const currentYear = new Date().getFullYear()
-  const yearsPaid = py ? Math.max(0, currentYear - py) : 0
   const loanPrincipal = Math.max(0, pp - dp)
+
+  // Use refi terms if refinanced, otherwise original loan terms
+  const activeRefi = hasRefinanced && refiYear && refiRate
+  const lt = activeRefi ? (parseInt(refiTerm) || 30) : (details?.loan_term || 30)
+  const ir = activeRefi ? parseFloat(refiRate) : (details?.interest_rate || 0)
+  const loanStartYear = activeRefi ? parseInt(refiYear) : py
+  const yearsPaid = loanStartYear ? Math.max(0, currentYear - loanStartYear) : 0
+  const activeLoanPrincipal = activeRefi ? (details?.refi_rate ? calcRemainingBalance(loanPrincipal, details?.interest_rate || ir, details?.loan_term || lt, py ? Math.max(0, parseInt(refiYear) - py) : 0) : loanPrincipal) : loanPrincipal
 
   const fhfaEst = pp && py ? estimateCurrentValue(pp, stateAbbr, py) : null
   const appreciationPct = pp && py ? getAppreciationPct(stateAbbr, py) : 0
   const estValue = details?.estimated_value_override || fhfaEst?.mid || 0
-  const remainingBal = loanPrincipal && ir && lt ? calcRemainingBalance(loanPrincipal, ir, lt, yearsPaid) : 0
+  const remainingBal = activeLoanPrincipal && ir && lt ? calcRemainingBalance(activeLoanPrincipal, ir, lt, yearsPaid) : 0
   const estEquity = estValue ? (remainingBal ? estValue - remainingBal : (dp || 0) + Math.round(pp * (appreciationPct / 100))) : 0
   const equityPct = estValue ? Math.round((estEquity / estValue) * 100) : 0
-  const totalInterest = loanPrincipal && ir && lt ? calcTotalInterest(loanPrincipal, ir, lt) : 0
+  const totalInterest = activeLoanPrincipal && ir && lt ? calcTotalInterest(activeLoanPrincipal, ir, lt) : 0
   const remainingInterest = remainingBal && ir && lt ? calcTotalInterest(remainingBal, ir, Math.max(1, lt - yearsPaid)) : 0
   const interestPaidEst = Math.max(0, totalInterest - remainingInterest)
-  const monthlyPmt = loanPrincipal && ir && lt ? calcMonthlyPayment(loanPrincipal, ir, lt) : 0
+  const monthlyPmt = activeLoanPrincipal && ir && lt ? calcMonthlyPayment(activeLoanPrincipal, ir, lt) : 0
   const extraSavings = remainingBal && ir && lt ? calcExtraSavings(remainingBal, ir, Math.max(1, lt - yearsPaid)) : null
   const budget1pct = estValue ? Math.round(estValue * 0.01) : 0
   const agentFee = estValue ? Math.round(estValue * 0.055) : 0
@@ -187,6 +208,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
   const netProceeds = estValue ? estValue - agentFee - closingCost - remainingBal : 0
   const hasBasic = !!(pp && dp && py)
   const hasLoan = !!(hasBasic && ir && lt)
+  const activeRate = ir
   const freddie = { rate30: 6.81, rate15: 6.10 }
 
   const fmt = (n: number) => '$' + Math.round(n).toLocaleString()
@@ -266,6 +288,22 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
                 <div><label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Interest rate %</label><input value={interestRate} onChange={e => setInterestRate(e.target.value)} style={iS} placeholder="e.g. 6.5" type="number" step="0.01" /></div>
               </div>
               <div><label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Your own value estimate (optional)</label><input value={valueOverride} onChange={e => setValueOverride(e.target.value)} style={iS} placeholder="e.g. 550000" type="number" /></div>
+              <div style={{ borderTop: '0.5px solid rgba(30,58,47,0.1)', paddingTop: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '13px', color: '#1E3A2F', fontWeight: 500 }}>Have you refinanced?</label>
+                  <button onClick={() => setHasRefinanced(!hasRefinanced)} style={{ background: hasRefinanced ? '#1E3A2F' : '#F8F4EE', color: hasRefinanced ? '#F8F4EE' : '#8A8A82', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '20px', padding: '4px 14px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>{hasRefinanced ? 'Yes' : 'No'}</button>
+                </div>
+                {hasRefinanced && (
+                  <div style={{ display: 'grid', gap: '10px', padding: '12px', background: '#F8F4EE', borderRadius: '10px' }}>
+                    <div style={{ fontSize: '11px', color: '#8A8A82', lineHeight: 1.5 }}>Enter your refinanced loan details — these replace the original terms for mortgage calculations. Your purchase year stays the same for home value estimates.</div>
+                    <div><label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Year you refinanced</label><input value={refiYear} onChange={e => setRefiYear(e.target.value)} style={iS} placeholder="e.g. 2021" type="number" min="1990" max={currentYear} /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div><label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>New loan term</label><select value={refiTerm} onChange={e => setRefiTerm(e.target.value)} style={iS}><option value="30">30 years</option><option value="25">25 years</option><option value="20">20 years</option><option value="15">15 years</option></select></div>
+                      <div><label style={{ display: 'block', fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>New interest rate %</label><input value={refiRate} onChange={e => setRefiRate(e.target.value)} style={iS} placeholder="e.g. 5.25" type="number" step="0.01" /></div>
+                    </div>
+                  </div>
+                )}
+              </div>
               <button onClick={save} disabled={saving || !purchasePrice || !downPayment || !purchaseYear} style={{ background: '#1E3A2F', color: '#F8F4EE', border: 'none', padding: '10px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving || !purchasePrice || !downPayment || !purchaseYear ? 0.6 : 1 }}>{saving ? 'Saving...' : 'Save details'}</button>
             </div>
           ) : (
@@ -276,6 +314,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
               <div style={rowS}><span style={{ fontSize: '13px', color: '#8A8A82' }}>State</span><span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{STATE_NAMES[stateAbbr] || stateAbbr}</span></div>
               <div style={rowS}><span style={{ fontSize: '13px', color: '#8A8A82' }}>Loan term <span style={{ fontSize: '10px', color: '#C47B2B' }}>unlocks more</span></span><span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{details?.loan_term ? `${details.loan_term} years` : <span style={{ color: '#8A8A82' }}>Not set</span>}</span></div>
               <div style={rowS}><span style={{ fontSize: '13px', color: '#8A8A82' }}>Interest rate <span style={{ fontSize: '10px', color: '#C47B2B' }}>unlocks more</span></span><span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{details?.interest_rate ? `${details.interest_rate}%` : <span style={{ color: '#8A8A82' }}>Not set</span>}</span></div>
+              <div style={rowS}><span style={{ fontSize: '13px', color: '#8A8A82' }}>Refinanced</span><span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>{hasRefinanced ? `Yes · ${refiYear || '—'} · ${refiTerm}yr · ${refiRate}%` : 'No'}</span></div>
               <div style={{ ...rowS, borderBottom: 'none' }}><span style={{ fontSize: '13px', color: '#8A8A82' }}>Value estimate <span style={{ fontSize: '10px', color: '#8A8A82' }}>optional</span></span><span style={{ fontSize: '12px', color: '#3D7A5A', cursor: 'pointer' }} onClick={() => setEditing(true)}>{details?.estimated_value_override ? fmt(details.estimated_value_override) : 'Override →'}</span></div>
               {!hasBasic && <button onClick={() => setEditing(true)} style={{ marginTop: '12px', width: '100%', background: '#C47B2B', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Add purchase details</button>}
             </div>
