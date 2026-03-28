@@ -246,8 +246,7 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
       job.system_type?.replace(/_/g, ' ').toLowerCase() === filterSystem.toLowerCase().replace(' / ', '/').replace('/', ' ').toLowerCase() ||
       job.system_type?.replace(/_/g, ' ').toLowerCase() === filterSystem.toLowerCase()
     const activeZips = nearbyZips.length > 0 ? nearbyZips : (zipSearch ? [zipSearch] : [])
-    // Show job if: no zip filter, job has no zip, job zip is in nearby list, or not enough local data
-    const matchesZip = activeZips.length === 0 || activeZips.includes(job.zip) || !job.zip
+    const matchesZip = activeZips.length === 0 || !job.zip || activeZips.includes(job.zip)
     return matchesSearch && matchesSystem && matchesZip
   })
 

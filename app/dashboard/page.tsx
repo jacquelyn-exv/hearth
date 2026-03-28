@@ -1577,7 +1577,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab==='log'&&home&&user&&<MaintenanceLog homeId={home.id} userId={user.id} userName={displayName||user.email||''}/>}
+        {activeTab==='log'&&home&&user&&<MaintenanceLog homeId={home.id} userId={user.id} userName={displayName||user.email||''} zip={home.zip||''}/>}
         {activeTab==='projects'&&<ProjectsTab homeId={home?.id} userId={user?.id}/>}
         {activeTab==='maintenance'&&<MaintenanceTab systems={systems} home={home} jobs={jobs} onTabChange={setActiveTab}/>}
 

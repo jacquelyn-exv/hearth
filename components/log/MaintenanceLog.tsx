@@ -85,7 +85,7 @@ function EntryCard({ job, onEdit, onDelete, onToggleShare }: { job: any; onEdit:
   )
 }
 
-export function MaintenanceLog({ homeId, userId, userName }: { homeId: string; userId: string; userName: string }) {
+export function MaintenanceLog({ homeId, userId, userName, zip }: { homeId: string; userId: string; userName: string; zip?: string }) {
   const [jobs, setJobs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -169,6 +169,7 @@ export function MaintenanceLog({ homeId, userId, userName }: { homeId: string; u
       notes: notes || null,
       is_shared: isDIY ? false : isShared,
       shared_radius: (!isDIY && isShared) ? 'zip' : null,
+      zip: (!isDIY && isShared && zip) ? zip : null,
     }
 
     if (editingId) {
