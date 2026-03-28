@@ -707,36 +707,6 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
               <ScenarioCalculator currentRate={ir} currentBalance={remainingBal} currentTermLeft={Math.max(1, lt - yearsPaid)} monthlyPmt={monthlyPmt} fmt={fmt} fmtK={fmtK} />
             </div>
           </div>
-
-          {/* Property Tax Tile */}
-          <div style={cardS}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3px' }}>
-              <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F' }}>Est. property taxes</div>
-              <span style={{ display: 'inline-block', fontSize: '11px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: taxRankBg, color: taxRankColor }}>{STATE_NAMES[stTax ? (home?.state||'MD').toUpperCase() : 'MD'] || (home?.state||'MD').toUpperCase()} · {stTax.rank} tax state</span>
-            </div>
-            <div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '12px' }}>Based on state avg effective rate of {(stTax.rate*100).toFixed(2)}% · enter your actual bill to make this precise</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-              <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>{actualTaxBill ? 'Your actual annual tax' : 'Est. annual tax'}</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#1E3A2F' }}>{estAnnualTax > 0 ? `~${fmt(estAnnualTax)}` : '—'}</div><div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '2px' }}>{actualTaxBill ? 'Your input' : `${(stTax.rate*100).toFixed(2)}% × ${fmtK(estValue)}`}</div></div>
-              <div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '3px' }}>Est. monthly</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#1E3A2F' }}>{estMonthlyTax > 0 ? `~${fmt(estMonthlyTax)}` : '—'}</div><div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '2px' }}>Typically escrowed by lender</div></div>
-            </div>
-            <div style={{ padding: '10px 12px', background: '#E6F1FB', borderRadius: '8px', borderLeft: '3px solid #185FA5', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, marginBottom: '10px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 500, color: '#0C447C', marginBottom: '3px' }}>{stTax.tipTitle}</div>
-              <div style={{ fontSize: '11px', color: '#185FA5', lineHeight: 1.6 }}>{stTax.tip}{stTax.tipLink && <a href={stTax.tipLink} target="_blank" rel="noopener noreferrer" style={{ color: '#0C447C', fontWeight: 500, marginLeft: '4px' }}>Learn more →</a>}</div>
-            </div>
-            {stTax.assessmentNote && (
-              <CollapsibleCard title="Assessment note">
-                {stTax.assessmentNote}
-              </CollapsibleCard>
-            )}
-            <CollapsibleCard title="Your right to appeal">
-              Every homeowner can appeal their property assessment. If your assessed value seems high vs comparable sales, file within your state's appeal window. Success rates are often 30–40%.
-            </CollapsibleCard>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input value={taxInput} onChange={e => setTaxInput(e.target.value)} style={{ ...iS, flex: 1 }} type="number" placeholder="Enter your actual annual tax bill" />
-              <button onClick={saveTax} disabled={savingTax} style={{ padding: '9px 14px', background: '#1E3A2F', color: '#F8F4EE', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap', opacity: savingTax ? 0.6 : 1 }}>{savingTax ? 'Saving...' : 'Save'}</button>
-            </div>
-            <div style={{ fontSize: '10px', color: '#8A8A82', marginTop: '6px' }}>Estimate uses state avg effective rate. Actual bill set by your county assessor and may differ significantly, especially for long-term owners with assessment caps.</div>
-          </div>
         </div>
         </div>{/* end S3 grid */}
       </div>{/* end S3 */}
