@@ -1,4 +1,59 @@
 'use client'
+const STATE_TAX: Record<string, { rate: number; rank: 'low'|'mid'|'high'; tipTitle: string; tip: string; tipLink?: string; assessmentNote?: string }> = {
+  AL: { rate: 0.0040, rank: 'low',  tipTitle: 'Alabama Homestead Exemption', tip: 'Primary residences qualify for a homestead exemption reducing assessed value. Apply at your county tax assessor.' },
+  AZ: { rate: 0.0051, rank: 'low',  tipTitle: 'Arizona Owner-Occupant Rate', tip: 'Owner-occupied primary residences are assessed at 10% of full cash value vs 18% for other property.', assessmentNote: 'Arizona assesses residential property at 10% of full cash value.' },
+  AR: { rate: 0.0061, rank: 'low',  tipTitle: 'Arkansas Homestead Credit', tip: 'Up to $425 credit on homestead property annually. Apply once at your county assessor.', assessmentNote: 'Arkansas assesses at 20% of market value.' },
+  CA: { rate: 0.0073, rank: 'low',  tipTitle: 'California Prop 13', tip: 'Assessed value capped at purchase price and can only increase 2%/yr. Your taxable value may be far below current market value.', tipLink: 'https://www.boe.ca.gov/', assessmentNote: 'Prop 13 caps annual assessment increases at 2%.' },
+  CO: { rate: 0.0051, rank: 'low',  tipTitle: 'Colorado Senior Homestead Exemption', tip: '50% of the first $200,000 in value exempt for qualifying seniors 65+.' },
+  CT: { rate: 0.0197, rank: 'high', tipTitle: 'Connecticut Elderly/Disabled Program', tip: 'Tax credits up to $1,250 for qualifying homeowners. Also check your municipality for local exemptions.' },
+  DE: { rate: 0.0057, rank: 'low',  tipTitle: 'Delaware Senior School Tax Credit', tip: 'Qualifying seniors 65+ receive a school tax credit — one of the most generous senior programs in the Northeast.' },
+  FL: { rate: 0.0089, rank: 'mid',  tipTitle: 'Florida Homestead + Save Our Homes', tip: '$50,000 exemption off assessed value for primary residence. Save Our Homes caps assessment increases at 3%/yr or CPI. File by March 1.', tipLink: 'https://floridarevenue.com/property/', assessmentNote: 'Save Our Homes caps annual assessment increases at 3% or CPI.' },
+  GA: { rate: 0.0092, rank: 'mid',  tipTitle: 'Georgia Homestead Exemption', tip: 'Standard $2,000 exemption off state assessed value. Many counties add additional local exemptions.', assessmentNote: 'Georgia assesses at 40% of fair market value.' },
+  HI: { rate: 0.0028, rank: 'low',  tipTitle: 'Hawaii Home Exemption', tip: 'Owner-occupants receive $100,000+ exemption in many counties. Lowest effective rate nationally.', tipLink: 'https://www.hawaiipropertytax.com/' },
+  ID: { rate: 0.0063, rank: 'low',  tipTitle: "Idaho Homeowner's Exemption", tip: '50% of value up to $125,000 exempt for primary residence.' },
+  IL: { rate: 0.0205, rank: 'high', tipTitle: 'Illinois General Homestead Exemption', tip: '$10,000 reduction in assessed value for primary residence. Senior freeze exemption available for 65+.', assessmentNote: 'Illinois assesses at 33.33% of market value.' },
+  IN: { rate: 0.0085, rank: 'mid',  tipTitle: 'Indiana Homestead Deduction', tip: 'Standard deduction of up to $48,000 or 60% of assessed value for primary residence.' },
+  IA: { rate: 0.0151, rank: 'high', tipTitle: 'Iowa Homestead Credit', tip: 'Credit applied directly to tax bill for primary residence owners. File with your county assessor.' },
+  KS: { rate: 0.0114, rank: 'mid',  tipTitle: 'Kansas Homestead Refund', tip: 'Refund program for low-income homeowners 55+ or disabled.' },
+  KY: { rate: 0.0086, rank: 'mid',  tipTitle: 'Kentucky Homestead Exemption', tip: 'Exemption for owners 65+ or totally disabled — $46,350 off assessed value.' },
+  LA: { rate: 0.0055, rank: 'low',  tipTitle: 'Louisiana Homestead Exemption', tip: 'First $75,000 of market value exempt from most property taxes for primary residence.', assessmentNote: 'Louisiana assesses residential property at 10% of fair market value.' },
+  ME: { rate: 0.0109, rank: 'mid',  tipTitle: 'Maine Homestead Exemption', tip: '$25,000 exemption off just value for primary residence.' },
+  MD: { rate: 0.0105, rank: 'mid',  tipTitle: 'Maryland Homestead Tax Credit', tip: "Caps your assessed value increase at 10%/yr for primary residence. If you've owned for several years your taxable value may be well below market value. Apply once at dat.maryland.gov.", tipLink: 'https://dat.maryland.gov/homestead', assessmentNote: 'Maryland reassesses every 3 years by neighborhood. You can appeal within 45 days of your assessment notice.' },
+  MA: { rate: 0.0114, rank: 'mid',  tipTitle: 'Massachusetts Residential Exemption', tip: 'Many municipalities offer a residential exemption — up to 35% off assessed value.' },
+  MI: { rate: 0.0145, rank: 'mid',  tipTitle: 'Michigan Principal Residence Exemption', tip: 'Exempts primary residence from 18 mills of school operating tax. File Form 2368 with your local assessor.' },
+  MN: { rate: 0.0111, rank: 'mid',  tipTitle: 'Minnesota Homestead Classification', tip: "Primary residences taxed at lower rates than other property." },
+  MS: { rate: 0.0063, rank: 'low',  tipTitle: 'Mississippi Homestead Exemption', tip: 'First $7,500 of assessed value exempt. Additional exemptions for seniors 65+.', assessmentNote: 'Mississippi assesses at 10% of true value for residential.' },
+  MO: { rate: 0.0097, rank: 'mid',  tipTitle: 'Missouri Property Tax Credit', tip: 'Credit for seniors 65+ and disabled persons with income limits.' },
+  MT: { rate: 0.0074, rank: 'low',  tipTitle: 'Montana Elderly Homeowner Credit', tip: 'Tax credit for qualifying elderly homeowners. Low rates with no sales tax.' },
+  NE: { rate: 0.0153, rank: 'high', tipTitle: 'Nebraska Homestead Exemption', tip: 'Full or partial exemption for qualifying seniors 65+, veterans, and disabled persons. Apply by June 30.' },
+  NV: { rate: 0.0059, rank: 'low',  tipTitle: 'Nevada Abatement Program', tip: 'Tax increase capped at 3% per year on primary residence. No state income tax.' },
+  NH: { rate: 0.0189, rank: 'high', tipTitle: 'New Hampshire Elderly Exemption', tip: 'No income or sales tax — property tax carries the full load. Elderly exemptions available for 65+.' },
+  NJ: { rate: 0.0223, rank: 'high', tipTitle: 'New Jersey ANCHOR Program', tip: 'ANCHOR program provides rebates up to $1,500 for homeowners. Senior Freeze program caps taxes for qualifying seniors. NJ has the highest effective rate nationally.', tipLink: 'https://www.state.nj.us/treasury/taxation/' },
+  NM: { rate: 0.0078, rank: 'low',  tipTitle: 'New Mexico Valuation Freeze', tip: 'Assessment freeze for 65+ on primary residence — value cannot increase once you apply.' },
+  NY: { rate: 0.0158, rank: 'high', tipTitle: 'New York STAR Program', tip: 'School Tax Relief (STAR) reduces school taxes for primary residence owners. Enhanced STAR available for 65+.', tipLink: 'https://www.tax.ny.gov/pit/property/star/' },
+  NC: { rate: 0.0084, rank: 'mid',  tipTitle: 'North Carolina Homestead Exclusion', tip: 'Elderly/disabled exclusion for 65+: higher of $25,000 or 50% of appraised value excluded.' },
+  ND: { rate: 0.0098, rank: 'mid',  tipTitle: 'North Dakota Primary Residence Credit', tip: '$500 credit for primary residence homeowners.' },
+  OH: { rate: 0.0153, rank: 'high', tipTitle: 'Ohio Homestead Exemption', tip: 'Reduces taxable value by $26,200 for 65+ and disabled homeowners.' },
+  OK: { rate: 0.0090, rank: 'mid',  tipTitle: 'Oklahoma Homestead Exemption', tip: '$1,000 off assessed value plus additional exemptions for seniors.', assessmentNote: 'Oklahoma assesses at 11% of fair cash value.' },
+  OR: { rate: 0.0097, rank: 'mid',  tipTitle: 'Oregon Property Tax Deferral', tip: 'Qualifying seniors 62+ can defer property taxes until the home is sold.' },
+  PA: { rate: 0.0153, rank: 'high', tipTitle: 'Pennsylvania Homestead Exclusion', tip: 'Local taxing bodies may offer homestead exclusion — amounts vary by municipality.' },
+  RI: { rate: 0.0153, rank: 'high', tipTitle: 'Rhode Island Homestead Exemption', tip: 'Many municipalities offer homestead exemptions — check with your local assessor.' },
+  SC: { rate: 0.0057, rank: 'low',  tipTitle: 'South Carolina 4% Ratio', tip: 'Primary residences taxed at 4% assessment ratio vs 6% for other property. Additional $50,000 exemption for 65+.', assessmentNote: 'SC assesses primary residences at 4% vs 6% for investment/second homes.' },
+  SD: { rate: 0.0111, rank: 'mid',  tipTitle: 'South Dakota Property Tax Reduction', tip: 'Reduction program for 70+ and disabled homeowners. No state income tax.' },
+  TN: { rate: 0.0071, rank: 'low',  tipTitle: 'Tennessee Homeowners Rebate', tip: 'Tax freeze program for 65+ whose home value does not exceed $50,000 above county median.' },
+  TX: { rate: 0.0160, rank: 'high', tipTitle: 'Texas Homestead + Appraisal Cap', tip: '$100,000 off school district taxes for primary residence. Annual appraisal increase capped at 10%. File with your appraisal district by April 30.', tipLink: 'https://comptroller.texas.gov/', assessmentNote: 'Texas caps annual appraisal increases at 10% for homestead properties.' },
+  UT: { rate: 0.0052, rank: 'low',  tipTitle: 'Utah Circuit Breaker Credit', tip: 'Property tax credit for 66+ or widows/widowers 65+ based on income.' },
+  VT: { rate: 0.0182, rank: 'high', tipTitle: 'Vermont Homestead Declaration', tip: 'File homestead declaration annually to access lower school tax rate. File by April 15.', tipLink: 'https://tax.vermont.gov/' },
+  VA: { rate: 0.0082, rank: 'mid',  tipTitle: 'Virginia Senior Exemption', tip: 'Localities may offer exemptions for 65+/disabled — amounts vary significantly.' },
+  WA: { rate: 0.0093, rank: 'mid',  tipTitle: 'Washington Senior/Disabled Exemption', tip: 'Exemption and deferral programs for 61+ and disabled. No state income tax.' },
+  WV: { rate: 0.0059, rank: 'low',  tipTitle: 'West Virginia Homestead Exemption', tip: '$20,000 exemption off assessed value for 65+ or totally disabled.' },
+  WI: { rate: 0.0153, rank: 'high', tipTitle: 'Wisconsin Lottery + School Levy Credit', tip: 'Lottery and gaming credit automatically applied to primary residence.' },
+  WY: { rate: 0.0057, rank: 'low',  tipTitle: 'Wyoming Property Tax Refund', tip: 'Refund program for low-income homeowners and seniors. No state income tax.' },
+  DC: { rate: 0.0085, rank: 'mid',  tipTitle: 'DC Homestead Deduction', tip: '$84,000 deduction off assessed value for primary residence owner-occupants.', tipLink: 'https://otr.cfo.dc.gov/' },
+  AK: { rate: 0.0100, rank: 'mid',  tipTitle: 'Alaska — Local Taxes Only', tip: 'No state property tax — only local municipal taxes apply. Senior and disabled exemptions available in most boroughs.' },
+}
+
+
 import { useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -39,6 +94,9 @@ const cardS: any = { background: '#fff', border: '1px solid rgba(30,58,47,0.11)'
 const darkCardS: any = { background: '#1E3A2F', border: 'none', borderRadius: '16px', padding: '18px 20px', alignSelf: 'start' }
 const statS: any = { background: '#F8F4EE', borderRadius: '8px', padding: '10px', textAlign: 'center' as const }
 const rowS: any = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '0.5px solid rgba(30,58,47,0.08)' }
+const amberCardS: any = { background: '#FAEEDA', border: '0.5px solid rgba(196,123,43,0.2)', borderRadius: '16px', padding: '18px 20px' }
+const dkRowS: any = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '0.5px solid rgba(255,255,255,0.08)' }
+const secL: any = { fontSize: '10px', fontWeight: 500, letterSpacing: '2px', textTransform: 'uppercase' as const, color: '#8A8A82', marginBottom: '12px', paddingBottom: '8px', borderBottom: '0.5px solid rgba(30,58,47,0.1)' }
 const pillG: any = { display: 'inline-block', fontSize: '11px', fontWeight: 500, padding: '3px 9px', borderRadius: '20px', background: '#EAF2EC', color: '#27500A' }
 const pillA: any = { display: 'inline-block', fontSize: '11px', fontWeight: 500, padding: '3px 9px', borderRadius: '20px', background: '#FBF0DC', color: '#633806' }
 const pillR: any = { display: 'inline-block', fontSize: '11px', fontWeight: 500, padding: '3px 9px', borderRadius: '20px', background: '#FDECEA', color: '#791F1F' }
@@ -237,6 +295,9 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
   const [refiRate, setRefiRate] = useState('')
   const [saving, setSaving] = useState(false)
   const [editingSale, setEditingSale] = useState(false)
+  const [taxInput, setTaxInput] = useState('')
+  const [actualTaxBill, setActualTaxBill] = useState('')
+  const [savingTax, setSavingTax] = useState(false)
   const [agentCommissionPct, setAgentCommissionPct] = useState('5.5')
   const [closingCostPct, setClosingCostPct] = useState('2.0')
 
@@ -278,6 +339,12 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
     setSaving(false); setEditing(false)
   }
 
+  const saveTax = async () => {
+    setSavingTax(true)
+    await supabase.from('home_details').update({ annual_property_tax: parseFloat(taxInput) || null }).eq('home_id', home.id)
+    setActualTaxBill(taxInput); setSavingTax(false)
+  }
+
   const pp = details?.purchase_price || 0
   const dp = details?.down_payment || 0
   const py = details?.purchase_year || 0
@@ -296,6 +363,7 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
   const remainingBal = activeLoanPrincipal && ir && lt ? calcRemainingBalance(activeLoanPrincipal, ir, lt, yearsPaid) : 0
   const estEquity = estValue ? (remainingBal ? estValue - remainingBal : (dp || 0) + Math.round(pp * (appreciationPct / 100))) : 0
   const equityPct = estValue ? Math.round((estEquity / estValue) * 100) : 0
+  const ltvPct = estValue && remainingBal ? Math.round((remainingBal / estValue) * 100) : 0
   const totalInterest = activeLoanPrincipal && ir && lt ? calcTotalInterest(activeLoanPrincipal, ir, lt) : 0
   const remainingInterest = remainingBal && ir && lt ? calcTotalInterest(remainingBal, ir, Math.max(1, lt - yearsPaid)) : 0
   const interestPaidEst = Math.max(0, totalInterest - remainingInterest)
@@ -308,6 +376,21 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
   const hasBasic = !!(pp && dp && py)
   const hasLoan = !!(hasBasic && ir && lt)
   const freddie = { rate30: 6.81, rate15: 6.10 }
+
+  // PMI
+  const originalLTV = pp && dp ? Math.round(((pp - dp) / pp) * 100) : 0
+  const hadPMI = originalLTV > 80
+  const pmiMonthly = hadPMI && remainingBal ? Math.round(remainingBal * 0.005 / 12) : 0
+  const showPMIWarning = hadPMI && ltvPct > 80
+  const showPMIClose = hadPMI && ltvPct > 78 && ltvPct <= 80
+  const showPMIClear = hadPMI && ltvPct > 0 && ltvPct <= 78
+
+  // Property tax
+  const stTax = STATE_TAX[(home?.state || 'MD').toUpperCase()] || STATE_TAX['MD']
+  const estAnnualTax = actualTaxBill ? parseFloat(actualTaxBill) : (estValue ? Math.round(estValue * stTax.rate) : 0)
+  const estMonthlyTax = Math.round(estAnnualTax / 12)
+  const taxRankColor = stTax.rank === 'low' ? '#27500A' : stTax.rank === 'high' ? '#791F1F' : '#633806'
+  const taxRankBg = stTax.rank === 'low' ? '#EAF2EC' : stTax.rank === 'high' ? '#FDECEA' : '#FBF0DC'
   const fmt = (n: number) => '$' + Math.round(n).toLocaleString()
   const fmtK = (n: number) => n >= 1000 ? '$' + Math.round(n / 1000) + 'k' : fmt(n)
   // Smart deferred cost estimates using home type + system detail fields
@@ -429,8 +512,10 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
         )}
       </div>
 
-      {/* MAINTENANCE SPENDING — enhanced, moved up */}
-      <div style={cardS}>
+      {/* S2: MAINTENANCE */}
+      <div>
+        <div style={secL}>Your maintenance health</div>
+        <div style={amberCardS}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
             <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Maintenance spending</div>
@@ -478,11 +563,14 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
             Homes with documented, current maintenance sell 8–12 days faster and closer to asking price. Buyers have no uncertainty to negotiate with — your logged records are your leverage. Every job you log here becomes part of your home's transferable history.
           </CollapsibleExplainer>
         </div>
-      </div>
+        </div>{/* end amberCardS */}
+      </div>{/* end S2 */}
 
-      {/* PURCHASE DETAILS + VALUE + RATES */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', alignItems: 'start' }}>
-        <div style={{ display: 'grid', gap: '16px', alignSelf: 'start' }}>
+      {/* S3: PROPERTY DETAILS */}
+      <div>
+        <div style={secL}>Your property details</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', alignItems: 'start' }}>
+          <div style={{ display: 'grid', gap: '16px', alignSelf: 'start' }}>
         <div style={darkCardS}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3px' }}>
             <div style={{ fontSize: '15px', fontWeight: 500, color: '#F8F4EE' }}>Purchase details</div>
@@ -607,7 +695,8 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
             </div>
           </div>
         </div>
-      </div>
+        </div>{/* end S3 grid */}
+      </div>{/* end S3 */}
 
       {/* EQUITY MILESTONES + SELL TODAY */}
       {hasBasic && (
