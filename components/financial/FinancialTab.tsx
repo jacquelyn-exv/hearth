@@ -64,13 +64,15 @@ function InfoTooltipDark({ text }: { text: string }) {
   )
 }
 
-function ExpandableTip({ title, accentColor, children }: { title: string; accentColor: string; children: ReactNode }) {
+function ExpandableTip({ title, teaser, accentColor, children }: { title: string; teaser: string; accentColor: string; children: ReactNode }) {
   const [open, setOpen] = useState(false)
+  const textColor = accentColor === '#3D7A5A' ? '#27500A' : accentColor === '#C47B2B' ? '#7A4A10' : accentColor === '#185FA5' ? '#0C447C' : '#27500A'
   return (
     <div style={{ padding: '14px 16px', border: '0.5px solid rgba(30,58,47,0.11)', borderRadius: '12px', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderLeft: `3px solid ${accentColor}`, marginBottom: '12px' }}>
-      <button onClick={() => setOpen(!open)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0, textAlign: 'left' as const }}>
-        <span style={{ fontSize: '13px', fontWeight: 500, color: accentColor === '#3D7A5A' ? '#27500A' : accentColor === '#C47B2B' ? '#7A4A10' : accentColor === '#185FA5' ? '#0C447C' : '#27500A' }}>{title}</span>
-        <span style={{ fontSize: '11px', color: '#8A8A82', flexShrink: 0, marginLeft: '12px' }}>{open ? 'Less ▲' : 'More ▼'}</span>
+      <div style={{ fontSize: '13px', fontWeight: 500, color: textColor, marginBottom: '6px' }}>{title}</div>
+      <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '8px' }}>{teaser}</div>
+      <button onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0, fontSize: '11px', color: textColor, fontWeight: 500 }}>
+        {open ? 'Show less ▲' : 'See how it works ▼'}
       </button>
       {open && <div style={{ marginTop: '12px' }}>{children}</div>}
     </div>
@@ -295,6 +297,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
 
       {/* PURCHASE DETAILS + VALUE + RATES */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gap: '16px', alignSelf: 'start' }}>
         <div style={darkCardS}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3px' }}>
             <div style={{ fontSize: '15px', fontWeight: 500, color: '#F8F4EE' }}>Purchase details</div>
@@ -355,6 +358,34 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
           )}
         </div>
 
+          <div style={darkCardS}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3px' }}>
+              <div style={{ fontSize: '15px', fontWeight: 500, color: '#F8F4EE' }}>If you sold today<InfoTooltip text="This is your equity in cash — what you would walk away with after paying off your mortgage and covering the costs of selling. The actual amount varies by agent commission, local closing costs, and your exact payoff balance." /></div>
+              <button onClick={() => setEditingSale(!editingSale)} style={{ fontSize: '12px', color: '#6AAF8A', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0 }}>{editingSale ? 'Done' : 'Edit costs'}</button>
+            </div>
+            <div style={{ fontSize: '12px', color: 'rgba(248,244,238,0.55)', marginBottom: '12px' }}>Estimated net proceeds after costs</div>
+            {editingSale && (
+              <div style={{ padding: '12px', background: 'rgba(255,255,255,0.06)', borderRadius: '10px', marginBottom: '12px', display: 'grid', gap: '10px' }}>
+                <div style={{ fontSize: '12px', color: 'rgba(248,244,238,0.6)', lineHeight: 1.6 }}>Defaults: NAR avg commission ~5.5% (post-2024 settlement), typical closing costs 2–3%. Enter your actuals if you have them.</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div><label style={{ display: 'block', fontSize: '11px', color: 'rgba(248,244,238,0.6)', marginBottom: '3px' }}>Agent commission %</label><input value={agentCommissionPct} onChange={e => setAgentCommissionPct(e.target.value)} style={iS} type="number" step="0.1" min="0" max="10" placeholder="5.5" /><div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.4)', marginTop: '3px' }}>NAR avg: ~5.5% · Some brokers: 1–3%</div></div>
+                  <div><label style={{ display: 'block', fontSize: '11px', color: 'rgba(248,244,238,0.6)', marginBottom: '3px' }}>Closing costs %</label><input value={closingCostPct} onChange={e => setClosingCostPct(e.target.value)} style={iS} type="number" step="0.1" min="0" max="10" placeholder="2.0" /><div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.4)', marginTop: '3px' }}>Typical range: 2–3%</div></div>
+                </div>
+              </div>
+            )}
+            {estValue ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}><span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)' }}>Est. sale price</span><span style={{ fontSize: '13px', fontWeight: 500, color: '#F8F4EE' }}>{fmt(estValue)}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}><span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)' }}>Agent commission ({agentCommissionPct}%)</span><span style={{ fontSize: '13px', color: '#E57373' }}>–{fmt(agentFee)}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}><span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)' }}>Closing costs ({closingCostPct}%)</span><span style={{ fontSize: '13px', color: '#E57373' }}>–{fmt(closingCost)}</span></div>
+                {remainingBal > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}><span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)' }}>Remaining mortgage</span><span style={{ fontSize: '13px', color: '#E57373' }}>–{fmt(remainingBal)}</span></div>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'rgba(106,175,138,0.2)', borderRadius: '8px', marginTop: '10px', marginBottom: '10px' }}><span style={{ fontSize: '13px', fontWeight: 500, color: '#6AAF8A' }}>Est. cash in hand</span><span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: '#6AAF8A' }}>~{fmt(netProceeds)}</span></div>
+                <div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.4)', lineHeight: 1.6 }}>Agent fees, closing costs, and payoff vary. Consult a licensed real estate professional for an accurate net sheet.</div>
+              </>
+            ) : <div style={{ padding: '20px', textAlign: 'center', color: 'rgba(248,244,238,0.5)', fontSize: '13px' }}>Add purchase details to see your estimated net proceeds.</div>}
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gap: '12px' }}>
           <div style={cardS}>
             <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Value estimate</div>
@@ -395,7 +426,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
 
       {/* EQUITY MILESTONES + SELL TODAY */}
       {hasBasic && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gap: '16px' }}>
           <div style={cardS}>
             <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Equity milestone tracker<InfoTooltipDark text="Each milestone unlocks new financial options — more equity means lower borrowing costs, better loan terms, and a stronger position when you sell." /></div>
             <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '12px' }}>What each milestone unlocks for you</div>
@@ -422,32 +453,6 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
             </div>
           </div>
 
-          <div style={darkCardS}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '3px' }}>
-              <div style={{ fontSize: '15px', fontWeight: 500, color: '#F8F4EE' }}>If you sold today<InfoTooltip text="This is your equity in cash — what you would walk away with after paying off your mortgage and covering the costs of selling. The actual amount varies by agent commission, local closing costs, and your exact payoff balance." /></div>
-              <button onClick={() => setEditingSale(!editingSale)} style={{ fontSize: '12px', color: '#6AAF8A', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0 }}>{editingSale ? 'Done' : 'Edit costs'}</button>
-            </div>
-            <div style={{ fontSize: '12px', color: 'rgba(248,244,238,0.55)', marginBottom: '12px' }}>Estimated net proceeds after costs</div>
-            {editingSale && (
-              <div style={{ padding: '12px', background: 'rgba(255,255,255,0.06)', borderRadius: '10px', marginBottom: '12px', display: 'grid', gap: '10px' }}>
-                <div style={{ fontSize: '12px', color: 'rgba(248,244,238,0.6)', lineHeight: 1.6 }}>Defaults: NAR avg commission ~5.5% (post-2024 settlement), typical closing costs 2–3%. Enter your actuals if you have them.</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div><label style={{ display: 'block', fontSize: '11px', color: 'rgba(248,244,238,0.6)', marginBottom: '3px' }}>Agent commission %</label><input value={agentCommissionPct} onChange={e => setAgentCommissionPct(e.target.value)} style={iS} type="number" step="0.1" min="0" max="10" placeholder="5.5" /><div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.4)', marginTop: '3px' }}>NAR avg: ~5.5% · Some brokers: 1–3%</div></div>
-                  <div><label style={{ display: 'block', fontSize: '11px', color: 'rgba(248,244,238,0.6)', marginBottom: '3px' }}>Closing costs %</label><input value={closingCostPct} onChange={e => setClosingCostPct(e.target.value)} style={iS} type="number" step="0.1" min="0" max="10" placeholder="2.0" /><div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.4)', marginTop: '3px' }}>Typical range: 2–3%</div></div>
-                </div>
-              </div>
-            )}
-            {estValue ? (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}><span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)' }}>Est. sale price</span><span style={{ fontSize: '13px', fontWeight: 500, color: '#F8F4EE' }}>{fmt(estValue)}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}><span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)' }}>Agent commission ({agentCommissionPct}%)</span><span style={{ fontSize: '13px', color: '#E57373' }}>–{fmt(agentFee)}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}><span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)' }}>Closing costs ({closingCostPct}%)</span><span style={{ fontSize: '13px', color: '#E57373' }}>–{fmt(closingCost)}</span></div>
-                {remainingBal > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}><span style={{ fontSize: '13px', color: 'rgba(248,244,238,0.6)' }}>Remaining mortgage</span><span style={{ fontSize: '13px', color: '#E57373' }}>–{fmt(remainingBal)}</span></div>}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'rgba(106,175,138,0.2)', borderRadius: '8px', marginTop: '10px', marginBottom: '10px' }}><span style={{ fontSize: '13px', fontWeight: 500, color: '#6AAF8A' }}>Est. cash in hand</span><span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 600, color: '#6AAF8A' }}>~{fmt(netProceeds)}</span></div>
-                <div style={{ fontSize: '11px', color: 'rgba(248,244,238,0.4)', lineHeight: 1.6 }}>Agent fees, closing costs, and payoff vary. Consult a licensed real estate professional for an accurate net sheet.</div>
-              </>
-            ) : <div style={{ padding: '20px', textAlign: 'center', color: 'rgba(248,244,238,0.5)', fontSize: '13px' }}>Add purchase details to see your estimated net proceeds.</div>}
-          </div>
         </div>
       )}
 
@@ -494,7 +499,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
         <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Become a financially savvy homeowner</div>
         <div style={{ fontSize: '12px', color: '#8A8A82', marginBottom: '1.25rem' }}>Educational strategies to build equity faster and manage costs smarter. This is not financial advice — consult a licensed professional for guidance specific to your situation.</div>
 
-        <ExpandableTip title="Make one extra mortgage payment per year" accentColor="#3D7A5A">
+        <ExpandableTip title="Make one extra mortgage payment per year" teaser="One extra payment per year on a 30-year mortgage can shave 4-5 years off your loan and save tens of thousands in interest - without refinancing or changing anything about your loan." accentColor="#3D7A5A">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>Most homeowners do not realize that making just one extra mortgage payment per year can dramatically shorten their loan and save tens of thousands in interest — without refinancing or changing lenders. The math works because every extra dollar goes directly to principal, which reduces the balance that future interest is calculated on.</div>
           {hasLoan && extraSavings ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', marginBottom: '12px' }}>
@@ -508,14 +513,14 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
           <a href="https://www.consumerfinance.gov/ask-cfpb/how-does-paying-down-a-mortgage-work-en-1943/" target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#3D7A5A', textDecoration: 'none' }}>How paying down a mortgage works · CFPB.gov →</a>
         </ExpandableTip>
 
-        <ExpandableTip title="Switch to bi-weekly payments — the extra payment that happens automatically" accentColor="#3D7A5A">
+        <ExpandableTip title="Switch to bi-weekly payments — the extra payment that happens automatically" teaser="Pay half your mortgage every two weeks. Because there are 52 weeks in a year you end up making 13 full payments instead of 12 — automatically, without feeling the difference." accentColor="#3D7A5A">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>Instead of paying your full mortgage once a month, pay half every two weeks. Because there are 52 weeks in a year, you end up making 26 half-payments — which equals 13 full payments instead of 12. That 13th payment happens automatically without you feeling like you made an extra payment.</div>
           {monthlyPmt > 0 && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}><div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '6px' }}>Monthly schedule</div><div style={{ fontSize: '13px', color: '#8A8A82', marginBottom: '3px' }}>12 × {fmt(monthlyPmt)}</div><div style={{ fontSize: '16px', fontWeight: 500, color: '#1E3A2F' }}>{fmt(monthlyPmt * 12)} / yr</div></div><div style={{ background: '#EAF2EC', borderRadius: '8px', padding: '10px' }}><div style={{ fontSize: '11px', color: '#27500A', marginBottom: '6px' }}>Bi-weekly schedule</div><div style={{ fontSize: '13px', color: '#3D7A5A', marginBottom: '3px' }}>26 × {fmt(monthlyPmt / 2)}</div><div style={{ fontSize: '16px', fontWeight: 500, color: '#27500A' }}>{fmt(monthlyPmt * 13)} / yr</div><div style={{ fontSize: '11px', color: '#3D7A5A', marginTop: '4px', fontWeight: 500 }}>+{fmt(monthlyPmt)} extra · automatically</div></div></div>}
           <div style={{ padding: '10px 12px', background: '#F8F4EE', borderRadius: '8px', fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>Why this works:</strong> If you are paid bi-weekly, two months per year you receive 3 paychecks instead of 2 — that is where the 13th payment comes from. Same interest savings as making one extra payment annually.</div>
           <div style={{ padding: '10px 12px', background: '#FBF0DC', borderRadius: '8px', fontSize: '12px', color: '#7A4A10', lineHeight: 1.6 }}><strong style={{ color: '#7A4A10' }}>Important:</strong> Do not pay a third party to set this up — some companies charge $300+ for this service. Contact your loan servicer directly. It is free.</div>
         </ExpandableTip>
 
-        <ExpandableTip title="Use your equity to finance projects smartly — not high-interest debt" accentColor="#C47B2B">
+        <ExpandableTip title="Use your equity to finance projects smartly — not high-interest debt" teaser="A HELOC lets you borrow against your equity at ~8% — far lower than a personal loan at ~15% or a credit card at ~24%. On a $20,000 project that difference is thousands in real savings." accentColor="#C47B2B">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>You have built equity in your home. That equity can work for you when it is time for a major project — at far lower interest rates than personal loans or credit cards. On a $20,000 project the rate difference means thousands of dollars in real savings.</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', marginBottom: '12px' }}>
             <div style={{ background: '#EAF2EC', borderRadius: '8px', padding: '12px', textAlign: 'center' as const }}><div style={{ fontSize: '12px', fontWeight: 500, color: '#27500A', marginBottom: '4px' }}>HELOC</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#27500A' }}>~8%</div><div style={{ fontSize: '11px', color: '#3D7A5A', marginTop: '4px', lineHeight: 1.4 }}>Secured by home · revolving credit</div></div>
@@ -527,7 +532,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
           <a href="https://www.consumerfinance.gov/ask-cfpb/what-is-a-home-equity-line-of-credit-heloc-en-1015/" target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#C47B2B', textDecoration: 'none' }}>What is a HELOC? · CFPB.gov →</a>
         </ExpandableTip>
 
-        <ExpandableTip title="Budget 1% of your home value annually for maintenance" accentColor="#C47B2B">
+        <ExpandableTip title="Budget 1% of your home value annually for maintenance" teaser="Set aside 1% of your home value each year as a maintenance reserve. A $500 problem left unaddressed becomes a $6,000 emergency. This rule keeps small issues from compounding into expensive ones." accentColor="#C47B2B">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>Setting aside 1% of your home value each year creates a maintenance reserve that keeps small problems from becoming expensive emergencies. Deferred maintenance does not stay the same — it compounds. A $500 roof repair ignored for two years can become a $6,000 replacement.</div>
           {budget1pct > 0 && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', marginBottom: '12px' }}><div style={{ background: '#EAF2EC', borderRadius: '8px', padding: '12px', textAlign: 'center' as const }}><div style={{ fontSize: '11px', color: '#27500A', marginBottom: '4px' }}>Your 1% target</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#27500A' }}>{fmt(budget1pct)}</div><div style={{ fontSize: '11px', color: '#3D7A5A', marginTop: '2px' }}>per year</div></div><div style={statS}><div style={{ fontSize: '11px', color: '#8A8A82', marginBottom: '4px' }}>Monthly reserve</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: '#1E3A2F' }}>{fmt(budget1pct / 12)}</div><div style={{ fontSize: '11px', color: '#8A8A82', marginTop: '2px' }}>per month</div></div><div style={{ background: thisYearSpend >= budget1pct ? '#EAF2EC' : '#FDECEA', borderRadius: '8px', padding: '12px', textAlign: 'center' as const }}><div style={{ fontSize: '11px', color: thisYearSpend >= budget1pct ? '#27500A' : '#791F1F', marginBottom: '4px' }}>Spent this year</div><div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '20px', fontWeight: 600, color: thisYearSpend >= budget1pct ? '#27500A' : '#791F1F' }}>{fmt(thisYearSpend)}</div><div style={{ fontSize: '11px', color: thisYearSpend >= budget1pct ? '#3D7A5A' : '#9B2C2C', marginTop: '2px' }}>{thisYearSpend >= budget1pct ? 'On track' : `${fmt(budget1pct - thisYearSpend)} behind`}</div></div></div>}
           <div style={{ padding: '10px 12px', background: '#F8F4EE', borderRadius: '8px', fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#1E3A2F' }}>Older homes need more.</strong> If your home was built before 1980 or is in a harsh climate, budget closer to 2% ({budget1pct > 0 ? fmt(budget1pct * 2) : 'double your target'}/year). Major systems like HVAC, roofing, and plumbing have finite lifespans.</div>
@@ -535,14 +540,14 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
           <a href="https://www.consumerfinance.gov/owning-a-home/process/close/homeownership-costs/" target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#C47B2B', textDecoration: 'none' }}>Homeownership costs guide · CFPB.gov →</a>
         </ExpandableTip>
 
-        <ExpandableTip title="Mortgage interest may be tax deductible — do not leave money on the table" accentColor="#185FA5">
+        <ExpandableTip title="Mortgage interest may be tax deductible — do not leave money on the table" teaser="If you itemize federal deductions, the interest on your mortgage may be deductible on up to $750,000 of loan principal. In early mortgage years this can represent meaningful annual tax savings." accentColor="#185FA5">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>If you itemize deductions on your federal tax return, the interest you pay on your mortgage may be deductible — up to $750,000 of loan principal for loans originated after December 2017. In the early years of a mortgage when most of your payment is interest, this deduction can be significant.</div>
           <div style={{ padding: '10px 12px', background: '#E6F1FB', borderRadius: '8px', fontSize: '12px', color: '#0C447C', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#0C447C' }}>For reference:</strong> {hasLoan && interestPaidEst > 0 ? `In year ${yearsPaid} of your loan, roughly ${fmt(Math.round(interestPaidEst / Math.max(1, yearsPaid)))} of your annual payments went toward interest. At a 22% federal tax bracket, that is potentially ${fmt(Math.round(interestPaidEst / Math.max(1, yearsPaid)) * 0.22)} in tax savings if you itemize.` : 'Add your loan details above to see an estimate of your potential interest deduction.'} Your actual benefit depends on whether itemizing beats the standard deduction for your situation.</div>
           <div style={{ padding: '10px 12px', background: '#FBF0DC', borderRadius: '8px', fontSize: '12px', color: '#7A4A10', lineHeight: 1.6, marginBottom: '10px' }}><strong style={{ color: '#7A4A10' }}>Important:</strong> Tax rules change and individual situations vary. Always consult a licensed tax professional or CPA. Hearth cannot provide tax advice.</div>
           <a href="https://www.irs.gov/publications/p936" target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#185FA5', textDecoration: 'none' }}>IRS Publication 936 — Home mortgage interest deduction →</a>
         </ExpandableTip>
 
-        <ExpandableTip title="Document everything — it pays off when you sell" accentColor="#3D7A5A">
+        <ExpandableTip title="Document everything — it pays off when you sell" teaser="Buyers negotiate with uncertainty. A home with complete documented history removes their leverage. Documented homes sell faster and closer to asking price — Hearth builds that record automatically as you log jobs." accentColor="#3D7A5A">
           <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.7, marginBottom: '12px' }}>A buyer who can see every repair, upgrade, inspection, and contractor job logged for your home has no uncertainty to negotiate with. Uncertainty is the buyer most powerful tool — it drives inspection credits, price reductions, and extended closing timelines.</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
             <div style={{ background: '#FDECEA', borderRadius: '8px', padding: '12px' }}><div style={{ fontSize: '12px', fontWeight: 500, color: '#791F1F', marginBottom: '6px' }}>Without records</div>{['Buyer assumes worst case on every system', 'Inspector flags unknowns as risks', 'Buyer requests $10–30k in credits', 'Longer days on market', 'Final price further from asking'].map(t => <div key={t} style={{ fontSize: '11px', color: '#9B2C2C', lineHeight: 1.5, marginBottom: '3px' }}>· {t}</div>)}</div>
