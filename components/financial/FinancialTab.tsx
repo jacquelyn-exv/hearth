@@ -208,7 +208,7 @@ function calcExtraSavings(principal: number, annualRate: number, termYears: numb
   return { saved: Math.max(0, Math.round(mp * n - totalPaid)), yearsCut: Math.max(0, Math.round((n - months) / 12)) }
 }
 
-export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thisYearJobs }: { home: any; jobs: any[]; systems: any[]; deferred: number; thisYearSpend: number; thisYearJobs: number }) {
+export function FinancialTab({ home, jobs, systems, details: homeDetails, deferred, thisYearSpend, thisYearJobs }: { home: any; jobs: any[]; systems: any[]; details: any; deferred: number; thisYearSpend: number; thisYearJobs: number }) {
   const [details, setDetails] = useState<any>(null)
   const [editing, setEditing] = useState(false)
   const [purchasePrice, setPurchasePrice] = useState('')
@@ -296,6 +296,93 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
   const freddie = { rate30: 6.81, rate15: 6.10 }
   const fmt = (n: number) => '$' + Math.round(n).toLocaleString()
   const fmtK = (n: number) => n >= 1000 ? '$' + Math.round(n / 1000) + 'k' : fmt(n)
+  // Smart deferred cost estimates using home type + system detail fields
+  const homeType = homeDetails?.home_type || home?.home_type || 'single_family'
+  const isTownhouse = homeType === 'townhouse'
+  const isCondo = homeType === 'condo'
+
+  function getSmartSystemCost(systemType: string): { cost: number; note: string } {
+    const sys = systems.find((s: any) => s.system_type === systemType)
+
+    // Windows — use window_count if available, else estimate from sqft
+    if (systemType === 'windows') {
+      const count = sys?.window_count || (homeDetails?.sqft ? Math.round(homeDetails.sqft / 80) : 15)
+      const costPerWindow = 950 // quality vinyl installed, CVV ref $22,073 / ~23 windows
+      return { cost: count * costPerWindow, note: `${count} windows × $950 avg installed · CVV 2025 national avg $22,073` }
+    }
+
+    // Entry door — use has_glass_lites_or_sidelites + quantity
+    if (systemType === 'entry_door') {
+      const hasSidelight = sys?.has_glass_lites_or_sidelites
+      const qty = sys?.quantity || 1
+      const baseCost = hasSidelight ? 4500 : 2800 // with vs without sidelight, installed
+      return { cost: baseCost * qty, note: `${qty} door${qty > 1 ? 's' : ''} · ${hasSidelight ? 'includes sidelight' : 'no sidelight'} · CVV 2025 ref $11,754 w/sidelight` }
+    }
+
+    // Roof — CVV 2025 = $31,871 national avg (upscale midrange)
+    if (systemType === 'roof') {
+      const cost = isCondo ? 0 : isTownhouse ? 14000 : 20000
+      if (isCondo) return { cost: 0, note: 'Not applicable for condos — covered by HOA' }
+      return { cost, note: isTownhouse ? 'Townhouse estimate · CVV 2025 national avg $31,871 for single family' : 'Single family estimate · architectural shingles · CVV 2025 national avg $31,871' }
+    }
+
+    // Siding — CVV 2025 = $21,485 fiber-cement national avg
+    if (systemType === 'siding') {
+      const cost = isCondo ? 0 : isTownhouse ? 11000 : 20000
+      if (isCondo) return { cost: 0, note: 'Not applicable for condos — covered by HOA' }
+      return { cost, note: isTownhouse ? 'Townhouse estimate · CVV 2025 national avg $21,485 for single family' : 'Single family estimate · vinyl · CVV 2025 fiber-cement avg $21,485' }
+    }
+
+    // HVAC
+    if (systemType === 'hvac') {
+      const cost = isCondo ? 4000 : isTownhouse ? 6000 : 9000
+      return { cost, note: 'Full system replacement · varies by home size and unit type' }
+    }
+
+    // Deck — not applicable for condo, smaller for townhouse
+    if (systemType === 'deck') {
+      if (isCondo) return { cost: 0, note: 'Not applicable for condos' }
+      const cost = isTownhouse ? 8000 : 15000
+      return { cost, note: 'Composite decking · varies significantly by sq footage and material' }
+    }
+
+    // Fencing
+    if (systemType === 'fencing') {
+      if (isCondo) return { cost: 0, note: 'Not applicable for condos' }
+      const cost = isTownhouse ? 5000 : 8000
+      return { cost, note: 'Varies significantly by linear footage and material (wood vs vinyl vs aluminum)' }
+    }
+
+    // Driveway
+    if (systemType === 'driveway') {
+      if (isCondo || isTownhouse) return { cost: 0, note: 'Not applicable — shared or HOA maintained' }
+      return { cost: 6000, note: 'Asphalt reseal/repave · varies by sq footage' }
+    }
+
+    // Plumbing
+    if (systemType === 'plumbing') {
+      const cost = isCondo ? 3000 : isTownhouse ? 6000 : 10000
+      return { cost, note: 'Partial replumb estimate · major buyer inspection flag' }
+    }
+
+    // Electrical
+    if (systemType === 'electrical') {
+      const cost = isCondo ? 2500 : isTownhouse ? 4000 : 6000
+      return { cost, note: 'Panel upgrade estimate · outdated panels are major buyer concern' }
+    }
+
+    // All other systems — flat costs
+    const flatCosts: Record<string, { cost: number; note: string }> = {
+      water_heater: { cost: 1800, note: 'Tank replacement installed' },
+      chimney: { cost: 3500, note: 'Rebuild/reline estimate' },
+      sump_pump: { cost: 1200, note: 'Replacement with battery backup' },
+      sliding_door: { cost: 2500, note: 'Quality vinyl installed' },
+      refrigerator: { cost: 1000, note: 'Mid-range replacement' },
+      dishwasher: { cost: 800, note: 'Mid-range replacement installed' },
+    }
+    return flatCosts[systemType] || { cost: 3000, note: 'Estimated replacement cost' }
+  }
+
   const milestones = [
     { pct: 20, label: '20% equity', desc: 'Remove PMI · save $200–400/mo' },
     { pct: 25, label: '25% equity', desc: 'Better HELOC rates · stronger borrowing position' },

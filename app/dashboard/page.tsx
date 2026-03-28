@@ -280,15 +280,37 @@ function getCondition(sys: any) {
 }
 
 function getDeferredLiability(systems: any[]): number {
-  const costs: Record<string,number> = {roof:12000,hvac:7000,water_heater:1500,windows:6000,deck:8000,siding:12000,entry_door:2000,sliding_door:2500,gutters:2000,driveway:4000,fencing:3000,chimney:2000,sump_pump:800}
+  // Costs represent realistic replacement/repair costs buyers would flag at inspection
+  const costs: Record<string,number> = {
+    roof: 12000,
+    hvac: 7000,
+    water_heater: 1500,
+    windows: 6000,
+    deck_patio: 8000,      // fixed: was 'deck', system_type is 'deck_patio'
+    siding: 12000,
+    entry_door: 2000,
+    sliding_door: 2500,
+    gutters_trim: 2000,    // fixed: was 'gutters', system_type is 'gutters_trim'
+    driveway: 4000,
+    fencing: 3000,
+    chimney: 2000,
+    sump_pump: 800,
+    plumbing: 8000,        // added: partial replumb, major buyer flag
+    electrical: 6000,      // added: panel upgrade, major buyer flag
+    refrigerator: 1200,    // added: appliance replacement
+    dishwasher: 800,       // added: appliance replacement
+  }
   let total = 0
   for (const sys of systems) {
     if (sys.not_applicable) continue
     const yr = sys.replacement_year || sys.install_year
     if (!yr) continue
+    const sysType = sys.system_type?.toLowerCase().replace(/ \/ /g,'_').replace(/ /g,'_').replace(/&/g,'').replace(/__/g,'_').replace(/^_|_$/g,'')
+    const cost = costs[sysType]
+    if (!cost) continue
     const pct = (new Date().getFullYear() - yr) / (SYSTEM_LIFESPANS[sys.system_type] || 20)
-    if (pct > 1.0) total += (costs[sys.system_type] || 3000)
-    else if (pct > 0.8) total += (costs[sys.system_type] || 3000) * 0.3
+    if (pct > 1.0) total += cost
+    else if (pct > 0.8) total += cost * 0.3
   }
   return Math.round(total)
 }
@@ -1573,6 +1595,7 @@ export default function Dashboard() {
             home={home}
             jobs={jobs}
             systems={systems}
+            details={details}
             deferred={deferred}
             thisYearSpend={thisYearSpend}
             thisYearJobs={thisYearJobs}
