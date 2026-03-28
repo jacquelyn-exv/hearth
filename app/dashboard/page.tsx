@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { FinancialTab } from '@/components/financial/FinancialTab'
 import { MaintenanceLog } from '@/components/log/MaintenanceLog'
 import { getSmartTasks as getEngineSmartTasks } from '@/lib/smartTasks'
 import { adaptHomeProfile } from '@/lib/adaptHomeProfile'
@@ -1546,38 +1547,17 @@ export default function Dashboard() {
           </div>
         )}
         {/* ══ FINANCIAL ══ */}
-        {activeTab==='financial'&&(
-          <div>
-            <div style={{background:'#1E3A2F',borderRadius:'16px',padding:'28px 32px',marginBottom:'24px',position:'relative',overflow:'hidden'}}>
-              <div style={{position:'absolute',top:'-60px',right:'-60px',width:'300px',height:'300px',background:'radial-gradient(circle, rgba(196,123,43,0.15) 0%, transparent 70%)',pointerEvents:'none'}}/>
-              <div style={{position:'relative',zIndex:1}}>
-                <div style={{fontSize:'11px',fontWeight:500,letterSpacing:'1.5px',textTransform:'uppercase',color:'rgba(248,244,238,0.45)',marginBottom:'16px'}}>Financial Intelligence</div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'24px',marginBottom:'20px'}}>
-                  {[{label:'Maintenance spent (this year)',value:thisYearSpend>0?`$${thisYearSpend.toLocaleString()}`:'$0',sub:`${thisYearJobs} job${thisYearJobs!==1?'s':''} logged this year`,color:'#F8F4EE'},{label:'Deferred maintenance liability',value:deferred>0?`~$${deferred.toLocaleString()}`:'$0',sub:deferred>0?'Cost grows if left unaddressed':'No deferred maintenance identified',color:deferred>0?'#E57373':'#6AAF8A'},{label:'Home value at risk',value:deferred>0?`~$${Math.round(deferred*2.1).toLocaleString()}`:'$0',sub:'Estimated buyer negotiation impact at sale',color:deferred>0?'#E57373':'#6AAF8A'}].map(stat=>(<div key={stat.label}><div style={{fontSize:'11px',color:'rgba(248,244,238,0.45)',marginBottom:'6px'}}>{stat.label}</div><div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'28px',fontWeight:600,color:stat.color,marginBottom:'4px'}}>{stat.value}</div><div style={{fontSize:'12px',color:'rgba(248,244,238,0.5)'}}>{stat.sub}</div></div>))}
-                </div>
-                {deferred>0&&(<div><div style={{fontSize:'12px',color:'rgba(248,244,238,0.5)',marginBottom:'6px'}}>Most impactful: Address {systems.filter(s=>['Inspect','Priority'].includes(getCondition(s).label))[0]?.system_type?.replace(/_/g,' ')||'flagged systems'} first</div><div style={{height:'8px',background:'rgba(255,255,255,0.1)',borderRadius:'4px',marginBottom:'4px'}}><div style={{width:`${Math.min(100,(deferred/15000)*100)}%`,height:'100%',background:deferred>8000?'#E57373':deferred>4000?'#C47B2B':'#6AAF8A',borderRadius:'4px'}}/></div><div style={{display:'flex',justifyContent:'space-between',fontSize:'11px',color:'rgba(248,244,238,0.35)'}}><span>$0 deferred</span><span>Your home</span><span>$15,000+ critical</span></div></div>)}
-              </div>
-            </div>
-            <h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'20px',fontWeight:400,color:'#1E3A2F',marginBottom:'6px'}}>Cost of Action vs. Inaction</h2>
-            <p style={{fontSize:'13px',color:'#8A8A82',marginBottom:'20px',lineHeight:1.6}}>Each system shows what it costs to address now vs. what happens if you wait.</p>
-            <div style={{display:'grid',gap:'16px',marginBottom:'32px'}}>
-              {systems.filter(s=>!s.not_applicable&&getCondition(s).label!=='Good').map(sys=>{
-                const cond=getCondition(sys);const cd=COST_DATA[sys.system_type];if(!cd)return null
-                return(<div key={sys.id} style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden'}}>
-                  <div style={{padding:'16px 20px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between'}}><div style={{display:'flex',alignItems:'center',gap:'12px'}}><div style={{fontSize:'24px'}}>{SYSTEM_ICONS[sys.system_type]}</div><div><div style={{fontSize:'15px',fontWeight:500,color:'#1E3A2F'}}>{SYSTEM_DISPLAY_NAMES[sys.system_type]}</div><div style={{fontSize:'12px',color:'#8A8A82'}}>{sys.material||'Material unknown'}{sys.install_year?` · ${new Date().getFullYear()-sys.install_year} yr old`:''}</div></div></div><span style={{fontSize:'11px',fontWeight:500,padding:'4px 10px',borderRadius:'20px',background:cond.bg,color:cond.textColor}}>{cond.label}</span></div>
-                  <div style={{padding:'16px 20px'}}><div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'12px',marginBottom:'14px'}}>{[{label:'Maintain now',amount:cd.maintain,icon:'✅',bg:'#EAF2EC',color:'#3D7A5A'},{label:'Repair if ignored',amount:cd.repair,icon:'⏳',bg:'#FBF0DC',color:'#7A4A10'},{label:'Emergency cost',amount:cd.emergency,icon:'🚨',bg:'#FDECEA',color:'#9B2C2C'}].map(tier=>(<div key={tier.label} style={{background:tier.bg,borderRadius:'10px',padding:'12px'}}><div style={{fontSize:'16px',marginBottom:'4px'}}>{tier.icon}</div><div style={{fontSize:'11px',fontWeight:600,color:tier.color,marginBottom:'4px',textTransform:'uppercase',letterSpacing:'0.5px'}}>{tier.label}</div><div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',color:tier.color,fontWeight:600}}>{tier.amount}</div></div>))}</div><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#F8F4EE',borderRadius:'8px',padding:'10px 14px'}}><span style={{fontSize:'12px',color:'#1E3A2F'}}>🏠 Home value impact at sale</span><span style={{fontSize:'13px',fontWeight:600,color:'#9B2C2C'}}>–{cd.valueAtRisk}</span></div></div>
-                </div>)
-              })}
-              {systems.filter(s=>!s.not_applicable&&getCondition(s).label!=='Good').length===0&&(<div style={{background:'#EAF2EC',border:'1px solid rgba(61,122,90,0.2)',borderRadius:'16px',padding:'32px',textAlign:'center'}}><div style={{fontSize:'40px',marginBottom:'12px'}}>✅</div><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'20px',fontWeight:400,color:'#1E3A2F',marginBottom:'6px'}}>All systems in good shape</h3><p style={{fontSize:'13px',color:'#8A8A82'}}>No deferred maintenance identified. Keep logging jobs to maintain your score.</p></div>)}
-            </div>
-            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden'}}>
-              <div style={{padding:'16px 20px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between'}}><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F'}}>Neighborhood Benchmark</h3>{home?.zip&&<span style={{fontSize:'12px',background:'#EAF2EC',color:'#3D7A5A',padding:'3px 10px',borderRadius:'20px',fontWeight:500}}>ZIP {home.zip}</span>}</div>
-              <div style={{padding:'20px'}}><div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'12px',marginBottom:'16px'}}>{[{label:'You spent (this year)',value:thisYearSpend>0?`$${thisYearSpend.toLocaleString()}`:'$0',bg:'#F8F4EE',color:'#1E3A2F'},{label:'Neighbor pricing',value:'See neighbors',bg:'#EAF2EC',color:'#3D7A5A'},{label:'Jobs logged',value:String(jobs.length),bg:'#FBF0DC',color:'#7A4A10'}].map(stat=>(<div key={stat.label} style={{background:stat.bg,borderRadius:'12px',padding:'16px',textAlign:'center'}}><div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'22px',color:stat.color,fontWeight:600,marginBottom:'4px'}}>{stat.value}</div><div style={{fontSize:'12px',color:'#8A8A82'}}>{stat.label}</div></div>))}</div><div style={{background:'#FBF0DC',borderRadius:'10px',padding:'12px 16px',fontSize:'13px',color:'#7A4A10',lineHeight:1.6}}>💡 Homes that stay current on maintenance typically sell 8–12 days faster and closer to asking price. <a href="/neighbors" style={{color:'#C47B2B',fontWeight:500}}>See neighbor jobs →</a></div></div>
-            </div>
-          </div>
+        {activeTab==='financial'&&home&&(
+          <FinancialTab
+            home={home}
+            jobs={jobs}
+            systems={systems}
+            deferred={deferred}
+            thisYearSpend={thisYearSpend}
+            thisYearJobs={thisYearJobs}
+          />
         )}
-
-        {activeTab==='log'&&home&&user&&<MaintenanceLog homeId={home.id} userId={user.id} userName={displayName||user.email||''} zip={home.zip||''}/>}
+                {activeTab==='log'&&home&&user&&<MaintenanceLog homeId={home.id} userId={user.id} userName={displayName||user.email||''} zip={home.zip||''}/>}
         {activeTab==='projects'&&<ProjectsTab homeId={home?.id} userId={user?.id}/>}
         {activeTab==='maintenance'&&<MaintenanceTab systems={systems} home={home} jobs={jobs} onTabChange={setActiveTab}/>}
 
