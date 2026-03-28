@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getAppreciationPct, estimateCurrentValue, STATE_NAMES } from '@/lib/fhfaHpi'
@@ -46,20 +46,34 @@ const tipS: any = { padding: '16px 18px', border: '0.5px solid rgba(30,58,47,0.1
 
 function InfoTooltip({ text }: { text: string }) {
   const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
   return (
-    <span style={{ position: 'relative', display: 'inline-block', marginLeft: '6px' }}>
+    <span ref={ref} style={{ position: 'relative', display: 'inline-block', marginLeft: '6px' }}>
       <button onClick={() => setOpen(!open)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', cursor: 'pointer', color: 'rgba(248,244,238,0.7)', fontWeight: 700, lineHeight: '16px', padding: 0, verticalAlign: 'middle' }}>?</button>
-      {open && <div onClick={() => setOpen(false)} style={{ position: 'absolute', bottom: '24px', left: '-8px', background: '#1E3A2F', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '12px', padding: '12px 14px', width: '260px', fontSize: '12px', color: 'rgba(248,244,238,0.85)', lineHeight: 1.6, zIndex: 100, cursor: 'pointer' }}>{text}<div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.4)', marginTop: '6px' }}>Tap to close</div></div>}
+      {open && <div style={{ position: 'absolute', bottom: '24px', left: '-8px', background: '#1E3A2F', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '12px', padding: '12px 14px', width: '260px', fontSize: '12px', color: 'rgba(248,244,238,0.85)', lineHeight: 1.6, zIndex: 100 }}>{text}</div>}
     </span>
   )
 }
 
 function InfoTooltipDark({ text }: { text: string }) {
   const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
   return (
-    <span style={{ position: 'relative', display: 'inline-block', marginLeft: '6px' }}>
+    <span ref={ref} style={{ position: 'relative', display: 'inline-block', marginLeft: '6px' }}>
       <button onClick={() => setOpen(!open)} style={{ background: 'rgba(30,58,47,0.1)', border: '1px solid rgba(30,58,47,0.2)', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', cursor: 'pointer', color: '#8A8A82', fontWeight: 700, lineHeight: '14px', padding: 0, verticalAlign: 'middle' }}>?</button>
-      {open && <div onClick={() => setOpen(false)} style={{ position: 'absolute', bottom: '24px', left: '-8px', background: '#1E3A2F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px 14px', width: '260px', fontSize: '12px', color: 'rgba(248,244,238,0.85)', lineHeight: 1.6, zIndex: 100, cursor: 'pointer' }}>{text}<div style={{ fontSize: '10px', color: 'rgba(248,244,238,0.4)', marginTop: '6px' }}>Tap to close</div></div>}
+      {open && <div style={{ position: 'absolute', bottom: '24px', left: '-8px', background: '#1E3A2F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px 14px', width: '260px', fontSize: '12px', color: 'rgba(248,244,238,0.85)', lineHeight: 1.6, zIndex: 100 }}>{text}</div>}
     </span>
   )
 }
