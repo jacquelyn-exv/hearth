@@ -79,6 +79,39 @@ function ExpandableTip({ title, teaser, accentColor, children }: { title: string
   )
 }
 
+function LenderFactors({ remainingBal, estValue }: { remainingBal: number; estValue: number }) {
+  const [open, setOpen] = useState(false)
+  const currentLTV = remainingBal && estValue ? Math.round(remainingBal / estValue * 100) : null
+  const factors = [
+    { label: 'Credit score', desc: '720+ gets best rates · 680–719 is good · below 620 significantly limits your options and rate', calc: 'Check yours free at annualcreditreport.com · improving your score before applying can save thousands' },
+    { label: 'DTI ratio', desc: 'Debt-to-income: most lenders want your total monthly debt payments below 43% of gross monthly income · some programs allow up to 50%', calc: 'Calc: add all monthly debt payments ÷ gross monthly income × 100. e.g. $2,000 debts ÷ $6,000 income = 33% DTI' },
+    { label: 'LTV ratio', desc: 'Loan-to-value: lower LTV = less risk for lender = better rate · 80% or below removes PMI and unlocks best terms · 60% or below gets premium rates', calc: currentLTV ? `Your current LTV: ~${currentLTV}% · Calc: loan balance ÷ home value × 100` : 'Calc: loan balance ÷ home value × 100 · e.g. $300k ÷ $400k = 75% LTV' },
+    { label: 'Payment history', desc: '24 months of on-time payments is the benchmark · a single 30-day late payment in the last 12 months can hurt your approval chances · collections and bankruptcies have multi-year impacts', calc: 'View on your free credit report · dispute any errors you find — they are more common than you think' },
+    { label: 'Cash reserves', desc: 'Lenders want to see 2–6 months of mortgage payments in savings after closing · shows you can handle a financial setback without defaulting', calc: 'Calc: monthly payment × 3 months minimum. e.g. $2,000/mo = $6,000 reserve needed' },
+    { label: 'Income & employment', desc: '2+ years same employer preferred · job changes in the same field are usually acceptable · self-employed requires 2 years of tax returns showing consistent income', calc: 'Verified via pay stubs, W-2s, 1099s, or federal tax returns · gaps in employment may require explanation letters' },
+  ]
+  return (
+    <div style={{ padding: '12px 14px', background: '#F8F4EE', borderRadius: '10px' }}>
+      <button onClick={() => setOpen(!open)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0 }}>
+        <span style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F' }}>What else do lenders look at beyond equity?</span>
+        <span style={{ fontSize: '11px', color: '#8A8A82' }}>{open ? 'Hide ▲' : 'Show ▼'}</span>
+      </button>
+      {open && (
+        <div style={{ marginTop: '12px' }}>
+          {factors.map((item, i, arr) => (
+            <div key={item.label} style={{ paddingBottom: '10px', borderBottom: i < arr.length - 1 ? '0.5px solid rgba(30,58,47,0.06)' : 'none', marginBottom: i < arr.length - 1 ? '8px' : 0 }}>
+              <div style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>{item.label}</div>
+              <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '3px' }}>{item.desc}</div>
+              <div style={{ fontSize: '11px', color: '#C47B2B' }}>{item.calc}</div>
+            </div>
+          ))}
+          <a href="https://www.consumerfinance.gov/ask-cfpb/what-is-a-debt-to-income-ratio-why-is-the-43-debt-to-income-ratio-important-en-1791/" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: '10px', fontSize: '11px', color: '#3D7A5A', textDecoration: 'none' }}>Understanding DTI and loan qualification · CFPB.gov →</a>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CollapsibleExplainer({ title, children, linkHref, linkText }: { title: string; children: ReactNode; linkHref?: string; linkText?: string }) {
   const [open, setOpen] = useState(false)
   return (
@@ -433,24 +466,7 @@ export function FinancialTab({ home, jobs, systems, deferred, thisYearSpend, thi
             <div style={{ display: 'grid', gap: '8px', marginBottom: '16px' }}>
               {milestones.map(m => { const reached = equityPct >= m.pct; const close = !reached && equityPct >= m.pct - 10; return (<div key={m.pct} style={{ padding: '10px 12px', background: reached ? '#EAF2EC' : '#F8F4EE', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: '12px', fontWeight: 500, color: reached ? '#27500A' : '#1E3A2F' }}>{m.label}</div><div style={{ fontSize: '11px', color: reached ? '#3D7A5A' : '#8A8A82', marginTop: '2px' }}>{m.desc}</div></div><span style={reached ? pillG : close ? pillA : { ...pillA, background: '#F8F4EE', color: '#8A8A82', border: '0.5px solid rgba(30,58,47,0.15)' }}>{reached ? 'Reached' : close ? 'In progress' : 'Not yet'}</span></div>) })}
             </div>
-            <div style={{ padding: '12px 14px', background: '#F8F4EE', borderRadius: '10px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F', marginBottom: '10px' }}>What else do lenders look at beyond equity?</div>
-              {[
-                { label: 'Credit score', desc: '720+ gets best rates · 680–719 is good · below 620 significantly limits your options and rate', calc: 'Check yours free at annualcreditreport.com · improving your score before applying can save thousands' },
-                { label: 'DTI ratio', desc: 'Debt-to-income: most lenders want your total monthly debt payments below 43% of gross monthly income · some programs allow up to 50%', calc: `Calc: add all monthly debt payments ÷ gross monthly income × 100. e.g. $2,000 debts ÷ $6,000 income = 33% DTI` },
-                { label: 'LTV ratio', desc: 'Loan-to-value: lower LTV = less risk for lender = better rate · 80% or below removes PMI and unlocks best terms · 60% or below gets premium rates', calc: remainingBal && estValue ? `Your current LTV: ~${Math.round(remainingBal / estValue * 100)}% · Calc: loan balance ÷ home value × 100` : 'Calc: loan balance ÷ home value × 100 · e.g. $300k ÷ $400k = 75% LTV' },
-                { label: 'Payment history', desc: '24 months of on-time payments is the benchmark · a single 30-day late payment in the last 12 months can hurt your approval chances · collections and bankruptcies have multi-year impacts', calc: 'View on your free credit report · dispute any errors you find — they are more common than you think' },
-                { label: 'Cash reserves', desc: 'Lenders want to see 2–6 months of mortgage payments in savings after closing · shows you can handle a financial setback without defaulting', calc: 'Calc: monthly payment × 3 months minimum. e.g. $2,000/mo = $6,000 reserve needed' },
-                { label: 'Income & employment', desc: '2+ years same employer preferred · job changes in the same field are usually acceptable · self-employed requires 2 years of tax returns showing consistent income', calc: 'Verified via pay stubs, W-2s, 1099s, or federal tax returns · gaps in employment may require explanation letters' },
-              ].map((item: any, i: number, arr: any[]) => (
-                <div key={item.label} style={{ paddingBottom: '10px', borderBottom: i < arr.length - 1 ? '0.5px solid rgba(30,58,47,0.06)' : 'none', marginBottom: i < arr.length - 1 ? '8px' : 0 }}>
-                  <div style={{ fontSize: '12px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>{item.label}</div>
-                  <div style={{ fontSize: '12px', color: '#4A4A44', lineHeight: 1.6, marginBottom: '3px' }}>{item.desc}</div>
-                  <div style={{ fontSize: '11px', color: '#C47B2B' }}>{item.calc}</div>
-                </div>
-              ))}
-              <a href="https://www.consumerfinance.gov/ask-cfpb/what-is-a-debt-to-income-ratio-why-is-the-43-debt-to-income-ratio-important-en-1791/" target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: '10px', fontSize: '11px', color: '#3D7A5A', textDecoration: 'none' }}>Understanding DTI and loan qualification · CFPB.gov →</a>
-            </div>
+            <LenderFactors remainingBal={remainingBal} estValue={estValue} />
           </div>
 
         </div>
