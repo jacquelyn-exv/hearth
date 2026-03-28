@@ -770,7 +770,8 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
                         <div key={sys}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                             <span style={{ fontSize: '13px', color: '#1E3A2F', textTransform: 'capitalize' }}>{sys.replace(/_/g, ' ')}</span>
-                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>${avg.toLocaleString()} <span style={{ fontSize: '10px', color: '#8A8A82', fontWeight: 400 }}>· {(prices as number[]).length} job{(prices as number[]).length !== 1 ? 's' : ''}</span></span>
+                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#1E3A2F' }}>${avg.toLocaleString()}</span>
+                            <span style={{ fontSize: '11px', color: '#8A8A82' }}>· {(prices as number[]).length} job{(prices as number[]).length !== 1 ? 's' : ''}</span>
                           </div>
                           <div style={{ height: '6px', background: '#EDE8E0', borderRadius: '3px' }}>
                             <div style={{ width: `${Math.min(100, (avg / maxAvg) * 100)}%`, height: '100%', background: '#3D7A5A', borderRadius: '3px' }} />
