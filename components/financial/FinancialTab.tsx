@@ -546,7 +546,10 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
         <div style={amberCardS}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: 500, color: '#1E3A2F', marginBottom: '3px' }}>Maintenance spending</div>
+            <div style={{ fontSize: '15px', fontWeight: 500, color: '#412402', marginBottom: '3px' }}>
+              Maintenance spending
+              <InfoTooltipDark text="Every $1 of deferred maintenance typically costs $2–3 in buyer negotiation credits at sale. Homes with documented, current maintenance sell 8–12 days faster and closer to asking price — your logged records remove buyer leverage at the table." />
+            </div>
             <div style={{ fontSize: '12px', color: '#8A8A82' }}>How your maintenance investment connects to home value and sale position</div>
           </div>
           <span style={pillG}>{jobs.length} job{jobs.length !== 1 ? 's' : ''} logged</span>
@@ -584,12 +587,7 @@ export function FinancialTab({ home, jobs, systems, details: homeDetails, deferr
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
-          <CollapsibleExplainer title="What deferred maintenance costs you" linkHref="https://www.consumerfinance.gov/owning-a-home/process/close/homeownership-costs/" linkText="Learn more about homeownership costs · CFPB.gov →">
-            Buyers and their inspectors find deferred maintenance. Every dollar of deferred maintenance typically costs $2–3 in buyer negotiation credits at sale. {deferred > 0 ? `Your ~${fmt(deferred)} deferred liability could become a ~${fmt(deferred * 2)} price reduction at the table.` : 'Staying current means buyers have nothing to negotiate with.'}
-          </CollapsibleExplainer>
-          <CollapsibleExplainer title="What staying current earns you">
-            Homes with documented, current maintenance sell 8–12 days faster and closer to asking price. Buyers have no uncertainty to negotiate with — your logged records are your leverage. Every job you log here becomes part of your home's transferable history.
-          </CollapsibleExplainer>
+
         </div>
         </div>{/* end amberCardS */}
       </div>{/* end S2 */}
