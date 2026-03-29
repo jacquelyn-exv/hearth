@@ -371,6 +371,15 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
   const [saving,setSaving]=useState(false)
   const [filterCat,setFilterCat]=useState('all')
   const [showTemplates,setShowTemplates]=useState(false)
+  const [financeOpenId,setFinanceOpenId]=useState<string|null>(null)
+  const [financeMode,setFinanceMode]=useState<Record<string,string>>({})
+  const [financeType,setFinanceType]=useState<Record<string,string>>({})
+  const [financePromoTerm,setFinancePromoTerm]=useState<Record<string,number>>({})
+  const [financeRate,setFinanceRate]=useState<Record<string,number>>({})
+  const [financeTerm,setFinanceTerm]=useState<Record<string,number>>({})
+  const [financeCustomRate,setFinanceCustomRate]=useState<Record<string,string>>({})
+  const [financeCustomTerm,setFinanceCustomTerm]=useState<Record<string,string>>({})
+  const [financeRemaining,setFinanceRemaining]=useState<Record<string,string>>({})
 
   // Known cost averages per project type (midpoint of typical range)
   const COST_AVERAGES: Record<string,{low:number;high:number;label:string}> = {
@@ -634,19 +643,112 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
                     <div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{timing.when}</div>
                     <div style={{fontSize:'11px',color:'#8A8A82'}}>{timing.reason}</div>
                   </div>
-                  {/* Monthly savings */}
+                  {/* How to pay for it */}
                   <div style={{background:'#F8F4EE',padding:'14px 18px'}}>
-                    <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',marginBottom:'6px'}}>Monthly Savings Goal</div>
-                    {savings?(
-                      <>
-                        <div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{savings.monthly}</div>
-                        <div style={{fontSize:'11px',color:'#8A8A82'}}>{savings.readyIn}</div>
-                      </>
-                    ):<div style={{fontSize:'13px',color:'#8A8A82'}}>Add a budget or timeline</div>}
+                    <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',marginBottom:'8px'}}>How to pay for it</div>
+                    <div style={{display:'flex',gap:'6px',marginBottom:'10px'}}>
+                      <button onClick={()=>{const fm={...financeMode};fm[p.id]='save';setFinanceMode(fm);setFinanceOpenId(null)}} style={{padding:'4px 10px',borderRadius:'20px',fontSize:'11px',border:'none',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",background:(financeMode[p.id]||'save')==='save'?'#1E3A2F':'rgba(30,58,47,0.08)',color:(financeMode[p.id]||'save')==='save'?'#F8F4EE':'#1E3A2F',fontWeight:500}}>Save for it</button>
+                      <button onClick={()=>{const fm={...financeMode};fm[p.id]='finance';setFinanceMode(fm);setFinanceOpenId(p.id)}} style={{padding:'4px 10px',borderRadius:'20px',fontSize:'11px',border:'none',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",background:financeMode[p.id]==='finance'?'#1E3A2F':'rgba(30,58,47,0.08)',color:financeMode[p.id]==='finance'?'#F8F4EE':'#1E3A2F',fontWeight:500}}>Finance it</button>
+                    </div>
+                    {(financeMode[p.id]||'save')==='save'?(
+                      savings?(<><div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{savings.monthly}</div><div style={{fontSize:'11px',color:'#8A8A82'}}>{savings.readyIn}</div></>):<div style={{fontSize:'12px',color:'#8A8A82'}}>Add a budget or timeline</div>
+                    ):(
+                      <div style={{fontSize:'12px',color:'#1E3A2F',fontWeight:500,cursor:'pointer'}} onClick={()=>setFinanceOpenId(financeOpenId===p.id?null:p.id)}>See financing options ↓</div>
+                    )}
                   </div>
                 </div>
               )}
 
+
+              {/* Financing panel */}
+              {financeOpenId===p.id&&!isEditing&&(
+                <div style={{padding:'20px 24px',borderTop:'1px solid rgba(30,58,47,0.06)',background:'#FAFAF8'}}>
+                  <div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F',marginBottom:'3px'}}>Contractor financing explorer</div>
+                  <div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'14px'}}>Model real financing structures — adjust to match what your contractor offers</div>
+
+                  {/* Cost inputs */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'14px'}}>
+                    <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Project cost</label><input type="number" defaultValue={budget||neighborAvg||''} onChange={e=>{}} id={`fc-cost-${p.id}`} style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'7px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none'}} placeholder="e.g. 14000" /></div>
+                    <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Down payment (optional)</label><input type="number" id={`fc-down-${p.id}`} style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'7px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none'}} placeholder="0" /></div>
+                  </div>
+
+                  {/* Type toggle */}
+                  <div style={{display:'flex',gap:'6px',marginBottom:'12px'}}>
+                    <button onClick={()=>{const ft={...financePromoTerm};ft[p.id]=ft[p.id]||12;setFinancePromoTerm(ft);const ftype={...financeType};ftype[p.id+'-sub']='promo';setFinanceType(ftype)}} style={{padding:'5px 12px',borderRadius:'20px',fontSize:'12px',border:'none',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",background:(financeType[p.id+'-sub']||'promo')==='promo'?'#1E3A2F':'rgba(30,58,47,0.08)',color:(financeType[p.id+'-sub']||'promo')==='promo'?'#F8F4EE':'#1E3A2F',fontWeight:500}}>Promotional 0%</button>
+                    <button onClick={()=>{const ftype={...financeType};ftype[p.id+'-sub']='fixed';setFinanceType(ftype)}} style={{padding:'5px 12px',borderRadius:'20px',fontSize:'12px',border:'none',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",background:financeType[p.id+'-sub']==='fixed'?'#1E3A2F':'rgba(30,58,47,0.08)',color:financeType[p.id+'-sub']==='fixed'?'#F8F4EE':'#1E3A2F',fontWeight:500}}>Fixed APR</button>
+                  </div>
+
+                  {/* Promo plans */}
+                  {(financeType[p.id+'-sub']||'promo')==='promo'&&(<>
+                    <div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'8px',lineHeight:1.5}}>No interest if paid in full during the promotional period. Equal payments below show what you need to pay monthly to clear the balance before the period ends.</div>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'6px',marginBottom:'12px'}}>
+                      {[12,18,24].map(term=>{
+                        const cost=parseFloat((document.getElementById(`fc-cost-${p.id}`) as HTMLInputElement)?.value||String(budget||neighborAvg||0))||0
+                        const down=parseFloat((document.getElementById(`fc-down-${p.id}`) as HTMLInputElement)?.value||'0')||0
+                        const fin=Math.max(0,cost-down)
+                        const pmt=fin>0?Math.round(fin/term):0
+                        const sel=(financePromoTerm[p.id]||12)===term
+                        return(<button key={term} onClick={()=>{const ft={...financePromoTerm};ft[p.id]=term;setFinancePromoTerm(ft)}} style={{padding:'10px 8px',borderRadius:'8px',fontSize:'12px',border:sel?'1.5px solid #1E3A2F':'0.5px solid rgba(30,58,47,0.2)',background:sel?'#F0F5F2':'#fff',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textAlign:'left'}}>
+                          <div style={{fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{term} months</div>
+                          <div style={{fontSize:'11px',color:'#8A8A82'}}>0% promo</div>
+                          {pmt>0&&<div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F',marginTop:'4px'}}>${pmt.toLocaleString()}/mo</div>}
+                          {pmt>0&&<div style={{fontSize:'10px',color:'#3D7A5A',marginTop:'1px'}}>to pay off in full</div>}
+                        </button>)
+                      })}
+                    </div>
+                    <div style={{padding:'10px 12px',background:'#FAEEDA',borderRadius:'8px',borderLeft:'3px solid #C47B2B',borderTopLeftRadius:0,borderBottomLeftRadius:0,fontSize:'11px',color:'#633806',lineHeight:1.6,marginBottom:'10px'}}>
+                      <strong style={{color:'#412402'}}>How deferred interest works:</strong> If any balance remains when the promo period ends, interest at 17.99–26.99% is charged retroactively on the <em>original financed amount</em> — not just what is left. Even $1 remaining triggers the full charge. Set a calendar reminder 60 days before the promo ends.
+                    </div>
+                  </>)}
+
+                  {/* Fixed plans */}
+                  {financeType[p.id+'-sub']==='fixed'&&(<>
+                    <div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'8px',lineHeight:1.5}}>Fixed rate for the full loan term — interest is built into your payment from day one. Common plans from major contractor financing partners.</div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px',marginBottom:'10px'}}>
+                      {[{rate:5.99,term:60,factor:3.0},{rate:7.99,term:84,factor:2.0},{rate:9.99,term:120,factor:1.3},{rate:11.99,term:120,factor:1.3}].map(plan=>{
+                        const cost=parseFloat((document.getElementById(`fc-cost-${p.id}`) as HTMLInputElement)?.value||String(budget||neighborAvg||0))||0
+                        const down=parseFloat((document.getElementById(`fc-down-${p.id}`) as HTMLInputElement)?.value||'0')||0
+                        const fin=Math.max(0,cost-down)
+                        const mr=plan.rate/100/12, n=plan.term
+                        const pmt=fin>0?Math.round(fin*(mr*Math.pow(1+mr,n))/(Math.pow(1+mr,n)-1)):0
+                        const total=pmt*n, interest=total-fin
+                        const sel=financeRate[p.id]===plan.rate&&financeTerm[p.id]===plan.term
+                        return(<button key={plan.rate} onClick={()=>{const fr={...financeRate};fr[p.id]=plan.rate;setFinanceRate(fr);const ft={...financeTerm};ft[p.id]=plan.term;setFinanceTerm(ft)}} style={{padding:'10px 12px',borderRadius:'8px',fontSize:'12px',border:sel?'1.5px solid #1E3A2F':'0.5px solid rgba(30,58,47,0.2)',background:sel?'#F0F5F2':'#fff',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textAlign:'left'}}>
+                          <div style={{fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{plan.rate}% APR · {plan.term} mo</div>
+                          <div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'4px'}}>{plan.factor}% payment factor</div>
+                          {pmt>0&&<div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>${pmt.toLocaleString()}/mo</div>}
+                          {interest>0&&pmt>0&&<div style={{fontSize:'10px',color:'#9B2C2C',marginTop:'1px'}}>${Math.round(interest).toLocaleString()} interest total</div>}
+                        </button>)
+                      })}
+                    </div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',marginBottom:'10px'}}>
+                      <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Custom APR %</label><input type="number" value={financeCustomRate[p.id]||''} onChange={e=>{const fr={...financeCustomRate};fr[p.id]=e.target.value;setFinanceCustomRate(fr)}} style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'7px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none'}} placeholder="e.g. 8.49" /></div>
+                      <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Custom term (months)</label><input type="number" value={financeCustomTerm[p.id]||''} onChange={e=>{const ft={...financeCustomTerm};ft[p.id]=e.target.value;setFinanceCustomTerm(ft)}} style={{width:'100%',padding:'7px 10px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'7px',fontSize:'13px',fontFamily:"'DM Sans', sans-serif",outline:'none'}} placeholder="e.g. 60" /></div>
+                    </div>
+                    {financeCustomRate[p.id]&&financeCustomTerm[p.id]&&(()=>{
+                      const cost=parseFloat((document.getElementById(`fc-cost-${p.id}`) as HTMLInputElement)?.value||String(budget||neighborAvg||0))||0
+                      const down=parseFloat((document.getElementById(`fc-down-${p.id}`) as HTMLInputElement)?.value||'0')||0
+                      const fin=Math.max(0,cost-down)
+                      const mr=parseFloat(financeCustomRate[p.id])/100/12
+                      const n=parseInt(financeCustomTerm[p.id])
+                      const pmt=fin>0&&mr>0&&n>0?Math.round(fin*(mr*Math.pow(1+mr,n))/(Math.pow(1+mr,n)-1)):0
+                      const total=pmt*n, interest=total-fin
+                      return pmt>0?(<div style={{padding:'10px 12px',background:'#F0F5F2',borderRadius:'8px',marginBottom:'10px'}}><span style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>${pmt.toLocaleString()}/mo</span><span style={{fontSize:'11px',color:'#9B2C2C',marginLeft:'10px'}}>${Math.round(interest).toLocaleString()} interest total</span></div>):null
+                    })()}
+                  </>)}
+
+                  {/* What to know */}
+                  <div style={{fontSize:'10px',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase',color:'#8A8A82',margin:'12px 0 8px'}}>What to know</div>
+                  <div style={{fontSize:'11px',color:'#4A4A44',lineHeight:1.7}}>
+                    <div style={{padding:'4px 0',borderBottom:'0.5px solid rgba(30,58,47,0.08)'}}>Common lender partners: GreenSky, Synchrony Home, Mosaic, Service Finance Company</div>
+                    <div style={{padding:'4px 0',borderBottom:'0.5px solid rgba(30,58,47,0.08)'}}>Credit 630–680+: typically qualifies for higher-rate plans · 690–700+: first-look lenders, lower APR plans</div>
+                    <div style={{padding:'4px 0',borderBottom:'0.5px solid rgba(30,58,47,0.08)'}}>Approval is usually instant in the home from established contractors · soft pull first, hard pull on approval · you can also apply directly through lender websites</div>
+                    <div style={{padding:'4px 0',borderBottom:'0.5px solid rgba(30,58,47,0.08)'}}>Payment factor: monthly payment per $1,000 borrowed · 1–4% is the common range</div>
+                    <div style={{padding:'4px 0'}}>Ask about financing during the quote — not at signing · most fixed APR plans allow early payoff with no penalty</div>
+                  </div>
+                  <div style={{marginTop:'10px',fontSize:'10px',color:'#8A8A82',lineHeight:1.6}}>Estimates are educational only. Actual rates, terms, and approval depend on your credit profile and the contractor's financing partner. Always read the full loan agreement before signing.</div>
+                </div>
+              )}
               {/* Edit form */}
               {isEditing&&(
                 <div style={{padding:'16px 24px',background:'#F8F4EE',borderTop:'1px solid rgba(30,58,47,0.06)'}}>
