@@ -1579,6 +1579,8 @@ const STATUS_OPTIONS=[
     const hasWindowWontOpen=sys.windows_wont_open
     const isDangerousPanel=sys.panel_type?.includes('Federal Pacific')||sys.panel_type?.includes('Zinsco')
     const hasSafetyFlag=hasBrokenGlass||hasLockIssue||isDangerousPanel
+    const isSetUp=!!age&&!!sys.condition&&sys.condition!=='unknown'&&!sys.not_applicable&&!hasSafetyFlag
+    const isPartial=!isSetUp&&!sys.not_applicable&&!!age
 
     // Autofill defaults
     const autoYear=home?.year_built?parseInt(home.year_built):null
@@ -1596,7 +1598,7 @@ const STATUS_OPTIONS=[
 
 
     return(
-      <div key={sys.id} style={{background:sys.not_applicable?'#F5F5F3':'#fff',border:`1px solid ${hasSafetyFlag?'rgba(226,75,74,0.4)':sys.not_applicable?'rgba(30,58,47,0.08)':'rgba(30,58,47,0.11)'}`,borderRadius:'14px',overflow:'hidden',marginBottom:'12px',opacity:sys.not_applicable?0.6:1}}>
+      <div key={sys.id} style={{background:sys.not_applicable?'#F5F5F3':isSetUp?'#EAF3DE':'#fff',border:`1px solid ${hasSafetyFlag?'rgba(226,75,74,0.4)':sys.not_applicable?'rgba(30,58,47,0.08)':isSetUp?'rgba(61,122,90,0.25)':'rgba(30,58,47,0.11)'}`,borderRadius:'14px',overflow:'hidden',marginBottom:'12px',opacity:sys.not_applicable?0.6:1}}>
 
         {/* Safety alerts — shown even when collapsed */}
         {hasSafetyFlag&&(
@@ -1618,16 +1620,9 @@ const STATUS_OPTIONS=[
               {sys.system_status==='getting_quotes'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#FBF0DC',color:'#633806'}}>Getting quotes</span>}
               {sys.system_status==='scheduled'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#E6F1FB',color:'#0C447C'}}>Scheduled</span>}
             </div>
-            {(()=>{
-              const hasCondition=!!sys.condition&&sys.condition!=='unknown'
-              const hasAge=!!age
-              const isSetUp=hasAge&&hasCondition&&!sys.not_applicable
-              const isPartial=!isSetUp&&!sys.not_applicable&&(hasAge||!!sys.material||!!sys.system_status&&sys.system_status!=='in_service')
-              const label=sys.not_applicable?'Not applicable':isSetUp?`${age} yr old${sys.material?` · ${sys.material}`:''}`:isPartial?'Tap to finish setting up':'Tap to set up'
-              return <div style={{fontSize:'12px',color:sys.not_applicable?'#8A8A82':'#C47B2B',fontWeight:isSetUp?400:500}}>
-                {label}
-              </div>
-            })()}
+            <div style={{fontSize:'12px',color:sys.not_applicable?'#8A8A82':isSetUp?'#8A8A82':'#C47B2B',fontWeight:(!isSetUp&&!sys.not_applicable)?500:400}}>
+              {sys.not_applicable?'Not applicable':isSetUp?`${age} yr old${sys.material?` · ${sys.material}`:''}`:isPartial?'Tap to finish setting up':'Tap to set up'}
+            </div>
           </div>
           {age!==null&&!sys.not_applicable&&sys.condition&&sys.condition!=='unknown'&&!!age&&<div style={{width:'60px',flexShrink:0}}><div style={{height:'4px',background:'#EDE8E0',borderRadius:'2px'}}><div style={{width:`${pct}%`,height:'100%',background:cond.color,borderRadius:'2px'}}/></div><div style={{fontSize:'10px',color:'#8A8A82',textAlign:'right',marginTop:'2px'}}>{pct}%</div></div>}
           <span style={{fontSize:'12px',color:'#8A8A82',flexShrink:0}}>›</span>
@@ -2029,7 +2024,7 @@ const STATUS_OPTIONS=[
                 return(
                   <div key={st}
                     onClick={()=>{if(ex){startEditSystem(ex);setSystemModal(ex)}else{addSystem(st)}}}
-                    style={{background:ex?.not_applicable?'#F5F5F3':'#fff',border:`1px solid ${hasSafetyFlag?'#E24B4A':ex?.not_applicable?'rgba(30,58,47,0.08)':ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer',position:'relative',opacity:ex?.not_applicable?0.6:1}}>
+                    style={{background:ex?.not_applicable?'#F5F5F3':(ex&&!ex.not_applicable&&ex.condition&&ex.condition!=='unknown'&&age)?'#EAF3DE':'#fff',border:`1px solid ${hasSafetyFlag?'#E24B4A':ex?.not_applicable?'rgba(30,58,47,0.08)':(ex&&ex.condition&&ex.condition!=='unknown'&&age)?'rgba(61,122,90,0.25)':ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer',position:'relative',opacity:ex?.not_applicable?0.6:1}}>
                     {hasSafetyFlag&&<div style={{position:'absolute',top:'6px',right:'6px',width:'8px',height:'8px',borderRadius:'50%',background:'#E24B4A'}}/>}
                     <div style={{fontSize:'20px',marginBottom:'6px'}}>{SYSTEM_ICONS[st]||'🔧'}</div>
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[st]||st}</div>
