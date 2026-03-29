@@ -2309,16 +2309,6 @@ const STATUS_OPTIONS=[
                 )}
               </div>
 
-              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
-                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
-                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#FAEEDA',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>🔨</div>
-                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Best months for exterior work</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>Based on Climate Zone {envData.climate_zone}</div></div>
-                </div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr'}}>
-                  {[{task:'Roof inspection',months:(envData.climate_zone||'').startsWith('1')||(envData.climate_zone||'').startsWith('2')?'Feb – Apr':'Apr – May'},{task:'Exterior painting',months:'May – Sep'},{task:'Deck sealing',months:'Apr – Oct'},{task:'Driveway sealing',months:'Jun – Aug'},{task:'Gutter cleaning',months:'Apr & Oct'},{task:'Winterization',months:envData.freeze_risk_days>60?'Oct – Nov':'Nov – Dec'}].map((item,i)=><div key={i} style={{padding:'11px 16px',borderBottom:i<4?'1px solid rgba(30,58,47,0.06)':'none',borderRight:i%2===0?'1px solid rgba(30,58,47,0.06)':'none'}}><div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'2px'}}>{item.months}</div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{item.task}</div></div>)}
-                </div>
-              </div>
-
               {/* ── Pollen & Air Quality ── */}
               <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
                 <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
