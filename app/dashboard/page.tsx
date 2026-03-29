@@ -391,63 +391,6 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 // HELPERS
 // ─────────────────────────────────────────────────────────────
 
-function conditionMeta(label:string){
-  if(label==='Good')return{label:'Good',color:'#3D7A5A',bg:'#EAF2EC',textColor:'#27500A'}
-  if(label==='Fair')return{label:'Fair',color:'#C47B2B',bg:'#FBF0DC',textColor:'#633806'}
-  if(label==='Poor')return{label:'Poor',color:'#E24B4A',bg:'#FDECEA',textColor:'#791F1F'}
-  if(label==='Critical')return{label:'Critical',color:'#791F1F',bg:'#FCEBEB',textColor:'#501313'}
-  return{label:'Not set',color:'#8A8A82',bg:'#F5F5F5',textColor:'#8A8A82'}
-}
-
-function calculateSmartCondition(sys:any):{condition:string;reasons:string[];locked:boolean}{
-  const reasons:string[]=[]
-  const yr=sys.replacement_year||sys.install_year||sys.purchase_year
-  const age=yr?new Date().getFullYear()-parseInt(yr):null
-  const lifespan=SYSTEM_LIFESPANS[sys.system_type]||20
-  const pct=age?Math.min(1,age/lifespan):0
-
-  // Critical — locked safety flags
-  const isFedPac=sys.panel_type?.includes('Federal Pacific')||sys.panel_type?.includes('Zinsco')
-  const hasBrokenGlass=sys.has_broken_glass||sys.any_broken_glass
-  if(isFedPac){reasons.push(`${sys.panel_type} panel — known fire hazard`);return{condition:'Critical',reasons,locked:true}}
-  if(hasBrokenGlass){reasons.push('Broken glass — safety and security risk');return{condition:'Critical',reasons,locked:true}}
-
-  // Poor signals
-  if(sys.storm_damage_unaddressed){reasons.push('Unaddressed storm damage')}
-  if(sys.known_issues){reasons.push('Known issues logged')}
-  if(sys.locks_not_functioning){reasons.push('Locks not functioning')}
-  if(sys.any_wood_rot){reasons.push('Wood rot present')}
-  if(pct>1){reasons.push(`${age} yrs old — past expected ${lifespan}-yr lifespan`)}
-
-  if(reasons.length>0)return{condition:'Poor',reasons,locked:false}
-
-  // Fair signals
-  if(pct>0.8){reasons.push(`${age} yrs old — ${Math.round(pct*100)}% through expected lifespan`)}
-  if(sys.has_fogged_units){reasons.push('Fogged window units — seal failure')}
-  if(sys.windows_wont_open){reasons.push('Some windows won\'t open or close')}
-  if(pct>0.6&&sys.system_type==='sump_pump'){reasons.push('Sump pumps have a 10-yr average lifespan')}
-  // Service overdue checks
-  const now=new Date()
-  if(sys.last_inspection){const d=new Date(sys.last_inspection);const yrs=(now.getTime()-d.getTime())/(1000*60*60*24*365);if(yrs>2)reasons.push(`Last inspection was ${Math.round(yrs)} years ago`)}
-  if(sys.last_sweep){const d=new Date(sys.last_sweep);const yrs=(now.getTime()-d.getTime())/(1000*60*60*24*365);if(yrs>1)reasons.push('Chimney sweep overdue — annual recommended')}
-  if(sys.last_filter_replacement){const d=new Date(sys.last_filter_replacement);const months=(now.getTime()-d.getTime())/(1000*60*60*24*30);if(months>3)reasons.push('Air filter overdue for replacement')}
-  if(sys.last_tpr_valve_test){const d=new Date(sys.last_tpr_valve_test);const yrs=(now.getTime()-d.getTime())/(1000*60*60*24*365);if(yrs>1)reasons.push('TPR valve test overdue — annual recommended')}
-  if(sys.last_flush){const d=new Date(sys.last_flush);const yrs=(now.getTime()-d.getTime())/(1000*60*60*24*365);if(yrs>1)reasons.push('Water heater flush overdue')}
-  if(sys.last_cleaning){const d=new Date(sys.last_cleaning);const months=(now.getTime()-d.getTime())/(1000*60*60*24*30);if(months>6&&sys.system_type==='gutters')reasons.push('Gutters due for cleaning')}
-  if(sys.last_test){const d=new Date(sys.last_test);const yrs=(now.getTime()-d.getTime())/(1000*60*60*24*365);if(yrs>1)reasons.push('Sump pump test overdue — annual recommended')}
-  // Galvanized pipe warning
-  if(sys.pipe_material==='Galvanized steel'){reasons.push('Galvanized steel pipes — corrosion risk, consider repiping')}
-  // 60A panel
-  if(sys.panel_amperage==='60A'){reasons.push('60A panel — undersized for modern homes')}
-
-  if(reasons.length>0)return{condition:'Fair',reasons,locked:false}
-
-  // Good
-  if(age!==null)reasons.push(`${age} yrs old — within expected lifespan`)
-  else reasons.push('No age data — appears to be in service')
-  return{condition:'Good',reasons,locked:false}
-}
-
 function getCondition(sys: any) {
   if (sys.not_applicable) return {label:'N/A',color:'#8A8A82',bg:'#F5F5F5',textColor:'#8A8A82'}
   // Use saved condition if set, otherwise calculate
@@ -455,11 +398,14 @@ function getCondition(sys: any) {
   if(saved&&saved!=='unknown'){
     const labelMap:Record<string,string>={'good':'Good','fair':'Fair','poor':'Poor','critical':'Critical','watch':'Fair','inspect':'Poor','priority':'Critical'}
     const label=labelMap[saved]||'Not set'
-    return conditionMeta(label)
+    if(label==='Good')return{label:'Good',color:'#3D7A5A',bg:'#EAF2EC',textColor:'#27500A'}
+    if(label==='Fair')return{label:'Fair',color:'#C47B2B',bg:'#FBF0DC',textColor:'#633806'}
+    if(label==='Poor')return{label:'Poor',color:'#E24B4A',bg:'#FDECEA',textColor:'#791F1F'}
+    if(label==='Critical')return{label:'Critical',color:'#791F1F',bg:'#FCEBEB',textColor:'#501313'}
+    return{label:'Not set',color:'#8A8A82',bg:'#F5F5F5',textColor:'#8A8A82'}
   }
-  // Fall back to smart calculation for display
-  const smart=calculateSmartCondition(sys)
-  return conditionMeta(smart.condition)
+  // No saved condition — return not set
+  return{label:'Not set',color:'#8A8A82',bg:'#F5F5F5',textColor:'#8A8A82'}
 }
 
 function getDeferredLiability(systems: any[]): number {
@@ -1347,11 +1293,8 @@ export default function Dashboard() {
       const installSystems=['roof','hvac','water_heater','windows','entry_door','sliding_door','siding','gutters','driveway','fencing','chimney','sump_pump','plumbing','electrical','foundation','garage_door']
       if(installSystems.includes(sys.system_type))edits.install_year=buildYear
     }
-    // Autofill condition from smart engine if not saved yet
-    if(!edits.condition||edits.condition==='unknown'){
-      const smart=calculateSmartCondition({...sys,...edits})
-      edits.condition=smart.condition
-    }
+    // Default condition if not set
+    if(!edits.condition||edits.condition==='unknown')edits.condition='Good'
     // Autofill status if not set
     if(!edits.system_status)edits.system_status='in_service'
     // Autofill window count from sqft
@@ -2202,55 +2145,18 @@ const STATUS_OPTIONS=[
                 <div style={{marginBottom:'14px'}}>
                   <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'6px'}}>Condition</label>
                   <div style={{display:'flex',gap:'8px'}}>
-                    {(()=>{
-                      const smart=calculateSmartCondition({...sys,...systemEdits})
-                      const isLocked=smart.locked
-                      const isOverridden=systemEdits.condition&&systemEdits.condition!==smart.condition.toLowerCase()
-                      const contradiction=isOverridden&&systemEdits.condition==='Good'&&(sys.known_issues||sys.has_broken_glass||sys.any_broken_glass||sys.storm_damage_unaddressed)
-                      return(<>
-                        {/* Smart assessment banner */}
-                        <div style={{background:'#EAF3DE',border:'0.5px solid #C0DD97',borderRadius:'10px',padding:'10px 14px',marginBottom:'12px',display:'flex',alignItems:'flex-start',gap:'10px'}}>
-                          <div style={{width:'6px',height:'6px',borderRadius:'50%',background:'#3B6D11',flexShrink:0,marginTop:'5px'}}/>
-                          <div style={{flex:1}}>
-                            <div style={{fontSize:'12px',fontWeight:500,color:'#27500A',marginBottom:'3px'}}>
-                              Smart assessment: {smart.condition}
-                              {!isOverridden&&<span style={{background:'#EAF3DE',border:'0.5px solid #C0DD97',borderRadius:'20px',padding:'1px 7px',fontSize:'10px',marginLeft:'8px',color:'#3B6D11'}}>✦ Active</span>}
-                              {isOverridden&&<span style={{background:'#FAEEDA',border:'0.5px solid #EF9F27',borderRadius:'20px',padding:'1px 7px',fontSize:'10px',marginLeft:'8px',color:'#633806'}}>✎ Overridden</span>}
-                            </div>
-                            <div style={{fontSize:'11px',color:'#3B6D11',lineHeight:1.6}}>{smart.reasons.map((r,i)=><span key={i}>· {r}<br/></span>)}</div>
-                            {isOverridden&&!isLocked&&<button onClick={()=>setSystemEdits((p:any)=>({...p,condition:smart.condition.toLowerCase()}))} style={{marginTop:'6px',background:'none',border:'0.5px solid #3B6D11',color:'#27500A',fontSize:'11px',padding:'3px 10px',borderRadius:'6px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Restore smart assessment</button>}
-                          </div>
-                        </div>
-
-                        {/* Contradiction warning */}
-                        {contradiction&&(
-                          <div style={{background:'#FAEEDA',border:'0.5px solid #EF9F27',borderRadius:'10px',padding:'10px 14px',marginBottom:'12px',display:'flex',gap:'8px'}}>
-                            <span style={{fontSize:'14px',flexShrink:0}}>⚠️</span>
-                            <div style={{fontSize:'12px',color:'#633806',lineHeight:1.5}}>You selected Good but have issues logged. This affects your home score and maintenance reminders.</div>
-                          </div>
-                        )}
-
-                        {/* Condition buttons */}
-                        {[
-                          {v:'Good',color:'#27500A',bg:'#EAF2EC',border:'#3D7A5A',desc:'No issues, well maintained'},
-                          {v:'Fair',color:'#633806',bg:'#FBF0DC',border:'#C47B2B',desc:'Minor wear, worth monitoring'},
-                          {v:'Poor',color:'#791F1F',bg:'#FDECEA',border:'#E24B4A',desc:'Needs attention soon'},
-                          {v:'Critical',color:'#501313',bg:'#FCEBEB',border:'#791F1F',desc:'Urgent — act now'},
-                        ].map(opt=>{
-                          const isActive=(systemEdits.condition||smart.condition.toLowerCase())===opt.v.toLowerCase()
-                          const isDisabled=isLocked&&opt.v!=='Critical'
-                          return(
-                            <button key={opt.v}
-                              disabled={isDisabled}
-                              onClick={()=>!isLocked&&setSystemEdits((p:any)=>({...p,condition:opt.v}))}
-                              style={{flex:1,padding:'10px 8px',borderRadius:'10px',border:`${isActive?'1.5px':'0.5px'} solid ${isActive?opt.border:'rgba(30,58,47,0.15)'}`,background:isActive?opt.bg:'#fff',cursor:isDisabled?'not-allowed':'pointer',textAlign:'center' as const,fontFamily:"'DM Sans', sans-serif",opacity:isDisabled?0.3:1}}>
-                              <div style={{fontSize:'11px',fontWeight:500,color:opt.color,marginBottom:'2px'}}>{opt.v}{isActive&&!isOverridden?' ✦':''}{isLocked&&opt.v==='Critical'?' 🔒':''}</div>
-                              <div style={{fontSize:'10px',color:opt.color,opacity:0.8,lineHeight:1.3}}>{opt.desc}</div>
-                            </button>
-                          )
-                        })}
-                      </>)
-                    })()}
+                    {[
+                      {v:'Good',color:'#27500A',bg:'#EAF2EC',border:'#3D7A5A',desc:'No issues, well maintained'},
+                      {v:'Fair',color:'#633806',bg:'#FBF0DC',border:'#C47B2B',desc:'Minor wear, worth monitoring'},
+                      {v:'Poor',color:'#791F1F',bg:'#FDECEA',border:'#E24B4A',desc:'Needs attention soon'},
+                      {v:'Critical',color:'#501313',bg:'#FCEBEB',border:'#791F1F',desc:'Urgent — act now'},
+                    ].map(opt=>(
+                      <button key={opt.v} onClick={()=>setSystemEdits((p:any)=>({...p,condition:opt.v}))}
+                        style={{flex:1,padding:'10px 8px',borderRadius:'10px',border:`${(systemEdits.condition||'Good')===opt.v?'1.5px':'0.5px'} solid ${(systemEdits.condition||'Good')===opt.v?opt.border:'rgba(30,58,47,0.15)'}`,background:(systemEdits.condition||'Good')===opt.v?opt.bg:'#fff',cursor:'pointer',textAlign:'center' as const,fontFamily:"'DM Sans', sans-serif"}}>
+                        <div style={{fontSize:'11px',fontWeight:500,color:opt.color,marginBottom:'2px'}}>{opt.v}</div>
+                        <div style={{fontSize:'10px',color:opt.color,opacity:0.8,lineHeight:1.3}}>{opt.desc}</div>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
