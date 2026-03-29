@@ -1197,6 +1197,7 @@ export default function Dashboard() {
       supabase.from('home_invites').select('*').eq('home_id',homeId).eq('status','pending').order('created_at',{ascending:false})
     ])
     setDetails(det);setSystems(sys||[]);setJobs(j||[])
+    console.log('LOADED HOME ID:',homeId,'systems:',sys?.length,'first system condition:',sys?.[0]?.condition)
     const {data:cr}=await supabase.from('garden_crops').select('*').eq('home_id',homeId).eq('archived',false).order('date_planted',{ascending:false})
     if(cr)setCrops(cr)
     if(sc&&sc.length>0)setScore(sc[0])
