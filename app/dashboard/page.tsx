@@ -1402,8 +1402,7 @@ export default function Dashboard() {
       const installSystems=['roof','hvac','water_heater','windows','entry_door','sliding_door','siding','gutters','driveway','fencing','chimney','sump_pump','plumbing','electrical','foundation','garage_door']
       if(installSystems.includes(sys.system_type))edits.install_year=buildYear
     }
-    // Default condition if not set
-    if(!edits.condition||edits.condition==='unknown')edits.condition='Good'
+    // Don't autofill condition — user must choose
     // Autofill status if not set
     if(!edits.system_status)edits.system_status='in_service'
     // Autofill window count from sqft
@@ -1620,9 +1619,13 @@ const STATUS_OPTIONS=[
               {sys.system_status==='scheduled'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#E6F1FB',color:'#0C447C'}}>Scheduled</span>}
             </div>
             {(()=>{
-              const isSetUp=!!age&&!!sys.condition&&sys.condition!=='unknown'&&!sys.not_applicable
-              return <div style={{fontSize:'12px',color:(!isSetUp&&!sys.not_applicable)?'#C47B2B':'#8A8A82',fontWeight:(!isSetUp&&!sys.not_applicable)?500:400}}>
-                {sys.not_applicable?'Not applicable':isSetUp?`${age} yr old${sys.material?` · ${sys.material}`:''}`:'Tap to set up'}
+              const hasCondition=!!sys.condition&&sys.condition!=='unknown'
+              const hasAge=!!age
+              const isSetUp=hasAge&&hasCondition&&!sys.not_applicable
+              const isPartial=!isSetUp&&!sys.not_applicable&&(hasAge||!!sys.material||!!sys.system_status&&sys.system_status!=='in_service')
+              const label=sys.not_applicable?'Not applicable':isSetUp?`${age} yr old${sys.material?` · ${sys.material}`:''}`:isPartial?'Tap to finish setting up':'Tap to set up'
+              return <div style={{fontSize:'12px',color:sys.not_applicable?'#8A8A82':'#C47B2B',fontWeight:isSetUp?400:500}}>
+                {label}
               </div>
             })()}
           </div>
@@ -2067,7 +2070,18 @@ const STATUS_OPTIONS=[
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[at]||at}</div>
                     {ex&&!ex.not_applicable?(
                       <div>
-                        {(()=>{const ok=!!(ex?.condition&&ex?.condition!=='unknown'&&age);return<><div style={{fontSize:'10px',color:ok?cond?.textColor||'#3D7A5A':'#C47B2B',fontWeight:500}}>{ok?(cond?.label||'Good'):'Tap to set up'}</div>{ok&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}{ok&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}</>})()}
+                        {(()=>{
+                          const hasC=!!(ex?.condition&&ex?.condition!=='unknown')
+                          const hasA=!!age
+                          const ok=hasC&&hasA
+                          const partial=!ok&&(hasA||!!ex?.material||!!(ex?.system_status&&ex?.system_status!=='in_service'))
+                          const lbl=ok?(cond?.label||'Good'):partial?'Tap to finish setting up':'Tap to set up'
+                          return<>
+                            <div style={{fontSize:'10px',color:ok?cond?.textColor||'#3D7A5A':'#C47B2B',fontWeight:500}}>{lbl}</div>
+                            {ok&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}
+                            {ok&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}
+                          </>
+                        })()}
                       </div>
                     ):ex?.not_applicable?(
                       <div style={{fontSize:'10px',color:'#8A8A82'}}>Not applicable</div>
@@ -2097,7 +2111,18 @@ const STATUS_OPTIONS=[
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[st]||st}</div>
                     {ex&&!ex.not_applicable?(
                       <div>
-                        {(()=>{const ok=!!(ex?.condition&&ex?.condition!=='unknown'&&age);return<><div style={{fontSize:'10px',color:ok?cond?.textColor||'#3D7A5A':'#C47B2B',fontWeight:500}}>{ok?(cond?.label||'Good'):'Tap to set up'}</div>{ok&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}{ok&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}</>})()}
+                        {(()=>{
+                          const hasC=!!(ex?.condition&&ex?.condition!=='unknown')
+                          const hasA=!!age
+                          const ok=hasC&&hasA
+                          const partial=!ok&&(hasA||!!ex?.material||!!(ex?.system_status&&ex?.system_status!=='in_service'))
+                          const lbl=ok?(cond?.label||'Good'):partial?'Tap to finish setting up':'Tap to set up'
+                          return<>
+                            <div style={{fontSize:'10px',color:ok?cond?.textColor||'#3D7A5A':'#C47B2B',fontWeight:500}}>{lbl}</div>
+                            {ok&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}
+                            {ok&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}
+                          </>
+                        })()}
                       </div>
                     ):ex?.not_applicable?(
                       <div style={{fontSize:'10px',color:'#8A8A82'}}>Not applicable</div>
