@@ -1342,7 +1342,7 @@ export default function Dashboard() {
 
   const sv=score?.total_score||0
   const tabs=['overview','home_details','log','financial','projects','maintenance','documents']
-  const tl:Record<string,string>={overview:'Dashboard',home_details:'Home Details',log:'📋 Activity Log',financial:'💰 Financial',projects:'✨ Projects',maintenance:'📅 Maintenance Calendar',documents:'Documents'}
+  const tl:Record<string,string>={overview:'Dashboard',home_details:'Home Details',log:'Activity Log',financial:'Finances',projects:'Projects',maintenance:'Maintenance Calendar',documents:'Documents'}
   const alertSys=systems.filter(s=>['Inspect','Priority'].includes(getCondition(s).label))
   const dnf=displayName||user?.email?.split('@')[0]?.split('.')[0]?.replace(/^\w/,(c:string)=>c.toUpperCase())||'there'
   const engineProfile=adaptHomeProfile(home,systems,userGoals,stormHistory)
