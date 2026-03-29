@@ -1597,7 +1597,7 @@ const STATUS_OPTIONS=[
 
 
     return(
-      <div key={sys.id} style={{background:'#fff',border:`1px solid ${hasSafetyFlag?'rgba(226,75,74,0.4)':'rgba(30,58,47,0.11)'}`,borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
+      <div key={sys.id} style={{background:sys.not_applicable?'#F5F5F3':'#fff',border:`1px solid ${hasSafetyFlag?'rgba(226,75,74,0.4)':sys.not_applicable?'rgba(30,58,47,0.08)':'rgba(30,58,47,0.11)'}`,borderRadius:'14px',overflow:'hidden',marginBottom:'12px',opacity:sys.not_applicable?0.6:1}}>
 
         {/* Safety alerts — shown even when collapsed */}
         {hasSafetyFlag&&(
@@ -2023,7 +2023,7 @@ const STATUS_OPTIONS=[
                 return(
                   <div key={st}
                     onClick={()=>{if(ex){startEditSystem(ex);setSystemModal(ex)}else{addSystem(st)}}}
-                    style={{background:'#fff',border:`1px solid ${hasSafetyFlag?'#E24B4A':ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer',position:'relative'}}>
+                    style={{background:ex?.not_applicable?'#F5F5F3':'#fff',border:`1px solid ${hasSafetyFlag?'#E24B4A':ex?.not_applicable?'rgba(30,58,47,0.08)':ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer',position:'relative',opacity:ex?.not_applicable?0.6:1}}>
                     {hasSafetyFlag&&<div style={{position:'absolute',top:'6px',right:'6px',width:'8px',height:'8px',borderRadius:'50%',background:'#E24B4A'}}/>}
                     <div style={{fontSize:'20px',marginBottom:'6px'}}>{SYSTEM_ICONS[st]||'🔧'}</div>
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[st]||st}</div>
