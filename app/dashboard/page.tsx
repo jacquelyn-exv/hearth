@@ -1620,7 +1620,7 @@ const STATUS_OPTIONS=[
               {sys.system_status==='getting_quotes'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#FBF0DC',color:'#633806'}}>Getting quotes</span>}
               {sys.system_status==='scheduled'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#E6F1FB',color:'#0C447C'}}>Scheduled</span>}
             </div>
-            <div style={{fontSize:'12px',color:sys.not_applicable?'#8A8A82':isSetUp?'#8A8A82':'#C47B2B',fontWeight:(!isSetUp&&!sys.not_applicable)?500:400}}>
+            <div style={{fontSize:'12px',color:sys.not_applicable?'#8A8A82':isSetUp?'#27500A':'#C47B2B',fontWeight:(!isSetUp&&!sys.not_applicable)?500:400}}>
               {sys.not_applicable?'Not applicable':isSetUp?`${age} yr old${sys.material?` · ${sys.material}`:''}`:isPartial?'Tap to finish setting up':'Tap to set up'}
             </div>
           </div>
@@ -2024,7 +2024,7 @@ const STATUS_OPTIONS=[
                 return(
                   <div key={st}
                     onClick={()=>{if(ex){startEditSystem(ex);setSystemModal(ex)}else{addSystem(st)}}}
-                    style={{background:ex?.not_applicable?'#F5F5F3':(ex&&!ex.not_applicable&&ex.condition&&ex.condition!=='unknown'&&age)?'#EAF3DE':'#fff',border:`1px solid ${hasSafetyFlag?'#E24B4A':ex?.not_applicable?'rgba(30,58,47,0.08)':(ex&&ex.condition&&ex.condition!=='unknown'&&age)?'rgba(61,122,90,0.25)':ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer',position:'relative',opacity:ex?.not_applicable?0.6:1}}>
+                    style={{background:(()=>{const exAge=ex?(new Date().getFullYear()-(parseInt(ex.replacement_year||ex.install_year||ex.purchase_year||'0')||0))||null:null;const exOk=!!(ex&&!ex.not_applicable&&ex.condition&&ex.condition!=='unknown'&&exAge);return ex?.not_applicable?'#F5F5F3':exOk?'#EAF3DE':'#fff'})(),border:`1px solid ${hasSafetyFlag?'#E24B4A':ex?.not_applicable?'rgba(30,58,47,0.08)':(()=>{const exAge=ex?(new Date().getFullYear()-(parseInt(ex.replacement_year||ex.install_year||ex.purchase_year||'0')||0))||null:null;return !!(ex&&!ex.not_applicable&&ex.condition&&ex.condition!=='unknown'&&exAge)})()?'rgba(61,122,90,0.25)':ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer',position:'relative',opacity:ex?.not_applicable?0.6:1}}>
                     {hasSafetyFlag&&<div style={{position:'absolute',top:'6px',right:'6px',width:'8px',height:'8px',borderRadius:'50%',background:'#E24B4A'}}/>}
                     <div style={{fontSize:'20px',marginBottom:'6px'}}>{SYSTEM_ICONS[st]||'🔧'}</div>
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[st]||st}</div>
