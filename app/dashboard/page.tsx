@@ -1414,12 +1414,13 @@ export default function Dashboard() {
     
   }
 
-  const saveSystem=async(sysId:string)=>{
+  const saveSystem=async(sysId:string,overrides?:any)=>{
     setSaving(true)
     try{
       const COLS=['id','home_id','system_type','install_year','replacement_year','age_years','material','notes','condition','system_status','ever_replaced','under_warranty','not_applicable','known_issues','storm_damage_unaddressed','considering_replacing','warranty_expiry_year','quantity','window_count','has_fogged_units','has_skylights','any_broken_glass','any_wood_rot','has_broken_glass','locks_not_functioning','windows_wont_open','has_gutter_guards','seamless_or_sectional','fascia_material','has_glass_lites_or_sidelites','hardware_in_working_condition','has_anti_lift','configuration','locking_type','frame_material','glazing_type','fuel_source','fuel_type','filter_size','last_filter_replacement','last_professional_service','furnace_install_year','ac_or_heat_pump_install_year','tank_size_gallons','tank_size','has_expansion_tank','last_flush','last_anode_rod_inspection','last_tpr_valve_test','last_sweep','last_inspection','last_cleaning','last_seal_stain','last_seal_year','last_test','last_battery_replacement','has_battery_backup','has_ice_maker','has_water_dispenser','last_condenser_coil_cleaning','last_water_filter_replacement','last_filter_cleaning','last_cleaner_cycle','occupants','last_pumped','system_subtype','pipe_material','panel_type','panel_amperage','is_insulated','door_count','last_service_year','purchase_year','appliance_type','has_water_line','last_drum_clean','has_smart_features','coverage_sqft','has_heater','last_chemical_service','softener_type','last_resin_clean','well_depth_ft','last_water_test','panel_kw','battery_backup','crawl_space_type','last_vapor_barrier','encapsulated','last_vent_cleaning','hvac_system_type','water_heater_type','pool_type','septic_system_type','chimney_type','foundation_type','tank_size_gallons','panel_count','panel_kw_output','last_seal_stain']
       const payload:any={}
-      for(const k of Object.keys(systemEdits)){if(COLS.includes(k))payload[k]=systemEdits[k]}
+      const mergedEdits={...systemEdits,...(overrides||{})}
+      for(const k of Object.keys(mergedEdits)){if(COLS.includes(k))payload[k]=mergedEdits[k]}
       if(payload.condition){const cm:Record<string,string>={'Good':'good','Fair':'fair','Poor':'poor','Critical':'critical','good':'good','fair':'fair','poor':'poor','critical':'critical','watch':'fair','inspect':'poor','priority':'critical','unknown':'unknown'};payload.condition=cm[payload.condition]||'unknown'}
       const effectiveYear=payload.replacement_year||payload.install_year||payload.purchase_year
       payload.age_years=effectiveYear?new Date().getFullYear()-parseInt(effectiveYear):null
@@ -2612,7 +2613,7 @@ const STATUS_OPTIONS=[
 
                 {/* Save / Cancel */}
                 <div style={{display:'flex',gap:'10px',paddingTop:'4px'}}>
-                  <button onClick={async()=>{await saveSystem(sys.id);if(!saving)setSystemModal(null)}} disabled={saving} style={{flex:1,background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'13px 20px',borderRadius:'12px',fontSize:'14px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{saving?'Saving...':'Save changes'}</button>
+                  <button onClick={async()=>{await saveSystem(sys.id,systemEdits);if(!saving)setSystemModal(null)}} disabled={saving} style={{flex:1,background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'13px 20px',borderRadius:'12px',fontSize:'14px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{saving?'Saving...':'Save changes'}</button>
                   <button onClick={()=>setSystemModal(null)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'13px 18px',borderRadius:'12px',fontSize:'14px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button>
                 </div>
               </div>
