@@ -1620,13 +1620,13 @@ const STATUS_OPTIONS=[
               {sys.system_status==='scheduled'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#E6F1FB',color:'#0C447C'}}>Scheduled</span>}
             </div>
             {(()=>{
-              const needsSetup=!sys.not_applicable&&(!age&&!sys.material)
-              return <div style={{fontSize:'12px',color:needsSetup?'#C47B2B':'#8A8A82',fontWeight:needsSetup?500:400}}>
-                {sys.not_applicable?'Not applicable':age?`${age} yr old${sys.material?` · ${sys.material}`:''}`:sys.material||'Tap to set up'}
+              const isSetUp=!!age&&!!sys.condition&&sys.condition!=='unknown'&&!sys.not_applicable
+              return <div style={{fontSize:'12px',color:(!isSetUp&&!sys.not_applicable)?'#C47B2B':'#8A8A82',fontWeight:(!isSetUp&&!sys.not_applicable)?500:400}}>
+                {sys.not_applicable?'Not applicable':isSetUp?`${age} yr old${sys.material?` · ${sys.material}`:''}`:'Tap to set up'}
               </div>
             })()}
           </div>
-          {age!==null&&!sys.not_applicable&&sys.condition&&sys.condition!=='unknown'&&<div style={{width:'60px',flexShrink:0}}><div style={{height:'4px',background:'#EDE8E0',borderRadius:'2px'}}><div style={{width:`${pct}%`,height:'100%',background:cond.color,borderRadius:'2px'}}/></div><div style={{fontSize:'10px',color:'#8A8A82',textAlign:'right',marginTop:'2px'}}>{pct}%</div></div>}
+          {age!==null&&!sys.not_applicable&&sys.condition&&sys.condition!=='unknown'&&!!age&&<div style={{width:'60px',flexShrink:0}}><div style={{height:'4px',background:'#EDE8E0',borderRadius:'2px'}}><div style={{width:`${pct}%`,height:'100%',background:cond.color,borderRadius:'2px'}}/></div><div style={{fontSize:'10px',color:'#8A8A82',textAlign:'right',marginTop:'2px'}}>{pct}%</div></div>}
           <span style={{fontSize:'12px',color:'#8A8A82',flexShrink:0}}>›</span>
         </div>
 
@@ -2067,9 +2067,7 @@ const STATUS_OPTIONS=[
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[at]||at}</div>
                     {ex&&!ex.not_applicable?(
                       <div>
-                        <div style={{fontSize:'10px',color:(ex?.condition&&ex?.condition!=='unknown')?cond?.textColor||'#8A8A82':'#C47B2B',fontWeight:500}}>{(ex?.condition&&ex?.condition!=='unknown')?(cond?.label||'Good'):'Tap to set up'}</div>
-                        {(ex?.condition&&ex?.condition!=='unknown')&&age&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}
-                        {(ex?.condition&&ex?.condition!=='unknown')&&age&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}
+                        {(()=>{const ok=!!(ex?.condition&&ex?.condition!=='unknown'&&age);return<><div style={{fontSize:'10px',color:ok?cond?.textColor||'#3D7A5A':'#C47B2B',fontWeight:500}}>{ok?(cond?.label||'Good'):'Tap to set up'}</div>{ok&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}{ok&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}</>})()}
                       </div>
                     ):ex?.not_applicable?(
                       <div style={{fontSize:'10px',color:'#8A8A82'}}>Not applicable</div>
@@ -2099,9 +2097,7 @@ const STATUS_OPTIONS=[
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[st]||st}</div>
                     {ex&&!ex.not_applicable?(
                       <div>
-                        <div style={{fontSize:'10px',color:(ex?.condition&&ex?.condition!=='unknown')?cond?.textColor||'#8A8A82':'#C47B2B',fontWeight:500}}>{(ex?.condition&&ex?.condition!=='unknown')?(cond?.label||'Good'):'Tap to set up'}</div>
-                        {(ex?.condition&&ex?.condition!=='unknown')&&age&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}
-                        {(ex?.condition&&ex?.condition!=='unknown')&&age&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}
+                        {(()=>{const ok=!!(ex?.condition&&ex?.condition!=='unknown'&&age);return<><div style={{fontSize:'10px',color:ok?cond?.textColor||'#3D7A5A':'#C47B2B',fontWeight:500}}>{ok?(cond?.label||'Good'):'Tap to set up'}</div>{ok&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}{ok&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}</>})()}
                       </div>
                     ):ex?.not_applicable?(
                       <div style={{fontSize:'10px',color:'#8A8A82'}}>Not applicable</div>
