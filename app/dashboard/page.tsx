@@ -1877,12 +1877,12 @@ const STATUS_OPTIONS=[
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'24px',alignItems:'start'}}>
             <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden'}}>
               <div style={{padding:'16px 20px',borderBottom:expandedSections.has('auto')?'1px solid rgba(30,58,47,0.08)':'none',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}} onClick={()=>{}}>
-                <div><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',fontWeight:400,color:'#1E3A2F'}}>Your Home's Environment</h3><p style={{fontSize:'11px',color:'#8A8A82',marginTop:'2px'}}>Auto-detected · overridable</p></div>
+                <div><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',fontWeight:400,color:'#1E3A2F'}}>Your Home's Environment</h3></div>
                 
               </div>
               {true&&(
                 <div style={{padding:'16px 20px'}}>
-                  <p style={{fontSize:'12px',color:'#8A8A82',marginBottom:'14px',lineHeight:1.5}}>Based on ZIP {home?.zip||'your address'} — tap Override if your property differs.</p>
+                  <p style={{fontSize:'11px',color:'#8A8A82',marginBottom:'12px',lineHeight:1.5}}>Based on ZIP {home?.zip||'your ZIP'}.</p>
                   <div style={{display:'flex',flexDirection:'column' as const,gap:'12px'}}>
                     {details?.climate_zone&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'18px',flexShrink:0}}>🌡️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Climate Zone {details.climate_zone}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>Affects HVAC sizing, roof ventilation, and exterior paint lifespan. Also useful for gardening — your zone determines which plants overwinter.</div></div></div>}
                     {details?.hard_water_zone&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'18px',flexShrink:0}}>💧</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#C47B2B'}}>Hard water area</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>Mineral buildup shortens water heater life and clogs fixtures faster. Flush your water heater annually and check the anode rod every 3 years.</div></div></div>}
