@@ -1393,8 +1393,9 @@ export default function Dashboard() {
 
   const startEditSystem=(sys:any)=>{
     const edits:any={}
-    Object.keys(sys).forEach(k=>{if(k!=='condition')edits[k]=sys[k]})
-    // condition must be explicitly chosen by user — never carry over
+    Object.keys(sys).forEach(k=>{edits[k]=sys[k]})
+    // Normalize condition to Title case for button display
+    if(edits.condition){const cm:Record<string,string>={'good':'Good','fair':'Fair','poor':'Poor','critical':'Critical','unknown':'','watch':'Fair','inspect':'Poor','priority':'Critical'};edits.condition=cm[edits.condition]||''}
     const fields=SYSTEM_FIELDS[sys.system_type]||[]
     fields.forEach(f=>{const key=f.label.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');if(!(key in edits))edits[key]=f.type==='boolean'?false:''})
     // Autofill install year from home build year if not set
