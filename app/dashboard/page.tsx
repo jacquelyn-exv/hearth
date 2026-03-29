@@ -969,7 +969,7 @@ function MaintenanceTab({systems,home,jobs,onTabChange,userId,onJobsRefresh}:{sy
     setLogDoneModal(null)
     setLdCompany(''); setLdDate(new Date().toISOString().split('T')[0]); setLdCost(''); setLdNotes('')
   }
-  const systemTypes = systems.filter(s=>!s.not_applicable).map(s=>s.system_type)
+  const systemTypes = systems.map(s=>s.system_type)
 
   const allTasks: {month:number;task:string;urgency:'high'|'medium'|'low';systemType:string;systemIcon:string}[] = []
   for (const st of systemTypes) {
@@ -1620,7 +1620,7 @@ const STATUS_OPTIONS=[
               {sys.system_status==='scheduled'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#E6F1FB',color:'#0C447C'}}>Scheduled</span>}
             </div>
             <div style={{fontSize:'12px',color:'#8A8A82'}}>
-              {sys.not_applicable?'Not applicable':age?`${age} yr old${sys.material?` · ${sys.material}`:''}`:sys.material||'Tap to set up'}
+              {sys.not_applicable?'Not applicable':((sys.condition&&sys.condition!=='unknown')&&age)?`${age} yr old${sys.material?` · ${sys.material}`:''}`:'Tap to set up'}
             </div>
           </div>
           {age!==null&&!sys.not_applicable&&<div style={{width:'60px',flexShrink:0}}><div style={{height:'4px',background:'#EDE8E0',borderRadius:'2px'}}><div style={{width:`${pct}%`,height:'100%',background:cond.color,borderRadius:'2px'}}/></div><div style={{fontSize:'10px',color:'#8A8A82',textAlign:'right',marginTop:'2px'}}>{pct}%</div></div>}
@@ -2029,7 +2029,7 @@ const STATUS_OPTIONS=[
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[st]||st}</div>
                     {ex&&!ex.not_applicable?(
                       <div>
-                        <div style={{fontSize:'10px',color:cond?.textColor||'#8A8A82',fontWeight:500}}>{cond?.label||'Set up'}</div>
+                        <div style={{fontSize:'10px',color:cond?.textColor||'#8A8A82',fontWeight:500}}>{(ex?.condition&&ex?.condition!=='unknown'&&ex?.condition!==null)?(cond?.label||'Good'):'Tap to set up'}</div>
                         {age&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}
                         {age&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}
                       </div>
@@ -2042,7 +2042,7 @@ const STATUS_OPTIONS=[
                 )
               })}
             </div>
-            {systems.some(s=>s.not_applicable)&&<button onClick={()=>setShowHiddenSystems(!showHiddenSystems)} style={{background:'none',border:'none',color:'#8A8A82',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",padding:'8px 0',marginBottom:'20px'}}>{showHiddenSystems?'Hide not applicable systems':`Show ${systems.filter(s=>s.not_applicable).length} hidden systems`}</button>}
+            
 
             <div style={{marginTop:'8px',marginBottom:'8px'}}><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F'}}>Appliances</h3></div>
             {/* APPLIANCES tile grid */}
