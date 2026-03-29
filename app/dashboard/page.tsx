@@ -1142,8 +1142,7 @@ export default function Dashboard() {
   const [editingHomeSection,setEditingHomeSection]=useState<string|null>(null)
   const [savedSection,setSavedSection]=useState<string|null>(null)
   const [expandedSections,setExpandedSections]=useState<Set<string>>(new Set(['about']))
-  const [expandedSystems,setExpandedSystems]=useState<Set<string>>(new Set())
-  const [editingSystemId,setEditingSystemId]=useState<string|null>(null)
+  const [systemModal,setSystemModal]=useState<any|null>(null)
   const [savedSystemId,setSavedSystemId]=useState<string|null>(null)
   const [systemEdits,setSystemEdits]=useState<any>({})
   const [showHiddenSystems,setShowHiddenSystems]=useState(false)
@@ -1254,8 +1253,7 @@ export default function Dashboard() {
         if(uh)setHome(uh)
       }
       const du:any={}
-      if(section==='about'){du.home_type=homeEdits.home_type||null;du.sqft=parseInt(homeEdits.sqft)||null;du.bedrooms=parseInt(homeEdits.bedrooms)||null;du.bathrooms=parseFloat(homeEdits.bathrooms)||null;du.stories=parseInt(homeEdits.stories)||null;du.lot_size=homeEdits.lot_size||null}
-      if(section==='features'){du.foundation_type=homeEdits.foundation_type||null;du.garage=homeEdits.garage||null;du.has_fireplace=homeEdits.has_fireplace||false;du.has_sump_pump=homeEdits.has_sump_pump||false;du.has_pool=homeEdits.has_pool||false;du.has_solar=homeEdits.has_solar||false;du.has_septic=homeEdits.has_septic||false;du.has_well_water=homeEdits.has_well_water||false;du.has_hoa=homeEdits.has_hoa||false;du.tree_coverage=homeEdits.tree_coverage||null}
+      if(section==='about'){du.home_type=homeEdits.home_type||null;du.sqft=parseInt(homeEdits.sqft)||null;du.bedrooms=parseInt(homeEdits.bedrooms)||null;du.bathrooms=parseFloat(homeEdits.bathrooms)||null;du.stories=parseInt(homeEdits.stories)||null;du.lot_size=homeEdits.lot_size||null;du.foundation_type=homeEdits.foundation_type||null;du.garage=homeEdits.garage||null;du.tree_coverage=homeEdits.tree_coverage||null;du.has_fireplace=homeEdits.has_fireplace||false;du.has_sump_pump=homeEdits.has_sump_pump||false;du.has_pool=homeEdits.has_pool||false;du.has_solar=homeEdits.has_solar||false;du.has_septic=homeEdits.has_septic||false;du.has_well_water=homeEdits.has_well_water||false;du.has_hoa=homeEdits.has_hoa||false}
       if(Object.keys(du).length>0){
         const {data:existCheck}=await supabase.from('home_details').select('id').eq('home_id',home.id).maybeSingle()
         if(existCheck){
@@ -1296,8 +1294,8 @@ export default function Dashboard() {
     if(sys.system_type==='windows'&&!edits.window_count&&details?.sqft){
       edits.window_count=Math.round(details.sqft/80)
     }
-    setSystemEdits(edits);setEditingSystemId(sys.id)
-    setExpandedSystems(prev=>{const n=new Set(prev);n.add(sys.id);return n})
+    setSystemEdits(edits)
+    
   }
 
   const saveSystem=async(sysId:string)=>{
@@ -1314,7 +1312,7 @@ export default function Dashboard() {
       if(se){console.error('system update:',se);alert('Save failed: '+se.message);setSaving(false);return}
       if(updated)setSystems((prev:any[])=>prev.map(s=>s.id===sysId?updated:s))
       await recalculateScore()
-      setEditingSystemId(null)
+      /* removed */
       setSavedSystemId(sysId)
       setTimeout(()=>setSavedSystemId(null),2500)
     }catch(e:any){console.error('saveSystem:',e);alert('Save failed: '+e.message)}
@@ -1421,14 +1419,22 @@ export default function Dashboard() {
     return<div key={field.label}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>{field.label}</label><input value={val||''} onChange={e=>onChange(e.target.value)} style={iS} placeholder={field.type==='year'?'e.g. 2018':''}/></div>
   }
 
+const STATUS_OPTIONS=[
+      {v:'in_service',label:'In service — working normally',dot:'#3D7A5A'},
+      {v:'monitoring',label:'In service — monitoring it',dot:'#C47B2B',sub:'Showing age or condition concerns'},
+      {v:'getting_quotes',label:'Getting quotes',dot:'#C47B2B',sub:'Actively pricing replacement'},
+      {v:'scheduled',label:'Replacement scheduled',dot:'#185FA5'},
+      {v:'recently_replaced',label:'Recently replaced',dot:'#185FA5',sub:'Update the year above'},
+      {v:'not_applicable',label:'Not applicable',dot:'#888780',sub:"This home doesn't have one"},
+    ]
+
   const renderSystemCard=(sys:any)=>{
     const cond=getCondition(sys)
     const effectiveYear=sys.replacement_year||sys.install_year||sys.purchase_year
     const age=effectiveYear?new Date().getFullYear()-effectiveYear:null
     const lifespan=SYSTEM_LIFESPANS[sys.system_type]||20
     const pct=age?Math.min(100,Math.round((age/lifespan)*100)):0
-    const isEditing=editingSystemId===sys.id
-    const isExpanded=expandedSystems.has(sys.id)
+    const isEditing=systemModal?.id===sys.id
     const fields=SYSTEM_FIELDS[sys.system_type]||[]
     const essentialFields=fields.filter(f=>!['boolean'].includes(f.type)&&!['Last','last'].some(p=>f.label.startsWith(p))&&f.label!=='Notes'&&f.label!=='Known issues')
     const detailFields=fields.filter(f=>f.type==='boolean'||['Last','last'].some(p=>f.label.startsWith(p)))
@@ -1455,14 +1461,6 @@ export default function Dashboard() {
       return 3
     }
 
-    const STATUS_OPTIONS=[
-      {v:'in_service',label:'In service — working normally',dot:'#3D7A5A'},
-      {v:'monitoring',label:'In service — monitoring it',dot:'#C47B2B',sub:'Showing age or condition concerns'},
-      {v:'getting_quotes',label:'Getting quotes',dot:'#C47B2B',sub:'Actively pricing replacement'},
-      {v:'scheduled',label:'Replacement scheduled',dot:'#185FA5'},
-      {v:'recently_replaced',label:'Recently replaced',dot:'#185FA5',sub:'Update the year above'},
-      {v:'not_applicable',label:'Not applicable',dot:'#888780',sub:"This home doesn't have one"},
-    ]
 
     return(
       <div key={sys.id} style={{background:'#fff',border:`1px solid ${hasSafetyFlag?'rgba(226,75,74,0.4)':'rgba(30,58,47,0.11)'}`,borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
@@ -1477,10 +1475,7 @@ export default function Dashboard() {
         )}
 
         <div style={{display:'flex',alignItems:'center',gap:'12px',padding:'14px 18px',cursor:'pointer'}}
-          onClick={()=>{
-            if(!isExpanded){setExpandedSystems(prev=>{const n=new Set(prev);n.add(sys.id);return n});startEditSystem(sys)}
-            else{setExpandedSystems(prev=>{const n=new Set(prev);n.delete(sys.id);return n});setEditingSystemId(null)}
-          }}>
+          onClick={()=>{startEditSystem(sys);setSystemModal(sys)}}>
           <div style={{fontSize:'22px',flexShrink:0}}>{SYSTEM_ICONS[sys.system_type]||'🔧'}</div>
           <div style={{flex:1}}>
             <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'2px',flexWrap:'wrap'}}>
@@ -1495,120 +1490,9 @@ export default function Dashboard() {
             </div>
           </div>
           {age!==null&&!sys.not_applicable&&<div style={{width:'60px',flexShrink:0}}><div style={{height:'4px',background:'#EDE8E0',borderRadius:'2px'}}><div style={{width:`${pct}%`,height:'100%',background:cond.color,borderRadius:'2px'}}/></div><div style={{fontSize:'10px',color:'#8A8A82',textAlign:'right',marginTop:'2px'}}>{pct}%</div></div>}
-          <span style={{fontSize:'12px',color:'#8A8A82',flexShrink:0}}>{isExpanded?'▲':'▼'}</span>
+          <span style={{fontSize:'12px',color:'#8A8A82',flexShrink:0}}>›</span>
         </div>
 
-        {isExpanded&&isEditing&&(
-          <div style={{borderTop:'1px solid rgba(30,58,47,0.08)',padding:'18px',background:'#F8F4EE'}}>
-
-            {/* STEP 1: Essentials */}
-            <div style={{fontSize:'10px',fontWeight:500,letterSpacing:'1px',textTransform:'uppercase' as const,color:'#C47B2B',marginBottom:'6px'}}>Step 1 · The essentials</div>
-            <div style={{fontSize:'12px',color:'#8A8A82',marginBottom:'12px',lineHeight:1.5}}>These fields drive your maintenance calendar and deferred liability estimate</div>
-
-            {/* Septic special — interval calculator */}
-            {sys.system_type==='septic'&&systemEdits.tank_size&&systemEdits.occupants&&(
-              <div style={{background:'#1E3A2F',borderRadius:'10px',padding:'12px 14px',marginBottom:'12px'}}>
-                <div style={{fontSize:'10px',color:'rgba(248,244,238,0.5)',marginBottom:'3px'}}>Your calculated pumping schedule</div>
-                <div style={{fontSize:'17px',fontWeight:500,color:'#F8F4EE',marginBottom:'2px'}}>Every {getSepticInterval()} years</div>
-                <div style={{fontSize:'11px',color:'rgba(248,244,238,0.5)'}}>{systemEdits.tank_size} · {systemEdits.occupants} occupants · EPA guideline</div>
-                {systemEdits.last_pumped&&(()=>{const due=parseInt(systemEdits.last_pumped)+getSepticInterval();const overdue=due<new Date().getFullYear();return(<div style={{marginTop:'8px',fontSize:'11px',color:overdue?'#E57373':'#6AAF8A',fontWeight:500}}>{overdue?`⚠️ Overdue — was due ${due}`:`Next due: ${due}`}</div>)})()}
-              </div>
-            )}
-
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'12px'}}>
-              {essentialFields.map(f=>renderSystemField(f))}
-              {/* Autofill install year hint */}
-              {(essentialFields.some(f=>f.label==='Install year'||f.label==='Purchase year'))&&autoYear&&!(systemEdits.install_year||systemEdits.purchase_year)&&(
-                <div style={{gridColumn:'1/-1',fontSize:'11px',color:'#8A8A82',marginTop:'-6px'}}>
-                  💡 We pre-filled {autoYear} from your home's build year — update if this system was replaced
-                </div>
-              )}
-            </div>
-
-            {/* Condition selector */}
-            <div style={{marginBottom:'14px'}}>
-              <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'6px'}}>Condition</label>
-              <div style={{display:'flex',gap:'8px'}}>
-                {[
-                  {v:'Good',label:'Good',desc:sys.system_type==='roof'?'No issues, well maintained':sys.system_type==='windows'?'All seals intact, all operable':sys.system_type==='hvac'?'Heating and cooling normally':'No known issues',color:'#27500A',bg:'#EAF2EC',border:'#3D7A5A'},
-                  {v:'Fair',label:'Fair',desc:sys.system_type==='roof'?'Minor wear, monitoring':sys.system_type==='windows'?'Some fogging or seal issues':sys.system_type==='hvac'?'Some inefficiency or noise':'Minor wear, monitoring',color:'#633806',bg:'#FBF0DC',border:'#C47B2B'},
-                  {v:'Poor',label:'Poor',desc:sys.system_type==='roof'?'Active leaks or damage':sys.system_type==='windows'?'Broken glass, failed seals':sys.system_type==='hvac'?'Not working properly':'Needs attention soon',color:'#791F1F',bg:'#FDECEA',border:'#E24B4A'},
-                ].map(opt=>(
-                  <button key={opt.v} onClick={()=>setSystemEdits((p:any)=>({...p,condition:opt.v}))}
-                    style={{flex:1,padding:'10px 8px',borderRadius:'10px',border:`${systemEdits.condition===opt.v?'1.5px':'0.5px'} solid ${systemEdits.condition===opt.v?opt.border:'rgba(30,58,47,0.15)'}`,background:systemEdits.condition===opt.v?opt.bg:'#fff',cursor:'pointer',textAlign:'center' as const,fontFamily:"'DM Sans', sans-serif"}}>
-                    <div style={{fontSize:'11px',fontWeight:500,color:opt.color,marginBottom:'2px'}}>{opt.label}</div>
-                    <div style={{fontSize:'10px',color:opt.color,opacity:0.8,lineHeight:1.3}}>{opt.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* STEP 2: Status */}
-            <div style={{height:'0.5px',background:'rgba(30,58,47,0.1)',margin:'14px 0'}}/>
-            <div style={{fontSize:'10px',fontWeight:500,letterSpacing:'1px',textTransform:'uppercase' as const,color:'#C47B2B',marginBottom:'6px'}}>Step 2 · Status</div>
-            <div style={{display:'grid',gap:'6px',marginBottom:'14px'}}>
-              {STATUS_OPTIONS.map(opt=>(
-                <button key={opt.v}
-                  onClick={()=>setSystemEdits((p:any)=>({...p,system_status:opt.v,not_applicable:opt.v==='not_applicable'}))}
-                  style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 12px',borderRadius:'10px',border:`${(systemEdits.system_status||'in_service')===opt.v?'1.5px':'0.5px'} solid ${(systemEdits.system_status||'in_service')===opt.v?'#1E3A2F':'rgba(30,58,47,0.15)'}`,background:(systemEdits.system_status||'in_service')===opt.v?'#F0F5F2':'#fff',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textAlign:'left' as const}}>
-                  <div style={{width:'8px',height:'8px',borderRadius:'50%',background:opt.dot,flexShrink:0}}/>
-                  <div>
-                    <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F'}}>{opt.label}</div>
-                    {opt.sub&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{opt.sub}</div>}
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* STEP 3: Details & service history */}
-            <div style={{height:'0.5px',background:'rgba(30,58,47,0.1)',margin:'14px 0'}}/>
-            <div style={{fontSize:'10px',fontWeight:500,letterSpacing:'1px',textTransform:'uppercase' as const,color:'#C47B2B',marginBottom:'6px'}}>Step 3 · Details & service history</div>
-
-            {/* Safety checks for windows */}
-            {sys.system_type==='windows'&&(
-              <div style={{display:'grid',gap:'6px',marginBottom:'12px'}}>
-                {[
-                  {key:'has_broken_glass',label:'Any broken glass',desc:'Security + safety risk — high urgency repair needed',severity:'high'},
-                  {key:'locks_not_functioning',label:'Any locks not functioning',desc:'Security vulnerability — repair recommended promptly',severity:'high'},
-                  {key:'windows_wont_open',label:'Any windows won\'t open or close',desc:'Egress safety concern — medium urgency',severity:'medium'},
-                  {key:'has_fogged_units',label:'Condensation / fogging between panes',desc:'Seal failure — energy loss',severity:'low'},
-                  {key:'any_wood_rot',label:'Any wood rot',desc:'Structural concern on wood frames',severity:'medium'},
-                ].map(check=>(
-                  <label key={check.key} style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 12px',background:check.severity==='high'&&systemEdits[check.key]?'#FEF5F5':check.severity==='medium'&&systemEdits[check.key]?'#FBF0DC':'#F8F4EE',border:`0.5px solid ${check.severity==='high'?'rgba(226,75,74,0.2)':check.severity==='medium'?'rgba(196,123,43,0.2)':'rgba(30,58,47,0.1)'}`,borderRadius:'8px',cursor:'pointer'}}>
-                    <input type="checkbox" checked={systemEdits[check.key]||false} onChange={e=>setSystemEdits((p:any)=>({...p,[check.key]:e.target.checked}))} style={{accentColor:check.severity==='high'?'#E24B4A':check.severity==='medium'?'#C47B2B':'#1E3A2F',width:'15px',height:'15px'}}/>
-                    <div>
-                      <div style={{fontSize:'12px',fontWeight:500,color:check.severity==='high'?'#791F1F':check.severity==='medium'?'#633806':'#1E3A2F'}}>{check.label}</div>
-                      <div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{check.desc}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {/* Electrical safety */}
-            {sys.system_type==='electrical'&&systemEdits.panel_type&&(systemEdits.panel_type.includes('Federal Pacific')||systemEdits.panel_type.includes('Zinsco'))&&(
-              <div style={{padding:'10px 14px',background:'#FEF5F5',borderRadius:'10px',border:'1px solid rgba(226,75,74,0.3)',marginBottom:'12px'}}>
-                <div style={{fontSize:'12px',fontWeight:500,color:'#791F1F',marginBottom:'3px'}}>🔴 {systemEdits.panel_type} — known fire hazard</div>
-                <div style={{fontSize:'11px',color:'#9B2C2C',lineHeight:1.5}}>This panel type has a documented history of fire hazards. Replacement by a licensed electrician is strongly recommended regardless of age. This has been added to your Home Log as high urgency.</div>
-              </div>
-            )}
-
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'10px'}}>
-              {detailFields.filter(f=>f.type!=='boolean').map(f=>renderSystemField(f))}
-              <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Notes</label><input value={systemEdits.notes||''} onChange={e=>setSystemEdits((p:any)=>({...p,notes:e.target.value}))} style={iS} placeholder="Anything else worth remembering?"/></div>
-              {notesFields.map(f=>renderSystemField(f))}
-            </div>
-            <div style={{display:'flex',flexWrap:'wrap',gap:'10px',marginBottom:'12px'}}>
-              {detailFields.filter(f=>f.type==='boolean'&&!['has_broken_glass','locks_not_functioning','windows_wont_open','has_fogged_units','any_wood_rot'].includes(f.label.toLowerCase().replace(/\s+/g,'_'))).map(f=>renderSystemField(f))}
-              <label style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'12px',cursor:'pointer'}}><input type="checkbox" checked={systemEdits.under_warranty||false} onChange={e=>setSystemEdits((p:any)=>({...p,under_warranty:e.target.checked}))} style={{accentColor:'#1E3A2F'}}/>Under warranty</label>
-            </div>
-
-            <div style={{display:'flex',gap:'8px'}}>
-              <button onClick={()=>saveSystem(sys.id)} disabled={saving} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'9px 20px',borderRadius:'9px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{saving?'Saving...':'Save'}</button>
-              <button onClick={()=>{setEditingSystemId(null);setExpandedSystems(prev=>{const n=new Set(prev);n.delete(sys.id);return n})}} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'9px 16px',borderRadius:'9px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button>
-            </div>
-          </div>
-        )}
       </div>
     )
   }
@@ -1860,7 +1744,7 @@ export default function Dashboard() {
           <div>
             <h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'22px',fontWeight:400,color:'#1E3A2F',marginBottom:'20px'}}>Home Details</h2>
 
-            {[{key:'about',title:'About This Home'},{key:'features',title:'Structure & Features'}].map(sec=>(
+            {[{key:'about',title:'About This Home'}].map(sec=>(
               <div key={sec.key} style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden',marginBottom:'12px'}}>
                 <div style={{padding:'16px 20px',borderBottom:expandedSections.has(sec.key)?'1px solid rgba(30,58,47,0.08)':'none',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}} onClick={()=>{if(editingHomeSection===sec.key)setEditingHomeSection(null);else startEditSection(sec.key)}}>
                   <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',fontWeight:400,color:'#1E3A2F'}}>{sec.title}</h3>
@@ -1873,12 +1757,17 @@ export default function Dashboard() {
                         {[{label:'Street address',key:'address'},{label:'City',key:'city'},{label:'State',key:'state'},{label:'ZIP',key:'zip'},{label:'Year built',key:'year_built'},{label:'Square footage',key:'sqft'},{label:'Bedrooms',key:'bedrooms'},{label:'Bathrooms',key:'bathrooms'},{label:'Stories',key:'stories'},{label:'Lot size',key:'lot_size'}].map(f=>(<div key={f.key}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>{f.label}</label><input value={homeEdits[f.key]||''} onChange={e=>setHomeEdits((p:any)=>({...p,[f.key]:e.target.value}))} style={iS}/></div>))}
                         <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Home type</label><select value={homeEdits.home_type||''} onChange={e=>setHomeEdits((p:any)=>({...p,home_type:e.target.value}))} style={iS}><option value="">Unknown</option><option value="single_family">Single family</option><option value="townhouse">Townhouse</option><option value="condo">Condo</option><option value="multi_family">Multi-family</option><option value="mobile_home">Mobile home</option></select></div>
                         <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>My relationship to this home</label><div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>{[{value:'owner_occupied',label:'🏡 I live here'},{value:'rental',label:'🔑 I rent this out'},{value:'former',label:'📦 Former home'}].map(opt=>(<button key={opt.value} type="button" onClick={()=>setHomeEdits((p:any)=>({...p,occupancy_status:opt.value}))} style={{padding:'8px 14px',borderRadius:'8px',fontSize:'13px',border:`1px solid ${homeEdits.occupancy_status===opt.value?'#1E3A2F':'rgba(30,58,47,0.2)'}`,background:homeEdits.occupancy_status===opt.value?'#1E3A2F':'#fff',color:homeEdits.occupancy_status===opt.value?'#F8F4EE':'#1E3A2F',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",fontWeight:homeEdits.occupancy_status===opt.value?500:400}}>{opt.label}</button>))}</div></div>
+                        <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Foundation</label><select value={homeEdits.foundation_type||''} onChange={e=>setHomeEdits((p:any)=>({...p,foundation_type:e.target.value}))} style={iS}><option value="">Unknown</option><option value="full_basement">Full basement</option><option value="partial_basement">Partial basement</option><option value="crawl_space">Crawl space</option><option value="slab">Slab</option><option value="pier_beam">Pier and beam</option></select></div>
+                        <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Garage</label><select value={homeEdits.garage||''} onChange={e=>setHomeEdits((p:any)=>({...p,garage:e.target.value}))} style={iS}><option value="">None</option><option value="attached">Attached</option><option value="detached">Detached</option><option value="carport">Carport</option></select></div>
+                        <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Tree coverage</label><select value={homeEdits.tree_coverage||''} onChange={e=>setHomeEdits((p:any)=>({...p,tree_coverage:e.target.value}))} style={iS}><option value="">Unknown</option><option value="heavy">Heavy</option><option value="moderate">Moderate</option><option value="light">Light</option><option value="none">None</option></select></div>
+                        <div style={{gridColumn:'1/-1'}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'6px'}}>Features</label><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>{[{label:'🔥 Fireplace',key:'has_fireplace'},{label:'💦 Sump pump',key:'has_sump_pump'},{label:'🏊 Pool / hot tub',key:'has_pool'},{label:'☀️ Solar panels',key:'has_solar'},{label:'🪣 Septic system',key:'has_septic'},{label:'💧 Well water',key:'has_well_water'},{label:'🏘️ HOA',key:'has_hoa'}].map(cb=>(<label key={cb.key} style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'13px',cursor:'pointer',padding:'6px 10px',borderRadius:'8px',border:'1px solid rgba(30,58,47,0.1)',background:homeEdits[cb.key]?'#EAF2EC':'#fff'}}><input type="checkbox" checked={homeEdits[cb.key]||false} onChange={e=>setHomeEdits((p:any)=>({...p,[cb.key]:e.target.checked}))} style={{accentColor:'#1E3A2F',width:'15px',height:'15px'}}/>{cb.label}</label>))}</div></div>
                         <div style={{gridColumn:'1/-1',display:'flex',gap:'8px',marginTop:'4px'}}><button onClick={()=>saveHomeSection('about')} disabled={saving} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'9px 20px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{saving?'Saving...':'Save'}</button><button onClick={()=>setEditingHomeSection(null)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'9px 16px',borderRadius:'8px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button></div>
                       </div>
                     ):(
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
                         <div style={{gridColumn:'1/-1',marginBottom:'8px'}}><span style={{display:'inline-flex',alignItems:'center',gap:'6px',padding:'5px 12px',borderRadius:'20px',fontSize:'12px',fontWeight:500,background:home?.occupancy_status==='rental'?'#E6F2F8':home?.occupancy_status==='former'?'#F5F5F5':'#EAF2EC',color:home?.occupancy_status==='rental'?'#3A7CA8':home?.occupancy_status==='former'?'#8A8A82':'#3D7A5A'}}>{home?.occupancy_status==='rental'?'🔑 I rent this out':home?.occupancy_status==='former'?'📦 Former home':'🏡 I live here'}</span></div>
-                      {[{label:'Address',value:home?.address},{label:'City / State / ZIP',value:`${home?.city||''}${home?.state?`, ${home.state}`:''}${home?.zip?` ${home.zip}`:''}`},{label:'Year built',value:home?.year_built},{label:'Home type',value:(details?.home_type||home?.home_type)?.replace('_',' ')},{label:'Sq ft',value:details?.sqft?`${details.sqft.toLocaleString()} sq ft`:null},{label:'Beds / Baths',value:details?.bedrooms?`${details.bedrooms} bd · ${details.bathrooms||'?'} ba`:null},{label:'Stories',value:details?.stories},{label:'Lot size',value:details?.lot_size}].filter(s=>s.value).map(stat=>(<div key={stat.label} style={{fontSize:'13px'}}><span style={{color:'#8A8A82'}}>{stat.label}: </span><span style={{fontWeight:500,textTransform:'capitalize'}}>{stat.value}</span></div>))}
+                      {[{label:'Address',value:home?.address},{label:'City / State / ZIP',value:`${home?.city||''}${home?.state?`, ${home.state}`:''}${home?.zip?` ${home.zip}`:''}`},{label:'Year built',value:home?.year_built},{label:'Home type',value:(details?.home_type||home?.home_type)?.replace('_',' ')},{label:'Sq ft',value:details?.sqft?`${details.sqft.toLocaleString()} sq ft`:null},{label:'Beds / Baths',value:details?.bedrooms?`${details.bedrooms} bd · ${details.bathrooms||'?'} ba`:null},{label:'Stories',value:details?.stories},{label:'Lot size',value:details?.lot_size},{label:'Foundation',value:details?.foundation_type?.replace(/_/g,' ')},{label:'Garage',value:details?.garage},{label:'Tree coverage',value:details?.tree_coverage}].filter(s=>s.value).map(stat=>(<div key={stat.label} style={{fontSize:'13px'}}><span style={{color:'#8A8A82'}}>{stat.label}: </span><span style={{fontWeight:500,textTransform:'capitalize'}}>{stat.value}</span></div>))}
+                      {[{label:'🔥 Fireplace',show:details?.has_fireplace},{label:'💦 Sump pump',show:details?.has_sump_pump},{label:'🏊 Pool',show:details?.has_pool},{label:'☀️ Solar',show:details?.has_solar},{label:'🪣 Septic',show:details?.has_septic},{label:'💧 Well water',show:details?.has_well_water},{label:'🏘️ HOA',show:details?.has_hoa}].filter(f=>f.show).length>0&&(<div style={{gridColumn:'1/-1',display:'flex',flexWrap:'wrap',gap:'6px',marginTop:'4px'}}>{[{label:'🔥 Fireplace',show:details?.has_fireplace},{label:'💦 Sump pump',show:details?.has_sump_pump},{label:'🏊 Pool',show:details?.has_pool},{label:'☀️ Solar',show:details?.has_solar},{label:'🪣 Septic',show:details?.has_septic},{label:'💧 Well water',show:details?.has_well_water},{label:'🏘️ HOA',show:details?.has_hoa}].filter(f=>f.show).map(f=>(<span key={f.label} style={{background:'#EAF2EC',border:'1px solid rgba(61,122,90,0.2)',padding:'3px 10px',borderRadius:'20px',fontSize:'12px',color:'#1E3A2F'}}>{f.label}</span>))}</div>)}
                       </div>
                     )}
                   </div>
@@ -2012,7 +1901,7 @@ export default function Dashboard() {
                 const hasSafetyFlag=ex&&(ex.has_broken_glass||ex.locks_not_functioning||ex.any_broken_glass||ex.panel_type?.includes('Federal Pacific')||ex.panel_type?.includes('Zinsco'))
                 return(
                   <div key={st}
-                    onClick={()=>{if(ex){setExpandedSystems(prev=>{const n=new Set(prev);if(n.has(ex.id))n.delete(ex.id);else n.add(ex.id);return n});startEditSystem(ex)}else{addSystem(st)}}}
+                    onClick={()=>{if(ex){startEditSystem(ex);setSystemModal(ex)}else{addSystem(st)}}}
                     style={{background:'#fff',border:`1px solid ${hasSafetyFlag?'#E24B4A':ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer',position:'relative'}}>
                     {hasSafetyFlag&&<div style={{position:'absolute',top:'6px',right:'6px',width:'8px',height:'8px',borderRadius:'50%',background:'#E24B4A'}}/>}
                     <div style={{fontSize:'20px',marginBottom:'6px'}}>{SYSTEM_ICONS[st]||'🔧'}</div>
@@ -2048,7 +1937,7 @@ export default function Dashboard() {
                 const pct=age?Math.min(100,Math.round((age/lifespan)*100)):0
                 return(
                   <div key={at}
-                    onClick={()=>{if(ex){setExpandedSystems(prev=>{const n=new Set(prev);if(n.has(ex.id))n.delete(ex.id);else n.add(ex.id);return n});startEditSystem(ex)}else{addSystem(at)}}}
+                    onClick={()=>{if(ex){startEditSystem(ex);setSystemModal(ex)}else{addSystem(at)}}}
                     style={{background:'#fff',border:`1px solid ${ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer'}}>
                     <div style={{fontSize:'20px',marginBottom:'6px'}}>{SYSTEM_ICONS[at]||'🔧'}</div>
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[at]||at}</div>
@@ -2080,7 +1969,7 @@ export default function Dashboard() {
                 const pct=age?Math.min(100,Math.round((age/lifespan)*100)):0
                 return(
                   <div key={st}
-                    onClick={()=>{if(ex){setExpandedSystems(prev=>{const n=new Set(prev);if(n.has(ex.id))n.delete(ex.id);else n.add(ex.id);return n});startEditSystem(ex)}else{addSystem(st)}}}
+                    onClick={()=>{if(ex){startEditSystem(ex);setSystemModal(ex)}else{addSystem(st)}}}
                     style={{background:'#fff',border:`1px solid ${ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer',opacity:ex?.not_applicable?0.5:1}}>
                     <div style={{fontSize:'20px',marginBottom:'6px'}}>{SYSTEM_ICONS[st]||'🔧'}</div>
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[st]||st}</div>
@@ -2103,7 +1992,7 @@ export default function Dashboard() {
             {/* Expanded system cards for whichever tiles are open */}
             {[...CORE_SYSTEMS,...APPLIANCES,...SITUATIONAL_SYSTEMS].map(st=>{
               const ex=systems.find((s:any)=>s.system_type===st)
-              if(!ex||!expandedSystems.has(ex.id))return null
+              if(!ex)return null
               return renderSystemCard(ex)
             })}
           </div>
@@ -2160,6 +2049,143 @@ export default function Dashboard() {
       {/* MODALS */}
       {showHistoryModal&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:500,display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}><div style={{background:'#fff',borderRadius:'16px',padding:'36px',width:'100%',maxWidth:'480px',textAlign:'center'}}><div style={{fontSize:'48px',marginBottom:'16px'}}>🏠</div><h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'24px',fontWeight:400,color:'#1E3A2F',marginBottom:'10px'}}>This home has a history</h2><p style={{fontSize:'14px',color:'#8A8A82',lineHeight:1.7,marginBottom:'24px'}}>There are {jobs.length} contractor job{jobs.length!==1?'s':''} already logged for this home.</p><div style={{display:'grid',gap:'10px'}}><button onClick={()=>{setShowHistoryModal(false);setActiveTab('log')}} style={{display:'block',width:'100%',background:'#1E3A2F',color:'#F8F4EE',padding:'12px',borderRadius:'10px',fontSize:'14px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",border:'none',textAlign:'center'}}>See this home&apos;s history first</button><button onClick={()=>setShowHistoryModal(false)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'12px',borderRadius:'10px',fontSize:'14px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Start my new homeowner guide</button></div></div></div>)}
       {showClaimedModal&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:500,display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}><div style={{background:'#fff',borderRadius:'16px',padding:'36px',width:'100%',maxWidth:'480px',textAlign:'center'}}><div style={{fontSize:'48px',marginBottom:'16px'}}>🔑</div><h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'24px',fontWeight:400,color:'#1E3A2F',marginBottom:'10px'}}>This home is now yours</h2><p style={{fontSize:'14px',color:'#8A8A82',lineHeight:1.7,marginBottom:'24px'}}>You now have full access to this home&apos;s complete history.</p><div style={{display:'grid',gap:'10px'}}><button onClick={()=>{setShowClaimedModal(false);setActiveTab('home_details')}} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'12px',borderRadius:'10px',fontSize:'14px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Update home details now</button><button onClick={()=>setShowClaimedModal(false)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'12px',borderRadius:'10px',fontSize:'14px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>I&apos;ll do it later</button></div></div></div>)}
+
+      {/* SYSTEM MODAL */}
+      {systemModal&&(()=>{
+        const sys=systems.find(s=>s.id===systemModal.id)||systemModal
+        const fields=SYSTEM_FIELDS[sys.system_type]||[]
+        const essentialFields=fields.filter((f:any)=>!['boolean'].includes(f.type)&&!['Last','last'].some((p:string)=>f.label.startsWith(p))&&f.label!=='Notes'&&f.label!=='Known issues')
+        const detailFields=fields.filter((f:any)=>f.type==='boolean'||['Last','last'].some((p:string)=>f.label.startsWith(p)))
+        const notesFields=fields.filter((f:any)=>f.label==='Notes'||f.label==='Known issues')
+        const autoYear=home?.year_built?parseInt(home.year_built):null
+        const getSepticInterval=()=>{const sz=parseInt(systemEdits.tank_size)||1000;const occ=parseInt(systemEdits.occupants)||2;return Math.round(sz/(occ*60))}
+        return(
+          <div style={{position:'fixed',inset:0,zIndex:1000,display:'flex',alignItems:'flex-end',justifyContent:'center',background:'rgba(0,0,0,0.45)'}} onClick={e=>{if(e.target===e.currentTarget)setSystemModal(null)}}>
+            <div style={{background:'#F8F4EE',borderRadius:'20px 20px 0 0',width:'100%',maxWidth:'640px',maxHeight:'90vh',overflowY:'auto',padding:'0 0 40px'}}>
+              {/* Modal header */}
+              <div style={{position:'sticky',top:0,background:'#1E3A2F',borderRadius:'20px 20px 0 0',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',zIndex:10}}>
+                <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                  <span style={{fontSize:'24px'}}>{SYSTEM_ICONS[sys.system_type]||'🔧'}</span>
+                  <div>
+                    <div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',color:'#F8F4EE',fontWeight:400}}>{SYSTEM_DISPLAY_NAMES[sys.system_type]||sys.system_type}</div>
+                    <div style={{fontSize:'11px',color:'rgba(248,244,238,0.5)',marginTop:'1px'}}>Tap fields to update · saves to your home record</div>
+                  </div>
+                </div>
+                <button onClick={()=>setSystemModal(null)} style={{background:'rgba(248,244,238,0.12)',border:'none',color:'#F8F4EE',width:'32px',height:'32px',borderRadius:'50%',fontSize:'18px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'DM Sans', sans-serif"}}>✕</button>
+              </div>
+              <div style={{padding:'20px 20px 0'}}>
+
+                {/* Safety flags */}
+                {(sys.has_broken_glass||sys.any_broken_glass)&&<div style={{padding:'10px 14px',background:'#FEF5F5',borderRadius:'10px',border:'1px solid rgba(226,75,74,0.3)',marginBottom:'12px',fontSize:'12px',fontWeight:500,color:'#791F1F'}}>🔴 Broken glass detected — security + safety risk</div>}
+                {sys.locks_not_functioning&&<div style={{padding:'10px 14px',background:'#FEF5F5',borderRadius:'10px',border:'1px solid rgba(226,75,74,0.3)',marginBottom:'12px',fontSize:'12px',fontWeight:500,color:'#791F1F'}}>🔴 Lock not functioning — security vulnerability</div>}
+                {(sys.panel_type?.includes('Federal Pacific')||sys.panel_type?.includes('Zinsco'))&&<div style={{padding:'10px 14px',background:'#FEF5F5',borderRadius:'10px',border:'1px solid rgba(226,75,74,0.3)',marginBottom:'12px'}}><div style={{fontSize:'12px',fontWeight:500,color:'#791F1F',marginBottom:'3px'}}>🔴 {sys.panel_type} — known fire hazard</div><div style={{fontSize:'11px',color:'#9B2C2C',lineHeight:1.5}}>Replacement by a licensed electrician is strongly recommended.</div></div>}
+
+                {/* STEP 1 */}
+                <div style={{fontSize:'10px',fontWeight:500,letterSpacing:'1px',textTransform:'uppercase' as const,color:'#C47B2B',marginBottom:'6px'}}>Step 1 · The essentials</div>
+                <div style={{fontSize:'12px',color:'#8A8A82',marginBottom:'12px',lineHeight:1.5}}>These fields drive your maintenance calendar and cost estimates</div>
+
+                {sys.system_type==='septic'&&systemEdits.tank_size&&systemEdits.occupants&&(
+                  <div style={{background:'#1E3A2F',borderRadius:'10px',padding:'12px 14px',marginBottom:'12px'}}>
+                    <div style={{fontSize:'10px',color:'rgba(248,244,238,0.5)',marginBottom:'3px'}}>Your calculated pumping schedule</div>
+                    <div style={{fontSize:'17px',fontWeight:500,color:'#F8F4EE',marginBottom:'2px'}}>Every {getSepticInterval()} years</div>
+                    <div style={{fontSize:'11px',color:'rgba(248,244,238,0.5)'}}>{systemEdits.tank_size} · {systemEdits.occupants} occupants · EPA guideline</div>
+                    {systemEdits.last_pumped&&(()=>{const due=parseInt(systemEdits.last_pumped)+getSepticInterval();const overdue=due<new Date().getFullYear();return(<div style={{marginTop:'8px',fontSize:'11px',color:overdue?'#E57373':'#6AAF8A',fontWeight:500}}>{overdue?`⚠️ Overdue — was due ${due}`:`Next due: ${due}`}</div>)})()}
+                  </div>
+                )}
+
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'12px'}}>
+                  {essentialFields.map((f:any)=>renderSystemField(f))}
+                  {(essentialFields.some((f:any)=>f.label==='Install year'||f.label==='Purchase year'))&&autoYear&&!(systemEdits.install_year||systemEdits.purchase_year)&&(
+                    <div style={{gridColumn:'1/-1',fontSize:'11px',color:'#8A8A82',marginTop:'-6px'}}>💡 Pre-filled from your home's build year — update if replaced</div>
+                  )}
+                </div>
+
+                {/* Condition */}
+                <div style={{marginBottom:'14px'}}>
+                  <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'6px'}}>Condition</label>
+                  <div style={{display:'flex',gap:'8px'}}>
+                    {[
+                      {v:'Good',label:'Good',desc:sys.system_type==='roof'?'No issues, well maintained':sys.system_type==='windows'?'All seals intact':sys.system_type==='hvac'?'Heating and cooling normally':'No known issues',color:'#27500A',bg:'#EAF2EC',border:'#3D7A5A'},
+                      {v:'Fair',label:'Fair',desc:sys.system_type==='roof'?'Minor wear, monitoring':sys.system_type==='windows'?'Some fogging or seal issues':sys.system_type==='hvac'?'Some inefficiency or noise':'Minor wear, monitoring',color:'#633806',bg:'#FBF0DC',border:'#C47B2B'},
+                      {v:'Poor',label:'Poor',desc:sys.system_type==='roof'?'Active leaks or damage':sys.system_type==='windows'?'Broken glass, failed seals':sys.system_type==='hvac'?'Not working properly':'Needs attention soon',color:'#791F1F',bg:'#FDECEA',border:'#E24B4A'},
+                    ].map(opt=>(
+                      <button key={opt.v} onClick={()=>setSystemEdits((p:any)=>({...p,condition:opt.v}))}
+                        style={{flex:1,padding:'10px 8px',borderRadius:'10px',border:`${systemEdits.condition===opt.v?'1.5px':'0.5px'} solid ${systemEdits.condition===opt.v?opt.border:'rgba(30,58,47,0.15)'}`,background:systemEdits.condition===opt.v?opt.bg:'#fff',cursor:'pointer',textAlign:'center' as const,fontFamily:"'DM Sans', sans-serif"}}>
+                        <div style={{fontSize:'11px',fontWeight:500,color:opt.color,marginBottom:'2px'}}>{opt.label}</div>
+                        <div style={{fontSize:'10px',color:opt.color,opacity:0.8,lineHeight:1.3}}>{opt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* STEP 2 */}
+                <div style={{height:'0.5px',background:'rgba(30,58,47,0.1)',margin:'14px 0'}}/>
+                <div style={{fontSize:'10px',fontWeight:500,letterSpacing:'1px',textTransform:'uppercase' as const,color:'#C47B2B',marginBottom:'6px'}}>Step 2 · Status</div>
+                <div style={{display:'grid',gap:'6px',marginBottom:'14px'}}>
+                  {STATUS_OPTIONS.map((opt:any)=>(
+                    <button key={opt.v}
+                      onClick={()=>setSystemEdits((p:any)=>({...p,system_status:opt.v,not_applicable:opt.v==='not_applicable'}))}
+                      style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 12px',borderRadius:'10px',border:`${(systemEdits.system_status||'in_service')===opt.v?'1.5px':'0.5px'} solid ${(systemEdits.system_status||'in_service')===opt.v?'#1E3A2F':'rgba(30,58,47,0.15)'}`,background:(systemEdits.system_status||'in_service')===opt.v?'#F0F5F2':'#fff',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textAlign:'left' as const}}>
+                      <div style={{width:'8px',height:'8px',borderRadius:'50%',background:opt.dot,flexShrink:0}}/>
+                      <div>
+                        <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F'}}>{opt.label}</div>
+                        {opt.sub&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{opt.sub}</div>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* STEP 3 */}
+                <div style={{height:'0.5px',background:'rgba(30,58,47,0.1)',margin:'14px 0'}}/>
+                <div style={{fontSize:'10px',fontWeight:500,letterSpacing:'1px',textTransform:'uppercase' as const,color:'#C47B2B',marginBottom:'6px'}}>Step 3 · Details & service history</div>
+
+                {sys.system_type==='windows'&&(
+                  <div style={{display:'grid',gap:'6px',marginBottom:'12px'}}>
+                    {[
+                      {key:'has_broken_glass',label:'Any broken glass',desc:'Security + safety risk — high urgency',severity:'high'},
+                      {key:'locks_not_functioning',label:'Any locks not functioning',desc:'Security vulnerability — repair recommended',severity:'high'},
+                      {key:'windows_wont_open',label:"Any windows won\'t open or close",desc:'Egress safety concern',severity:'medium'},
+                      {key:'has_fogged_units',label:'Condensation / fogging between panes',desc:'Seal failure — energy loss',severity:'low'},
+                      {key:'any_wood_rot',label:'Any wood rot',desc:'Structural concern on wood frames',severity:'medium'},
+                    ].map(check=>(
+                      <label key={check.key} style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 12px',background:check.severity==='high'&&systemEdits[check.key]?'#FEF5F5':check.severity==='medium'&&systemEdits[check.key]?'#FBF0DC':'#F8F4EE',border:`0.5px solid ${check.severity==='high'?'rgba(226,75,74,0.2)':check.severity==='medium'?'rgba(196,123,43,0.2)':'rgba(30,58,47,0.1)'}`,borderRadius:'8px',cursor:'pointer'}}>
+                        <input type="checkbox" checked={systemEdits[check.key]||false} onChange={e=>setSystemEdits((p:any)=>({...p,[check.key]:e.target.checked}))} style={{accentColor:check.severity==='high'?'#E24B4A':check.severity==='medium'?'#C47B2B':'#1E3A2F',width:'15px',height:'15px'}}/>
+                        <div>
+                          <div style={{fontSize:'12px',fontWeight:500,color:check.severity==='high'?'#791F1F':check.severity==='medium'?'#633806':'#1E3A2F'}}>{check.label}</div>
+                          <div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{check.desc}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {sys.system_type==='electrical'&&systemEdits.panel_type&&(systemEdits.panel_type.includes('Federal Pacific')||systemEdits.panel_type.includes('Zinsco'))&&(
+                  <div style={{padding:'10px 14px',background:'#FEF5F5',borderRadius:'10px',border:'1px solid rgba(226,75,74,0.3)',marginBottom:'12px'}}>
+                    <div style={{fontSize:'12px',fontWeight:500,color:'#791F1F',marginBottom:'3px'}}>🔴 {systemEdits.panel_type} — known fire hazard</div>
+                    <div style={{fontSize:'11px',color:'#9B2C2C',lineHeight:1.5}}>Replacement by a licensed electrician is strongly recommended.</div>
+                  </div>
+                )}
+
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'10px'}}>
+                  {detailFields.filter((f:any)=>f.type!=='boolean').map((f:any)=>renderSystemField(f))}
+                  <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Notes</label><input value={systemEdits.notes||''} onChange={e=>setSystemEdits((p:any)=>({...p,notes:e.target.value}))} style={iS} placeholder="Anything else worth remembering?"/></div>
+                  {notesFields.map((f:any)=>renderSystemField(f))}
+                </div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:'10px',marginBottom:'16px'}}>
+                  {detailFields.filter((f:any)=>f.type==='boolean'&&!['has_broken_glass','locks_not_functioning','windows_wont_open','has_fogged_units','any_wood_rot'].includes(f.label.toLowerCase().replace(/s+/g,'_'))).map((f:any)=>renderSystemField(f))}
+                  <label style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'12px',cursor:'pointer'}}><input type="checkbox" checked={systemEdits.under_warranty||false} onChange={e=>setSystemEdits((p:any)=>({...p,under_warranty:e.target.checked}))} style={{accentColor:'#1E3A2F'}}/>Under warranty</label>
+                </div>
+
+                {/* Save / Cancel */}
+                <div style={{display:'flex',gap:'10px',paddingTop:'4px'}}>
+                  <button onClick={async()=>{await saveSystem(sys.id);setSystemModal(null)}} disabled={saving} style={{flex:1,background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'13px 20px',borderRadius:'12px',fontSize:'14px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{saving?'Saving...':'Save changes'}</button>
+                  <button onClick={()=>setSystemModal(null)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'13px 18px',borderRadius:'12px',fontSize:'14px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </main>
   )
 }
