@@ -1455,7 +1455,7 @@ export default function Dashboard() {
 
   const addSystem=async(systemType:string)=>{
     const {data}=await supabase.from('home_systems').insert({home_id:home.id,system_type:systemType,not_applicable:false}).select().single()
-    if(data){setSystems((prev:any[])=>[...prev,data]);startEditSystem(data)}
+    if(data){setSystems((prev:any[])=>[...prev,data]);startEditSystem(data);setSystemModal(data)}
   }
 
   const toggleChecklistItem=async(itemKey:string)=>{
