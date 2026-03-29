@@ -1816,29 +1816,8 @@ const STATUS_OPTIONS=[
               </div>
             ))}
 
-            {/* Environment + Members side by side */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'24px',alignItems:'start'}}>
-            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden'}}>
-              <div style={{padding:'16px 20px',borderBottom:expandedSections.has('auto')?'1px solid rgba(30,58,47,0.08)':'none',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}} onClick={()=>{}}>
-                <div><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',fontWeight:400,color:'#1E3A2F'}}>Your Home's Environment</h3></div>
-                
-              </div>
-              {true&&(
-                <div style={{padding:'16px 20px'}}>
-                  <p style={{fontSize:'11px',color:'#8A8A82',marginBottom:'12px',lineHeight:1.5}}>Based on ZIP {home?.zip||'your ZIP'}.</p>
-                  <div style={{display:'flex',flexDirection:'column' as const,gap:'12px'}}>
-                    {details?.climate_zone&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'18px',flexShrink:0}}>🌡️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Climate Zone {details.climate_zone}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>Affects HVAC sizing, roof ventilation, and exterior paint lifespan. Also useful for gardening — your zone determines which plants overwinter.</div></div></div>}
-                    {details?.hard_water_zone&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'18px',flexShrink:0}}>💧</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#C47B2B'}}>Hard water area</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>Mineral buildup shortens water heater life and clogs fixtures faster. Flush your water heater annually and check the anode rod every 3 years.</div></div></div>}
-                    {details?.coastal_zone&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'18px',flexShrink:0}}>🌊</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#C47B2B'}}>Coastal / high wind exposure</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>Salt air corrodes gutters, flashing, and HVAC units faster. Rinse exterior surfaces annually. May affect roof warranty terms and insurance coverage.</div></div></div>}
-                    {details?.wildfire_zone?<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'18px',flexShrink:0}}>🔥</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#791F1F'}}>⚠️ Wildfire zone</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>Clear defensible space around the home annually. Check that roof vents and eaves are ember-resistant.</div></div></div>:<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'18px',flexShrink:0}}>🔥</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#3D7A5A'}}>Low wildfire risk</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>No significant wildfire history in this area. No action needed.</div></div></div>}
-                  </div>
-
-                </div>
-              )}
-            </div>
-
-            {/* Home Members — in grid with environment */}
-            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden'}}>
+            {/* Home Members */}
+            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden',marginBottom:'24px'}}>
               <div style={{padding:'16px 20px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div>
                   <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',fontWeight:400,color:'#1E3A2F'}}>Home Members</h3>
@@ -1921,7 +1900,7 @@ const STATUS_OPTIONS=[
               )}
             </div>
 
-            </div>{/* end side by side grid */}
+
             <div style={{marginBottom:'8px'}}><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F'}}>Home Systems</h3></div>
             {/* CORE SYSTEMS tile grid */}
             <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'8px',letterSpacing:'0.5px'}}>Core systems</div>
