@@ -60,7 +60,7 @@ export default function ReportCard() {
       const [{ data: d }, { data: s }, { data: j }, { data: sc }] = await Promise.all([
         supabase.from('home_details').select('*').eq('home_id', homes[0].id).single(),
         supabase.from('home_systems').select('*').eq('home_id', homes[0].id),
-        supabase.from('contractor_jobs').select('*').eq('home_id', homes[0].id).order('job_date', { ascending: false }),
+        supabase.from('home_activity').select('*').eq('home_id', homes[0].id).eq('entry_type','job').order('job_date', { ascending: false }),
         supabase.from('health_scores').select('*').eq('home_id', homes[0].id).order('calculated_at', { ascending: false }).limit(1)
       ])
       setDetails(d)

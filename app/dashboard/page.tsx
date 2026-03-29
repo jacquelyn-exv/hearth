@@ -4,7 +4,7 @@ import { useEffect as _useEffectHash } from 'react'
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { FinancialTab } from '@/components/financial/FinancialTab'
-import { MaintenanceLog } from '@/components/log/MaintenanceLog'
+import { HomeLog } from '@/components/log/HomeLog'
 import { getSmartTasks as getEngineSmartTasks } from '@/lib/smartTasks'
 import { adaptHomeProfile } from '@/lib/adaptHomeProfile'
 import Nav from '@/components/Nav'
@@ -822,7 +822,7 @@ function MaintenanceTab({systems,home,jobs,onTabChange,userId,onJobsRefresh}:{sy
     const tk = `${task.systemType}-${task.month}-${task.task}`
     if (saveToLog && home?.id && userId) {
       setLdSaving(true)
-      await supabase.from('contractor_jobs').insert({
+      await supabase.from('home_activity').insert({
         home_id: home.id,
         user_id: userId,
         system_type: task.systemType,
@@ -1051,7 +1051,7 @@ export default function Dashboard() {
     const [{data:det},{data:sys},{data:j},{data:sc},{data:tk},{data:dc},{data:hm},{data:hi}]=await Promise.all([
       supabase.from('home_details').select('*').eq('home_id',homeId).single(),
       supabase.from('home_systems').select('*').eq('home_id',homeId),
-      supabase.from('contractor_jobs').select('*').eq('home_id',homeId).order('job_date',{ascending:false}),
+      supabase.from('home_activity').select('*').eq('home_id',homeId).order('created_at',{ascending:false}),
       supabase.from('health_scores').select('*').eq('home_id',homeId).order('calculated_at',{ascending:false}).limit(1),
       supabase.from('home_tasks').select('*').eq('home_id',homeId).order('created_at',{ascending:false}),
       supabase.from('home_documents').select('*').eq('home_id',homeId).order('created_at',{ascending:false}),
@@ -1744,9 +1744,9 @@ export default function Dashboard() {
             thisYearJobs={thisYearJobs}
           />
         )}
-                {activeTab==='log'&&home&&user&&<MaintenanceLog homeId={home.id} userId={user.id} userName={displayName||user.email||''} zip={home.zip||''}/>}
+                {activeTab==='log'&&home&&user&&<HomeLog homeId={home.id} userId={user.id} userName={displayName||user.email||''} zip={home.zip||''} systems={systems} jobs={jobs} onActivityUpdate={async()=>{const{data:j}=await supabase.from('home_activity').select('*').eq('home_id',home.id).order('created_at',{ascending:false});if(j)setJobs(j)}} />}
         {activeTab==='projects'&&<ProjectsTab homeId={home?.id} userId={user?.id}/>}
-        {activeTab==='maintenance'&&<MaintenanceTab systems={systems} home={home} jobs={jobs} onTabChange={setActiveTab} userId={user?.id||''} onJobsRefresh={async()=>{const{data:j}=await supabase.from('contractor_jobs').select('*').eq('home_id',home.id).order('job_date',{ascending:false});if(j)setJobs(j)}} />}
+        {activeTab==='maintenance'&&<MaintenanceTab systems={systems} home={home} jobs={jobs} onTabChange={setActiveTab} userId={user?.id||''} onJobsRefresh={async()=>{const{data:j}=await supabase.from('home_activity').select('*').eq('home_id',home.id).order('created_at',{ascending:false});if(j)setJobs(j)}} />}
 
         {/* ══ DOCUMENTS ══ */}
         {activeTab==='documents'&&(

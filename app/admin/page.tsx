@@ -79,7 +79,7 @@ export default function Admin() {
     ] = await Promise.all([
       supabase.from('homes').select('*').order('created_at', { ascending: false }),
       supabase.from('home_systems').select('*'),
-      supabase.from('contractor_jobs').select('*').order('created_at', { ascending: false }),
+      supabase.from('home_activity').select('*').order('created_at', { ascending: false }),
       supabase.from('health_scores').select('total_score, home_id'),
       supabase.from('home_details').select('*'),
       supabase.from('community_scores').select('*'),

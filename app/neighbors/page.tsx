@@ -165,7 +165,7 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
           const { data: systems } = await supabase.from('home_systems').select('system_type').eq('home_id', homes[0].id)
           setUserSystems(systems?.map(s => s.system_type) || [])
           const { data: myJobData } = await supabase
-            .from('contractor_jobs')
+            .from('home_activity')
             .select('quality_rating, would_refer, final_price, created_at')
             .eq('user_id', user.id)
           setMyJobs(myJobData || [])
@@ -182,7 +182,7 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
           if (lbData) {
             const enriched = await Promise.all(lbData.map(async (cs: any) => {
               const { data: theirJobs } = await supabase
-                .from('public_contractor_jobs')
+                .from('public_home_activity')
                 .select('quality_rating, would_refer, final_price')
                 .eq('user_id', cs.user_id)
               return { ...cs, theirJobs: theirJobs || [] }
@@ -192,7 +192,7 @@ const [activeView, setActiveView] = useState<'neighborhood' | 'contractors' | 'p
         }
       }
 
-      const { data } = await supabase.from('public_contractor_jobs').select('*').order('created_at', { ascending: false })
+      const { data } = await supabase.from('public_home_activity').select('*').order('created_at', { ascending: false })
       const jobData = data || []
       setJobs(jobData)
       setLoading(false)
