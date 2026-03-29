@@ -1314,6 +1314,7 @@ export default function Dashboard() {
       if(se){console.error('system update:',se);alert('Save failed: '+se.message);setSaving(false);return}
       if(updated)setSystems((prev:any[])=>prev.map(s=>s.id===sysId?updated:s))
       await recalculateScore()
+      console.log('system_status check:',payload.system_status)
       if(payload.system_status==='getting_quotes'){
         const sysName=SYSTEM_DISPLAY_NAMES[updated?.system_type]||updated?.system_type||'System'
         const existingProjects=await supabase.from('home_projects').select('title').eq('home_id',home.id)
@@ -1511,8 +1512,8 @@ const STATUS_OPTIONS=[
   if(loading)return<div style={{background:'#F8F4EE',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'DM Sans', sans-serif"}}><p style={{color:'#8A8A82'}}>Loading your home...</p></div>
 
   const sv=score?.total_score||0
-  const tabs=['overview','home_details','log','financial','projects','maintenance','documents']
-  const tl:Record<string,string>={overview:'Dashboard',home_details:'Home Details',log:'Activity Log',financial:'Finances',projects:'Projects',maintenance:'Maintenance Calendar',documents:'Documents'}
+  const tabs=['overview','home_details','log','financial','projects','maintenance','environment','documents']
+  const tl:Record<string,string>={overview:'Dashboard',home_details:'Home Details',log:'Activity Log',financial:'Finances',projects:'Projects',maintenance:'Maintenance Calendar',environment:'Environment',documents:'Documents'}
   const alertSys=systems.filter(s=>['Inspect','Priority'].includes(getCondition(s).label))
   const dnf=displayName||user?.email?.split('@')[0]?.split('.')[0]?.replace(/^\w/,(c:string)=>c.toUpperCase())||'there'
   const engineProfile=adaptHomeProfile(home,systems,userGoals,stormHistory)
@@ -1765,7 +1766,7 @@ const STATUS_OPTIONS=[
                   <div style={{padding:'20px'}}>
                     {editingHomeSection==='about'?(
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
-                        {[{label:'Street address',key:'address'},{label:'City',key:'city'},{label:'State',key:'state'},{label:'ZIP',key:'zip'},{label:'Year built',key:'year_built'},{label:'Square footage',key:'sqft'},{label:'Bedrooms',key:'bedrooms'},{label:'Bathrooms',key:'bathrooms'},{label:'Stories',key:'stories'},{label:'Lot size',key:'lot_size'}].map(f=>(<div key={f.key}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>{f.label}</label><input value={homeEdits[f.key]||''} onChange={e=>setHomeEdits((p:any)=>({...p,[f.key]:e.target.value}))} style={iS}/></div>))}
+                        {[{label:'Street address',key:'address'},{label:'City',key:'city'},{label:'State',key:'state'},{label:'ZIP',key:'zip'},{label:'Year built',key:'year_built'},{label:'Square footage',key:'sqft'},{label:'Bedrooms',key:'bedrooms'},{label:'Bathrooms',key:'bathrooms'},{label:'Stories',key:'stories'},{label:'Lot size (acres)',key:'lot_size'}].map(f=>(<div key={f.key}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>{f.label}</label><input value={homeEdits[f.key]||''} onChange={e=>setHomeEdits((p:any)=>({...p,[f.key]:e.target.value}))} style={iS}/></div>))}
                         <div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'3px'}}>Home type</label><select value={homeEdits.home_type||''} onChange={e=>setHomeEdits((p:any)=>({...p,home_type:e.target.value}))} style={iS}><option value="">Unknown</option><option value="single_family">Single family</option><option value="townhouse">Townhouse</option><option value="condo">Condo</option><option value="multi_family">Multi-family</option><option value="mobile_home">Mobile home</option></select></div>
                         <div style={{gridColumn:'1/-1'}}><div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'16px',flexWrap:'wrap'}}><div><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'6px'}}>My relationship to this home</label><div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>{[{value:'owner_occupied',label:'🏡 I live here'},{value:'rental',label:'🔑 I rent this out'},{value:'former',label:'📦 Former home'}].map(opt=>(<button key={opt.value} type="button" onClick={()=>setHomeEdits((p:any)=>({...p,occupancy_status:opt.value}))} style={{padding:'7px 12px',borderRadius:'8px',fontSize:'13px',border:`1px solid ${homeEdits.occupancy_status===opt.value?'#1E3A2F':'rgba(30,58,47,0.2)'}`,background:homeEdits.occupancy_status===opt.value?'#1E3A2F':'#fff',color:homeEdits.occupancy_status===opt.value?'#F8F4EE':'#1E3A2F',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",fontWeight:homeEdits.occupancy_status===opt.value?500:400}}>{opt.label}</button>))}</div></div><div style={{flexShrink:0}}><label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'6px'}}>HOA</label><div style={{display:'flex',gap:'6px'}}>{[{value:true,label:'Yes'},{value:false,label:'No'}].map(opt=>(<button key={String(opt.value)} type="button" onClick={()=>setHomeEdits((p:any)=>({...p,has_hoa:opt.value}))} style={{padding:'7px 14px',borderRadius:'8px',fontSize:'13px',border:`1px solid ${homeEdits.has_hoa===opt.value?'#1E3A2F':'rgba(30,58,47,0.2)'}`,background:homeEdits.has_hoa===opt.value?'#1E3A2F':'#fff',color:homeEdits.has_hoa===opt.value?'#F8F4EE':'#1E3A2F',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",fontWeight:homeEdits.has_hoa===opt.value?500:400}}>{opt.label}</button>))}</div></div></div></div>
                         <div style={{gridColumn:'1/-1',display:'flex',gap:'8px',marginTop:'4px'}}><button onClick={()=>saveHomeSection('about')} disabled={saving} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'9px 20px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>{saving?'Saving...':'Save'}</button><button onClick={()=>setEditingHomeSection(null)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'9px 16px',borderRadius:'8px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button></div>
@@ -1793,7 +1794,7 @@ const STATUS_OPTIONS=[
                       </div>
                     ):(
                       <div style={{display:'flex',flexWrap:'wrap',gap:'8px'}}>
-                        {[{label:details?.foundation_type?.replace('_',' '),show:!!details?.foundation_type},{label:`${details?.garage} garage`,show:!!details?.garage},{label:`${details?.tree_coverage} tree coverage`,show:!!details?.tree_coverage},{label:'🔥 Fireplace',show:details?.has_fireplace},{label:'💦 Sump pump',show:details?.has_sump_pump},{label:'🏊 Pool',show:details?.has_pool},{label:'☀️ Solar',show:details?.has_solar},{label:'🪣 Septic',show:details?.has_septic},{label:'💧 Well water',show:details?.has_well_water},{label:'🏘️ HOA',show:details?.has_hoa}].filter(f=>f.show).map(f=>(<span key={f.label} style={{background:'#F8F4EE',border:'1px solid rgba(30,58,47,0.15)',padding:'5px 12px',borderRadius:'20px',fontSize:'12px',color:'#1E3A2F',textTransform:'capitalize'}}>{f.label}</span>))}
+
                         {!details?.foundation_type&&!details?.has_fireplace&&!details?.garage&&<span style={{fontSize:'13px',color:'#8A8A82'}}>Tap to add structure and features.</span>}
                       </div>
                     )}
@@ -1804,11 +1805,11 @@ const STATUS_OPTIONS=[
 
             {/* Auto-Detected */}
             <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden',marginBottom:'24px'}}>
-              <div style={{padding:'16px 20px',borderBottom:expandedSections.has('auto')?'1px solid rgba(30,58,47,0.08)':'none',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}} onClick={()=>setExpandedSections(prev=>{const n=new Set(prev);if(n.has('auto'))n.delete('auto');else n.add('auto');return n})}>
+              <div style={{padding:'16px 20px',borderBottom:expandedSections.has('auto')?'1px solid rgba(30,58,47,0.08)':'none',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}} onClick={()=>{}}>
                 <div><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',fontWeight:400,color:'#1E3A2F'}}>Your Home's Environment</h3><p style={{fontSize:'11px',color:'#8A8A82',marginTop:'2px'}}>Auto-detected · overridable</p></div>
-                <span style={{fontSize:'12px',color:'#8A8A82'}}>{expandedSections.has('auto')?'▲':'▼'}</span>
+                
               </div>
-              {expandedSections.has('auto')&&(
+              {true&&(
                 <div style={{padding:'16px 20px'}}>
                   <p style={{fontSize:'12px',color:'#8A8A82',marginBottom:'14px',lineHeight:1.5}}>Based on ZIP {home?.zip||'your address'} — tap Override if your property differs.</p>
                   <div style={{display:'flex',flexDirection:'column' as const,gap:'12px'}}>
@@ -2184,7 +2185,7 @@ const STATUS_OPTIONS=[
                   {notesFields.map((f:any)=>renderSystemField(f))}
                 </div>
                 <div style={{display:'flex',flexWrap:'wrap',gap:'10px',marginBottom:'16px'}}>
-                  {detailFields.filter((f:any)=>f.type==='boolean'&&!['has_broken_glass','locks_not_functioning','windows_wont_open','has_fogged_units','any_wood_rot','considering_replacing'].includes(f.label.toLowerCase().replace(/s+/g,'_'))).map((f:any)=>renderSystemField(f))}
+                  {detailFields.filter((f:any)=>f.type==='boolean'&&!['has_broken_glass','locks_not_functioning','windows_wont_open','has_fogged_units','any_wood_rot','considering_replacing'].includes(f.label.toLowerCase().replace(/\s+/g,'_'))).map((f:any)=>renderSystemField(f))}
                   <label style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'12px',cursor:'pointer'}}><input type="checkbox" checked={systemEdits.under_warranty||false} onChange={e=>setSystemEdits((p:any)=>({...p,under_warranty:e.target.checked}))} style={{accentColor:'#1E3A2F'}}/>Under warranty</label>
                   {systemEdits.under_warranty&&<div style={{gridColumn:'1/-1' as const,display:'flex',alignItems:'center',gap:'8px'}}><label style={{fontSize:'12px',color:'#8A8A82',whiteSpace:'nowrap' as const}}>Warranty expires</label><input type="number" value={systemEdits.warranty_expiry_year||''} onChange={e=>setSystemEdits((p:any)=>({...p,warranty_expiry_year:e.target.value}))} placeholder="Year (e.g. 2031)" style={{...iS,maxWidth:'160px'}}/></div>}
                 </div>
