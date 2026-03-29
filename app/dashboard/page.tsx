@@ -1620,7 +1620,7 @@ const STATUS_OPTIONS=[
               {sys.system_status==='getting_quotes'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#FBF0DC',color:'#633806'}}>Getting quotes</span>}
               {sys.system_status==='scheduled'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#E6F1FB',color:'#0C447C'}}>Scheduled</span>}
             </div>
-            <div style={{fontSize:'12px',color:sys.not_applicable?'#8A8A82':isSetUp?'#27500A':'#C47B2B',fontWeight:(!isSetUp&&!sys.not_applicable)?500:400}}>
+            <div style={{fontSize:'12px',color:sys.not_applicable?'#8A8A82':isSetUp?'#27500A':'#C47B2B',fontWeight:isSetUp?400:500}}>
               {sys.not_applicable?'Not applicable':isSetUp?`${age} yr old${sys.material?` · ${sys.material}`:''}`:isPartial?'Tap to finish setting up':'Tap to set up'}
             </div>
           </div>
@@ -2060,7 +2060,7 @@ const STATUS_OPTIONS=[
                 return(
                   <div key={at}
                     onClick={()=>{if(ex){startEditSystem(ex);setSystemModal(ex)}else{addSystem(at)}}}
-                    style={{background:'#fff',border:`1px solid ${ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer'}}>
+                    style={{background:(()=>{const exAge=ex?(new Date().getFullYear()-(parseInt(ex.replacement_year||ex.install_year||ex.purchase_year||'0')||0))||null:null;return ex?.not_applicable?'#F5F5F3':(ex&&!ex.not_applicable&&ex.condition&&ex.condition!=='unknown'&&exAge)?'#EAF3DE':'#fff'})(),border:`1px solid ${(()=>{const exAge=ex?(new Date().getFullYear()-(parseInt(ex.replacement_year||ex.install_year||ex.purchase_year||'0')||0))||null:null;return ex?.not_applicable?'rgba(30,58,47,0.08)':(ex&&ex.condition&&ex.condition!=='unknown'&&exAge)?'rgba(61,122,90,0.25)':ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'})()}`,borderRadius:'12px',padding:'12px',cursor:'pointer',opacity:ex?.not_applicable?0.6:1}}>
                     <div style={{fontSize:'20px',marginBottom:'6px'}}>{SYSTEM_ICONS[at]||'🔧'}</div>
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[at]||at}</div>
                     {ex&&!ex.not_applicable?(
@@ -2562,7 +2562,7 @@ const STATUS_OPTIONS=[
                       <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F'}}>Want to log this replacement?</div>
                       <div style={{fontSize:'11px',color:'#8A8A82',marginTop:'2px'}}>Keep a record of the work done, cost, and contractor.</div>
                     </div>
-                    <a href="/log" style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'6px 12px',borderRadius:'7px',fontSize:'12px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textDecoration:'none',whiteSpace:'nowrap'}}>Log it →</a>
+                    <button onClick={()=>{setSystemModal(null);setActiveTab('log')}} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'6px 12px',borderRadius:'7px',fontSize:'12px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",whiteSpace:'nowrap'}}>Log it →</button>
                   </div>
                 )}
 
