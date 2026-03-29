@@ -857,7 +857,7 @@ function MaintenanceTab({systems,home,jobs,onTabChange,userId,onJobsRefresh}:{sy
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px',flexWrap:'wrap',gap:'10px'}}>
         <div><h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'22px',fontWeight:400,color:'#1E3A2F',marginBottom:'4px'}}>Maintenance Calendar</h2><p style={{fontSize:'13px',color:'#8A8A82'}}>Personalized for your {systemTypes.length} active system{systemTypes.length!==1?'s':''}</p></div>
-        <a href="/log" style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'10px 20px',borderRadius:'10px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textDecoration:'none'}}>+ Log a job</a>
+        
       </div>
 
       {overdueTasks.filter(t=>!loggedTasks.has(`${t.systemType}-${t.month}-${t.task}`)).length>0&&(
