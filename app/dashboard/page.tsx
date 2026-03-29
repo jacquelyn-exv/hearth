@@ -118,15 +118,15 @@ const SYSTEM_FIELDS: Record<string, {label:string;type:string;options?:string[]}
     {label:'Considering replacing',type:'boolean'},
   ],
   hvac:[
-    {label:'System type',type:'select',options:['Gas furnace + central AC','Air source heat pump','Mini split / ductless','Boiler','Other']},
+    {label:'HVAC system type',type:'select',options:['Gas furnace + central AC','Air source heat pump','Mini split / ductless','Boiler','Other']},
     {label:'Fuel source',type:'select',options:['Gas','Electric','Propane','Oil']},
     {label:'Furnace install year',type:'year'},{label:'AC or heat pump install year',type:'year'},
     {label:'Filter size',type:'text'},{label:'Last filter replacement',type:'date'},
     {label:'Last professional service',type:'date'},{label:'Considering replacing',type:'boolean'},
   ],
   water_heater:[
-    {label:'Type',type:'select',options:['Tank (gas)','Tank (electric)','Tankless (gas)','Tankless (electric)','Heat pump / hybrid']},
-    {label:'Tank size (gallons)',type:'number'},{label:'Install year',type:'year'},
+    {label:'Water heater type',type:'select',options:['Tank (gas)','Tank (electric)','Tankless (gas)','Tankless (electric)','Heat pump / hybrid']},
+    {label:'Tank size gallons',type:'number'},{label:'Install year',type:'year'},
     {label:'Has expansion tank',type:'select',options:['Yes','No','Unknown']},
     {label:'Last flush',type:'date'},{label:'Last anode rod inspection',type:'date'},
     {label:'Last TPR valve test',type:'date'},{label:'Considering replacing',type:'boolean'},
@@ -137,7 +137,7 @@ const SYSTEM_FIELDS: Record<string, {label:string;type:string;options?:string[]}
     {label:'Known issues',type:'text'},{label:'Considering replacing',type:'boolean'},
   ],
   chimney:[
-    {label:'Type',type:'select',options:['Wood burning','Gas','Electric','Decorative']},
+    {label:'Chimney type',type:'select',options:['Wood burning','Gas','Electric','Decorative']},
     {label:'Last sweep',type:'date'},{label:'Last inspection',type:'date'},
     {label:'Considering replacing',type:'boolean'},
   ],
@@ -161,41 +161,41 @@ const SYSTEM_FIELDS: Record<string, {label:string;type:string;options?:string[]}
     {label:'Considering replacing',type:'boolean'},
   ],
   refrigerator:[
-    {label:'Type',type:'select',options:['Top freezer','Bottom freezer','Side-by-side','French door']},
+    {label:'Appliance type',type:'select',options:['Top freezer','Bottom freezer','Side-by-side','French door']},
     {label:'Purchase year',type:'year'},{label:'Has ice maker',type:'boolean'},
     {label:'Has water dispenser',type:'boolean'},{label:'Last condenser coil cleaning',type:'date'},
     {label:'Last water filter replacement',type:'date'},{label:'Considering replacing',type:'boolean'},
   ],
   dishwasher:[
-    {label:'Type',type:'select',options:['Built-in','Drawer','Portable']},
+    {label:'Appliance type',type:'select',options:['Built-in','Drawer','Portable']},
     {label:'Purchase year',type:'year'},{label:'Last filter cleaning',type:'date'},
     {label:'Last cleaner cycle',type:'date'},
   ],
   washer:[
-    {label:'Type',type:'select',options:['Top load','Front load','Compact','Unknown']},
+    {label:'Appliance type',type:'select',options:['Top load','Front load','Compact','Unknown']},
     {label:'Purchase year',type:'year'},
     {label:'Fuel type',type:'select',options:['Electric','Gas']},
     {label:'Last drum clean',type:'date'},
   ],
   dryer:[
-    {label:'Type',type:'select',options:['Electric','Gas','Heat pump','Unknown']},
+    {label:'Appliance type',type:'select',options:['Electric','Gas','Heat pump','Unknown']},
     {label:'Purchase year',type:'year'},
     {label:'Last vent cleaning',type:'date'},
   ],
   oven:[
-    {label:'Type',type:'select',options:['Gas range','Electric range','Induction','Double oven','Wall oven','Unknown']},
+    {label:'Appliance type',type:'select',options:['Gas range','Electric range','Induction','Double oven','Wall oven','Unknown']},
     {label:'Purchase year',type:'year'},
     {label:'Has smart features',type:'boolean'},
   ],
   garage_door:[
     {label:'Material',type:'select',options:['Steel','Wood','Aluminum','Fiberglass','Unknown']},
     {label:'Is insulated',type:'boolean'},
-    {label:'Number of doors',type:'number'},
+    {label:'Door count',type:'number'},
     {label:'Install year',type:'year'},
-    {label:'Last service',type:'date'},
+    {label:'Last service year',type:'date'},
   ],
   foundation:[
-    {label:'Type',type:'select',options:['Poured concrete','Block','Slab','Crawl space','Pier and beam','Unknown']},
+    {label:'Foundation type',type:'select',options:['Poured concrete','Block','Slab','Crawl space','Pier and beam','Unknown']},
     {label:'Known issues',type:'text'},
     {label:'Last inspection',type:'date'},
   ],
@@ -214,14 +214,14 @@ const SYSTEM_FIELDS: Record<string, {label:string;type:string;options?:string[]}
   ],
   septic:[
     {label:'Tank size',type:'select',options:['500 gallons','750 gallons','1,000 gallons','1,250 gallons','1,500 gallons','2,000+ gallons','Unknown']},
-    {label:'System type',type:'select',options:['Conventional','Chamber','Drip distribution','Aerobic','Mound','Unknown']},
+    {label:'Septic system type',type:'select',options:['Conventional','Chamber','Drip distribution','Aerobic','Mound','Unknown']},
     {label:'Install year',type:'year'},
     {label:'Last pumped',type:'year'},
     {label:'Last inspection',type:'date'},
   ],
   well:[
     {label:'Install year',type:'year'},
-    {label:'Well depth (ft)',type:'number'},
+    {label:'Well depth ft',type:'number'},
     {label:'Last water test',type:'date'},
     {label:'Last inspection',type:'date'},
     {label:'Known issues',type:'text'},
@@ -229,18 +229,18 @@ const SYSTEM_FIELDS: Record<string, {label:string;type:string;options?:string[]}
   solar:[
     {label:'Install year',type:'year'},
     {label:'Panel count',type:'number'},
-    {label:'System size (kW)',type:'number'},
+    {label:'Panel kw',type:'number'},
     {label:'Has battery backup',type:'boolean'},
     {label:'Last inspection',type:'date'},
   ],
   generator:[
     {label:'Fuel type',type:'select',options:['Natural gas','Propane','Gasoline','Diesel','Unknown']},
     {label:'Install year',type:'year'},
-    {label:'Output (kW)',type:'number'},
-    {label:'Last service',type:'date'},
+    {label:'Panel kw',type:'number'},
+    {label:'Last service year',type:'date'},
   ],
   pool:[
-    {label:'Type',type:'select',options:['In-ground','Above-ground','Hot tub / spa','Combined pool + spa','Unknown']},
+    {label:'Pool type',type:'select',options:['In-ground','Above-ground','Hot tub / spa','Combined pool + spa','Unknown']},
     {label:'Material',type:'select',options:['Concrete / gunite','Fiberglass','Vinyl liner','Unknown']},
     {label:'Install year',type:'year'},
     {label:'Has heater',type:'boolean'},
@@ -248,20 +248,20 @@ const SYSTEM_FIELDS: Record<string, {label:string;type:string;options?:string[]}
   ],
   crawl_space:[
     {label:'Type',type:'select',options:['Vented','Encapsulated','Partially encapsulated','Unknown']},
-    {label:'Is encapsulated',type:'boolean'},
+    {label:'Encapsulated',type:'boolean'},
     {label:'Install year',type:'year'},
     {label:'Last inspection',type:'date'},
     {label:'Last vapor barrier',type:'date'},
     {label:'Known issues',type:'text'},
   ],
   water_softener:[
-    {label:'Type',type:'select',options:['Salt-based ion exchange','Salt-free / conditioner','Magnetic','Dual tank','Unknown']},
+    {label:'Softener type',type:'select',options:['Salt-based ion exchange','Salt-free / conditioner','Magnetic','Dual tank','Unknown']},
     {label:'Install year',type:'year'},
     {label:'Last resin clean',type:'date'},
   ],
   irrigation:[
     {label:'Install year',type:'year'},
-    {label:'Coverage (sqft)',type:'number'},
+    {label:'Coverage sqft',type:'number'},
     {label:'Has smart controller',type:'boolean'},
     {label:'Last inspection',type:'date'},
   ],
@@ -1302,7 +1302,7 @@ export default function Dashboard() {
   const saveSystem=async(sysId:string)=>{
     setSaving(true)
     try{
-      const COLS=['id','home_id','system_type','install_year','replacement_year','age_years','material','notes','condition','system_status','ever_replaced','under_warranty','not_applicable','known_issues','storm_damage_unaddressed','considering_replacing','warranty_expiry_year','quantity','window_count','has_fogged_units','has_skylights','any_broken_glass','any_wood_rot','has_broken_glass','locks_not_functioning','windows_wont_open','has_gutter_guards','seamless_or_sectional','fascia_material','has_glass_lites_or_sidelites','hardware_in_working_condition','has_anti_lift','configuration','locking_type','frame_material','glazing_type','fuel_source','fuel_type','filter_size','last_filter_replacement','last_professional_service','furnace_install_year','ac_or_heat_pump_install_year','tank_size_gallons','tank_size','has_expansion_tank','last_flush','last_anode_rod_inspection','last_tpr_valve_test','last_sweep','last_inspection','last_cleaning','last_seal_stain','last_seal_year','last_test','last_battery_replacement','has_battery_backup','has_ice_maker','has_water_dispenser','last_condenser_coil_cleaning','last_water_filter_replacement','last_filter_cleaning','last_cleaner_cycle','occupants','last_pumped','system_subtype','pipe_material','panel_type','panel_amperage','is_insulated','door_count','last_service_year','purchase_year','appliance_type','has_water_line','last_drum_clean','has_smart_features','coverage_sqft','has_heater','last_chemical_service','softener_type','last_resin_clean','well_depth_ft','last_water_test','panel_kw','battery_backup','crawl_space_type','last_vapor_barrier','encapsulated']
+      const COLS=['id','home_id','system_type','install_year','replacement_year','age_years','material','notes','condition','system_status','ever_replaced','under_warranty','not_applicable','known_issues','storm_damage_unaddressed','considering_replacing','warranty_expiry_year','quantity','window_count','has_fogged_units','has_skylights','any_broken_glass','any_wood_rot','has_broken_glass','locks_not_functioning','windows_wont_open','has_gutter_guards','seamless_or_sectional','fascia_material','has_glass_lites_or_sidelites','hardware_in_working_condition','has_anti_lift','configuration','locking_type','frame_material','glazing_type','fuel_source','fuel_type','filter_size','last_filter_replacement','last_professional_service','furnace_install_year','ac_or_heat_pump_install_year','tank_size_gallons','tank_size','has_expansion_tank','last_flush','last_anode_rod_inspection','last_tpr_valve_test','last_sweep','last_inspection','last_cleaning','last_seal_stain','last_seal_year','last_test','last_battery_replacement','has_battery_backup','has_ice_maker','has_water_dispenser','last_condenser_coil_cleaning','last_water_filter_replacement','last_filter_cleaning','last_cleaner_cycle','occupants','last_pumped','system_subtype','pipe_material','panel_type','panel_amperage','is_insulated','door_count','last_service_year','purchase_year','appliance_type','has_water_line','last_drum_clean','has_smart_features','coverage_sqft','has_heater','last_chemical_service','softener_type','last_resin_clean','well_depth_ft','last_water_test','panel_kw','battery_backup','crawl_space_type','last_vapor_barrier','encapsulated','last_vent_cleaning','last_service_year','door_count','well_depth_ft','coverage_sqft','hvac_system_type','water_heater_type','pool_type','septic_system_type','chimney_type','foundation_type','softener_type','tank_size_gallons']
       const payload:any={}
       for(const k of Object.keys(systemEdits)){if(COLS.includes(k))payload[k]=systemEdits[k]}
       if(payload.condition){const cm:Record<string,string>={'Good':'good','Fair':'watch','Poor':'inspect','good':'good','fair':'watch','poor':'inspect','watch':'watch','priority':'priority','inspect':'inspect','unknown':'unknown'};payload.condition=cm[payload.condition]||'unknown'}
@@ -1421,7 +1421,7 @@ export default function Dashboard() {
   const formatSize=(bytes:number)=>{if(!bytes)return'';if(bytes<1024*1024)return`${Math.round(bytes/1024)} KB`;return`${(bytes/(1024*1024)).toFixed(1)} MB`}
 
   const renderSystemField=(field:{label:string;type:string;options?:string[]})=>{
-    const key=field.label.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')
+    const key=field.label.toLowerCase().replace(/[()]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').replace(/_+/g,'_').replace(/^_|_$/g,'')
     const val=systemEdits[key]??systemEdits[field.label]??(field.type==='boolean'?false:'')
     const onChange=(v:any)=>setSystemEdits((p:any)=>({...p,[key]:v,[field.label]:v}))
     if(field.type==='boolean')return<label key={field.label} style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'12px',cursor:'pointer'}}><input type="checkbox" checked={!!val} onChange={e=>onChange(e.target.checked)} style={{accentColor:'#1E3A2F'}}/>{field.label}</label>
