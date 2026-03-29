@@ -1203,7 +1203,7 @@ export default function Dashboard() {
   const [expandedSections,setExpandedSections]=useState<Set<string>>(new Set(['about']))
   const [systemModal,setSystemModal]=useState<any|null>(null)
   const [wishlistToast,setWishlistToast]=useState<string|null>(null)
-  const [wishlistSyncModal,setWishlistSyncModal]=useState<{sysName:string;projectId:string}|null>(null)
+  const [wishlistSyncModal,setWishlistSyncModal]=useState<{sysName:string;projectId:string;type:'in_service'|'scheduled'}|null>(null)
   const [savedSystemId,setSavedSystemId]=useState<string|null>(null)
   const [systemEdits,setSystemEdits]=useState<any>({})
   const [showHiddenSystems,setShowHiddenSystems]=useState(false)
@@ -1349,7 +1349,7 @@ export default function Dashboard() {
     }
     // Autofill condition from smart engine if not saved yet
     if(!edits.condition||edits.condition==='unknown'){
-      const smart=calculateSmartCondition(edits)
+      const smart=calculateSmartCondition({...sys,...edits})
       edits.condition=smart.condition
     }
     // Autofill status if not set
@@ -1387,12 +1387,12 @@ export default function Dashboard() {
             setWishlistToast(sysName)
             setTimeout(()=>setWishlistToast(null),4000)
           }
-        } else if(payload.system_status==='scheduled'&&matchingProject&&matchingProject.status==='wishlist'){
-          await supabase.from('home_projects').update({status:'planning'}).eq('id',matchingProject.id)
+        } else if(payload.system_status==='scheduled'&&matchingProject){
+          setWishlistSyncModal({sysName,projectId:matchingProject.id,type:'scheduled'})
         } else if(payload.system_status==='recently_replaced'&&matchingProject&&matchingProject.status!=='done'){
           await supabase.from('home_projects').update({status:'done'}).eq('id',matchingProject.id)
         } else if((payload.system_status==='in_service'||payload.system_status==='monitoring')&&matchingProject&&matchingProject.status==='wishlist'){
-          setWishlistSyncModal({sysName,projectId:matchingProject.id})
+          setWishlistSyncModal({sysName,projectId:matchingProject.id,type:'in_service'})
         }
       }
       setSavedSystemId(sysId)
@@ -1873,8 +1873,9 @@ const STATUS_OPTIONS=[
               </div>
             ))}
 
-            {/* Auto-Detected */}
-            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden',marginBottom:'24px'}}>
+            {/* Environment + Members side by side */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'24px',alignItems:'start'}}>
+            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden'}}>
               <div style={{padding:'16px 20px',borderBottom:expandedSections.has('auto')?'1px solid rgba(30,58,47,0.08)':'none',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}} onClick={()=>{}}>
                 <div><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',fontWeight:400,color:'#1E3A2F'}}>Your Home's Environment</h3><p style={{fontSize:'11px',color:'#8A8A82',marginTop:'2px'}}>Auto-detected · overridable</p></div>
                 
@@ -1893,8 +1894,8 @@ const STATUS_OPTIONS=[
               )}
             </div>
 
-            {/* Home Members */}
-            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden',marginBottom:'24px'}}>
+            {/* Home Members — in grid with environment */}
+            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden'}}>
               <div style={{padding:'16px 20px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div>
                   <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'16px',fontWeight:400,color:'#1E3A2F'}}>Home Members</h3>
@@ -1977,6 +1978,7 @@ const STATUS_OPTIONS=[
               )}
             </div>
 
+            </div>{/* end side by side grid */}
             <div style={{marginBottom:'8px'}}><h3 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F'}}>Home Systems</h3></div>
             {/* CORE SYSTEMS tile grid */}
             <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'8px',letterSpacing:'0.5px'}}>Core systems</div>
@@ -2201,7 +2203,7 @@ const STATUS_OPTIONS=[
                   <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'6px'}}>Condition</label>
                   <div style={{display:'flex',gap:'8px'}}>
                     {(()=>{
-                      const smart=calculateSmartCondition(sys)
+                      const smart=calculateSmartCondition({...sys,...systemEdits})
                       const isLocked=smart.locked
                       const isOverridden=systemEdits.condition&&systemEdits.condition!==smart.condition.toLowerCase()
                       const contradiction=isOverridden&&systemEdits.condition==='Good'&&(sys.known_issues||sys.has_broken_glass||sys.any_broken_glass||sys.storm_damage_unaddressed)
@@ -2337,11 +2339,20 @@ const STATUS_OPTIONS=[
       {wishlistSyncModal&&(
         <div style={{position:'fixed',inset:0,zIndex:1001,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.45)',padding:'20px'}} onClick={e=>{if(e.target===e.currentTarget)setWishlistSyncModal(null)}}>
           <div style={{background:'#F8F4EE',borderRadius:'16px',padding:'24px',maxWidth:'340px',width:'100%',fontFamily:"'DM Sans', sans-serif"}}>
-            <div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F',marginBottom:'8px'}}>Update your wishlist?</div>
-            <div style={{fontSize:'13px',color:'#8A8A82',lineHeight:1.6,marginBottom:'20px'}}>You moved {wishlistSyncModal.sysName} back to in service. What should we do with <span style={{fontWeight:500,color:'#1E3A2F'}}>{wishlistSyncModal.sysName} replacement</span> on your project wishlist?</div>
+            <div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F',marginBottom:'8px'}}>{wishlistSyncModal.type==='scheduled'?'Move to planning?':'Update your wishlist?'}</div>
+            <div style={{fontSize:'13px',color:'#8A8A82',lineHeight:1.6,marginBottom:'20px'}}>{wishlistSyncModal.type==='scheduled'?<>You scheduled <span style={{fontWeight:500,color:'#1E3A2F'}}>{wishlistSyncModal.sysName} replacement</span> — want to move it from wishlist to planning on your projects?</>:<>You moved {wishlistSyncModal.sysName} back to in service. What should we do with <span style={{fontWeight:500,color:'#1E3A2F'}}>{wishlistSyncModal.sysName} replacement</span> on your project wishlist?</>}</div>
             <div style={{display:'flex',flexDirection:'column' as const,gap:'8px'}}>
-              <button onClick={async()=>{await supabase.from('home_projects').delete().eq('id',wishlistSyncModal.projectId);setWishlistSyncModal(null)}} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'11px 16px',borderRadius:'10px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textAlign:'left' as const}}>Remove from wishlist — no longer planning this</button>
-              <button onClick={async()=>{await supabase.from('home_projects').update({status:'wishlist'}).eq('id',wishlistSyncModal.projectId);setWishlistSyncModal(null)}} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'11px 16px',borderRadius:'10px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textAlign:'left' as const}}>Keep it — still thinking about replacing it eventually</button>
+              {wishlistSyncModal.type==='scheduled'?(
+                <>
+                  <button onClick={async()=>{await supabase.from('home_projects').update({status:'planning'}).eq('id',wishlistSyncModal.projectId);setWishlistSyncModal(null)}} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'11px 16px',borderRadius:'10px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textAlign:'left' as const}}>Yes — move to planning</button>
+                  <button onClick={()=>setWishlistSyncModal(null)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'11px 16px',borderRadius:'10px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textAlign:'left' as const}}>Keep it on wishlist for now</button>
+                </>
+              ):(
+                <>
+                  <button onClick={async()=>{await supabase.from('home_projects').delete().eq('id',wishlistSyncModal.projectId);setWishlistSyncModal(null)}} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'11px 16px',borderRadius:'10px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textAlign:'left' as const}}>Remove — no longer planning this</button>
+                  <button onClick={async()=>{await supabase.from('home_projects').update({status:'wishlist'}).eq('id',wishlistSyncModal.projectId);setWishlistSyncModal(null)}} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'11px 16px',borderRadius:'10px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textAlign:'left' as const}}>Keep it — still thinking about it eventually</button>
+                </>
+              )}
               <button onClick={()=>setWishlistSyncModal(null)} style={{background:'none',border:'none',color:'#8A8A82',padding:'8px',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Dismiss</button>
             </div>
           </div>
