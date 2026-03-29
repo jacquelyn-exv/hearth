@@ -2033,9 +2033,15 @@ const STATUS_OPTIONS=[
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[st]||st}</div>
                     {ex&&!ex.not_applicable?(
                       <div>
-                        <div style={{fontSize:'10px',color:cond?.textColor||'#8A8A82',fontWeight:500}}>{(ex?.condition&&ex?.condition!=='unknown'&&ex?.condition!==null)?(cond?.label||'Good'):'Tap to set up'}</div>
-                        {age&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}
-                        {age&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}
+                        {(()=>{
+                          const ok=!!(ex?.condition&&ex?.condition!=='unknown'&&age)
+                          const partial=!ok&&!!age
+                          const lbl=ok?(cond?.label||'Good'):partial?'Tap to finish setting up':'Tap to set up'
+                          return<>
+                            <div style={{fontSize:'10px',color:ok?cond?.textColor||'#3D7A5A':'#C47B2B',fontWeight:500}}>{lbl}</div>
+                            {ok&&<div style={{fontSize:'10px',color:'#8A8A82',marginTop:'1px'}}>{age} yrs old</div>}
+                            {ok&&<div style={{height:'3px',background:'#EDE8E0',borderRadius:'2px',marginTop:'4px',overflow:'hidden'}}><div style={{width:`${pct}%`,height:'100%',background:cond?.color||'#3D7A5A',borderRadius:'2px'}}/></div>}</>
+                        })()}
                       </div>
                     ):ex?.not_applicable?(
                       <div style={{fontSize:'10px',color:'#8A8A82'}}>Not applicable</div>
