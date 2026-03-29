@@ -1584,6 +1584,7 @@ const STATUS_OPTIONS=[
     const hasSafetyFlag=hasBrokenGlass||hasLockIssue||isDangerousPanel
     const isSetUp=!!age&&!!sys.condition&&sys.condition!=='unknown'&&!sys.not_applicable&&!hasSafetyFlag
     const isPartial=!isSetUp&&!sys.not_applicable&&!!age
+    console.log(sys.system_type,'age:',age,'condition:',sys.condition,'isSetUp:',isSetUp,'isPartial:',isPartial)
 
     // Autofill defaults
     const autoYear=home?.year_built?parseInt(home.year_built):null
