@@ -1420,10 +1420,11 @@ export default function Dashboard() {
       const payload:any={}
       for(const k of Object.keys(systemEdits)){if(COLS.includes(k))payload[k]=systemEdits[k]}
       if(payload.condition){const cm:Record<string,string>={'Good':'good','Fair':'fair','Poor':'poor','Critical':'critical','good':'good','fair':'fair','poor':'poor','critical':'critical','watch':'fair','inspect':'poor','priority':'critical','unknown':'unknown'};payload.condition=cm[payload.condition]||'unknown'}
-      const effectiveYear=payload.replacement_year||payload.install_year
+      const effectiveYear=payload.replacement_year||payload.install_year||payload.purchase_year
       payload.age_years=effectiveYear?new Date().getFullYear()-parseInt(effectiveYear):null
       if(payload.install_year)payload.install_year=parseInt(payload.install_year)
       if(payload.replacement_year)payload.replacement_year=parseInt(payload.replacement_year)
+      if(payload.purchase_year)payload.purchase_year=parseInt(payload.purchase_year)
       const {data:updated,error:se}=await supabase.from('home_systems').update(payload).eq('id',sysId).select().single()
       if(se){console.error('system update:',se);alert('Save failed: '+se.message);setSaving(false);return}
       if(updated)setSystems((prev:any[])=>prev.map(s=>s.id===sysId?updated:s))
