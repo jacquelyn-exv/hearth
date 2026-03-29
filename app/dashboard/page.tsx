@@ -113,7 +113,7 @@ const SYSTEM_FIELDS: Record<string, {label:string;type:string;options?:string[]}
     {label:'Glazing type',type:'select',options:['Single pane','Double pane','Triple pane','Unknown']},
     {label:'Configuration',type:'select',options:['2-panel','3-panel','Unknown']},
     {label:'Locking type',type:'select',options:['Single-point','Multi-point','Unknown']},
-    {label:'Quantity',type:'number'},{label:'Has anti-lift',type:'boolean'},
+    {label:'Quantity',type:'number'},{label:'Has anti lift',type:'boolean'},
     {label:'Hardware in working condition',type:'boolean'},{label:'Install year',type:'year'},
     {label:'Considering replacing',type:'boolean'},
   ],
@@ -133,7 +133,7 @@ const SYSTEM_FIELDS: Record<string, {label:string;type:string;options?:string[]}
   ],
   deck:[
     {label:'Material',type:'select',options:['Pressure treated wood','Cedar','Composite','Hardwood','Concrete','Pavers']},
-    {label:'Install year',type:'year'},{label:'Last seal / stain',type:'date'},
+    {label:'Install year',type:'year'},{label:'Last seal stain',type:'date'},
     {label:'Known issues',type:'text'},{label:'Considering replacing',type:'boolean'},
   ],
   chimney:[
@@ -229,7 +229,7 @@ const SYSTEM_FIELDS: Record<string, {label:string;type:string;options?:string[]}
   solar:[
     {label:'Install year',type:'year'},
     {label:'Panel count',type:'number'},
-    {label:'Panel kw',type:'number'},
+    {label:'Panel kw output',type:'number'},
     {label:'Has battery backup',type:'boolean'},
     {label:'Last inspection',type:'date'},
   ],
@@ -1302,7 +1302,7 @@ export default function Dashboard() {
   const saveSystem=async(sysId:string)=>{
     setSaving(true)
     try{
-      const COLS=['id','home_id','system_type','install_year','replacement_year','age_years','material','notes','condition','system_status','ever_replaced','under_warranty','not_applicable','known_issues','storm_damage_unaddressed','considering_replacing','warranty_expiry_year','quantity','window_count','has_fogged_units','has_skylights','any_broken_glass','any_wood_rot','has_broken_glass','locks_not_functioning','windows_wont_open','has_gutter_guards','seamless_or_sectional','fascia_material','has_glass_lites_or_sidelites','hardware_in_working_condition','has_anti_lift','configuration','locking_type','frame_material','glazing_type','fuel_source','fuel_type','filter_size','last_filter_replacement','last_professional_service','furnace_install_year','ac_or_heat_pump_install_year','tank_size_gallons','tank_size','has_expansion_tank','last_flush','last_anode_rod_inspection','last_tpr_valve_test','last_sweep','last_inspection','last_cleaning','last_seal_stain','last_seal_year','last_test','last_battery_replacement','has_battery_backup','has_ice_maker','has_water_dispenser','last_condenser_coil_cleaning','last_water_filter_replacement','last_filter_cleaning','last_cleaner_cycle','occupants','last_pumped','system_subtype','pipe_material','panel_type','panel_amperage','is_insulated','door_count','last_service_year','purchase_year','appliance_type','has_water_line','last_drum_clean','has_smart_features','coverage_sqft','has_heater','last_chemical_service','softener_type','last_resin_clean','well_depth_ft','last_water_test','panel_kw','battery_backup','crawl_space_type','last_vapor_barrier','encapsulated','last_vent_cleaning','last_service_year','door_count','well_depth_ft','coverage_sqft','hvac_system_type','water_heater_type','pool_type','septic_system_type','chimney_type','foundation_type','softener_type','tank_size_gallons']
+      const COLS=['id','home_id','system_type','install_year','replacement_year','age_years','material','notes','condition','system_status','ever_replaced','under_warranty','not_applicable','known_issues','storm_damage_unaddressed','considering_replacing','warranty_expiry_year','quantity','window_count','has_fogged_units','has_skylights','any_broken_glass','any_wood_rot','has_broken_glass','locks_not_functioning','windows_wont_open','has_gutter_guards','seamless_or_sectional','fascia_material','has_glass_lites_or_sidelites','hardware_in_working_condition','has_anti_lift','configuration','locking_type','frame_material','glazing_type','fuel_source','fuel_type','filter_size','last_filter_replacement','last_professional_service','furnace_install_year','ac_or_heat_pump_install_year','tank_size_gallons','tank_size','has_expansion_tank','last_flush','last_anode_rod_inspection','last_tpr_valve_test','last_sweep','last_inspection','last_cleaning','last_seal_stain','last_seal_year','last_test','last_battery_replacement','has_battery_backup','has_ice_maker','has_water_dispenser','last_condenser_coil_cleaning','last_water_filter_replacement','last_filter_cleaning','last_cleaner_cycle','occupants','last_pumped','system_subtype','pipe_material','panel_type','panel_amperage','is_insulated','door_count','last_service_year','purchase_year','appliance_type','has_water_line','last_drum_clean','has_smart_features','coverage_sqft','has_heater','last_chemical_service','softener_type','last_resin_clean','well_depth_ft','last_water_test','panel_kw','battery_backup','crawl_space_type','last_vapor_barrier','encapsulated','last_vent_cleaning','hvac_system_type','water_heater_type','pool_type','septic_system_type','chimney_type','foundation_type','tank_size_gallons','panel_count','panel_kw_output','last_seal_stain']
       const payload:any={}
       for(const k of Object.keys(systemEdits)){if(COLS.includes(k))payload[k]=systemEdits[k]}
       if(payload.condition){const cm:Record<string,string>={'Good':'good','Fair':'watch','Poor':'inspect','good':'good','fair':'watch','poor':'inspect','watch':'watch','priority':'priority','inspect':'inspect','unknown':'unknown'};payload.condition=cm[payload.condition]||'unknown'}
@@ -1818,7 +1818,7 @@ const STATUS_OPTIONS=[
                     {details?.coastal_zone&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'18px',flexShrink:0}}>🌊</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#C47B2B'}}>Coastal / high wind exposure</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>Salt air corrodes gutters, flashing, and HVAC units faster. Rinse exterior surfaces annually. May affect roof warranty terms and insurance coverage.</div></div></div>}
                     {details?.wildfire_zone?<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'18px',flexShrink:0}}>🔥</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#791F1F'}}>⚠️ Wildfire zone</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>Clear defensible space around the home annually. Check that roof vents and eaves are ember-resistant.</div></div></div>:<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'18px',flexShrink:0}}>🔥</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#3D7A5A'}}>Low wildfire risk</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>No significant wildfire history in this area. No action needed.</div></div></div>}
                   </div>
-                  <button onClick={()=>startEditSection('about')} style={{marginTop:'14px',background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'7px 14px',borderRadius:'8px',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Override any of these ✎</button>
+
                 </div>
               )}
             </div>
@@ -2160,6 +2160,17 @@ const STATUS_OPTIONS=[
                     </button>
                   ))}
                 </div>
+
+                {systemEdits.system_status==='recently_replaced'&&(
+                  <div style={{background:'#EAF2EC',border:'1px solid rgba(61,122,90,0.2)',borderRadius:'10px',padding:'11px 14px',marginBottom:'10px',display:'flex',alignItems:'center',gap:'10px'}}>
+                    <span style={{fontSize:'16px'}}>📋</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F'}}>Want to log this replacement?</div>
+                      <div style={{fontSize:'11px',color:'#8A8A82',marginTop:'2px'}}>Keep a record of the work done, cost, and contractor.</div>
+                    </div>
+                    <a href="/log" style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'6px 12px',borderRadius:'7px',fontSize:'12px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",textDecoration:'none',whiteSpace:'nowrap'}}>Log it →</a>
+                  </div>
+                )}
 
                 {/* STEP 3 */}
                 <div style={{height:'0.5px',background:'rgba(30,58,47,0.1)',margin:'14px 0'}}/>
