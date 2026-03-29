@@ -230,6 +230,209 @@ const UTILITY_BY_STATE: Record<string,{electric:number;gas:number}> = {
   WI:{electric:16.2,gas:16.8},WY:{electric:10.5,gas:12.5},DC:{electric:16.8,gas:18.5}
 }
 
+// ─── POLLEN SEASONS BY ZONE ───────────────────────────────────────────────
+function getPollenSeasons(zone: string): {tree:string;grass:string;ragweed:string;mold:string;worstMonths:string} {
+  const z = parseFloat(zone.split('-')[0])
+  if (z <= 4) return {tree:'Apr–May',grass:'Jun–Jul',ragweed:'Aug–Sep',mold:'Jun–Aug',worstMonths:'May–Jul'}
+  if (z <= 5) return {tree:'Mar–May',grass:'May–Jul',ragweed:'Aug–Oct',mold:'Jun–Sep',worstMonths:'Apr–Jun'}
+  if (z <= 6) return {tree:'Mar–May',grass:'May–Jul',ragweed:'Aug–Oct',mold:'Jun–Sep',worstMonths:'Apr–Jun'}
+  if (z <= 7) return {tree:'Feb–May',grass:'May–Jul',ragweed:'Aug–Oct',mold:'Jun–Sep',worstMonths:'Mar–May & Aug–Sep'}
+  if (z <= 8) return {tree:'Feb–Apr',grass:'Apr–Jun',ragweed:'Aug–Oct',mold:'May–Sep',worstMonths:'Mar–Apr & Aug–Sep'}
+  return {tree:'Jan–Mar',grass:'Mar–May',ragweed:'Sep–Nov',mold:'Apr–Oct',worstMonths:'Feb–Apr'}
+}
+
+// ─── PEST RISK BY STATE ────────────────────────────────────────────────────
+const PEST_BY_STATE: Record<string,{termite:string;mosquito:string;deer:string;rodent:string}> = {
+  AL:{termite:'very_high',mosquito:'high',deer:'moderate',rodent:'moderate'},
+  AK:{termite:'low',mosquito:'moderate',deer:'low',rodent:'moderate'},
+  AZ:{termite:'high',mosquito:'moderate',deer:'low',rodent:'moderate'},
+  AR:{termite:'high',mosquito:'high',deer:'high',rodent:'moderate'},
+  CA:{termite:'high',mosquito:'moderate',deer:'moderate',rodent:'moderate'},
+  CO:{termite:'moderate',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  CT:{termite:'moderate',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  DE:{termite:'high',mosquito:'high',deer:'high',rodent:'moderate'},
+  FL:{termite:'very_high',mosquito:'very_high',deer:'moderate',rodent:'high'},
+  GA:{termite:'very_high',mosquito:'high',deer:'high',rodent:'moderate'},
+  HI:{termite:'very_high',mosquito:'high',deer:'low',rodent:'moderate'},
+  ID:{termite:'low',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  IL:{termite:'moderate',mosquito:'high',deer:'high',rodent:'moderate'},
+  IN:{termite:'moderate',mosquito:'high',deer:'high',rodent:'moderate'},
+  IA:{termite:'moderate',mosquito:'high',deer:'high',rodent:'moderate'},
+  KS:{termite:'moderate',mosquito:'high',deer:'high',rodent:'moderate'},
+  KY:{termite:'high',mosquito:'high',deer:'high',rodent:'moderate'},
+  LA:{termite:'very_high',mosquito:'very_high',deer:'moderate',rodent:'high'},
+  ME:{termite:'low',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  MD:{termite:'high',mosquito:'high',deer:'very_high',rodent:'moderate'},
+  MA:{termite:'moderate',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  MI:{termite:'moderate',mosquito:'high',deer:'high',rodent:'moderate'},
+  MN:{termite:'moderate',mosquito:'high',deer:'high',rodent:'moderate'},
+  MS:{termite:'very_high',mosquito:'very_high',deer:'high',rodent:'moderate'},
+  MO:{termite:'high',mosquito:'high',deer:'high',rodent:'moderate'},
+  MT:{termite:'low',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  NE:{termite:'moderate',mosquito:'high',deer:'high',rodent:'moderate'},
+  NV:{termite:'moderate',mosquito:'low',deer:'moderate',rodent:'moderate'},
+  NH:{termite:'low',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  NJ:{termite:'high',mosquito:'high',deer:'very_high',rodent:'high'},
+  NM:{termite:'moderate',mosquito:'low',deer:'moderate',rodent:'moderate'},
+  NY:{termite:'moderate',mosquito:'moderate',deer:'high',rodent:'high'},
+  NC:{termite:'high',mosquito:'high',deer:'high',rodent:'moderate'},
+  ND:{termite:'low',mosquito:'high',deer:'high',rodent:'moderate'},
+  OH:{termite:'moderate',mosquito:'high',deer:'high',rodent:'moderate'},
+  OK:{termite:'high',mosquito:'high',deer:'high',rodent:'moderate'},
+  OR:{termite:'moderate',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  PA:{termite:'moderate',mosquito:'moderate',deer:'very_high',rodent:'moderate'},
+  RI:{termite:'moderate',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  SC:{termite:'very_high',mosquito:'high',deer:'high',rodent:'moderate'},
+  SD:{termite:'low',mosquito:'high',deer:'high',rodent:'moderate'},
+  TN:{termite:'high',mosquito:'high',deer:'high',rodent:'moderate'},
+  TX:{termite:'very_high',mosquito:'very_high',deer:'high',rodent:'moderate'},
+  UT:{termite:'low',mosquito:'low',deer:'moderate',rodent:'moderate'},
+  VT:{termite:'low',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  VA:{termite:'high',mosquito:'high',deer:'very_high',rodent:'moderate'},
+  WA:{termite:'moderate',mosquito:'low',deer:'high',rodent:'moderate'},
+  WV:{termite:'moderate',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  WI:{termite:'moderate',mosquito:'high',deer:'high',rodent:'moderate'},
+  WY:{termite:'low',mosquito:'moderate',deer:'high',rodent:'moderate'},
+  DC:{termite:'high',mosquito:'high',deer:'moderate',rodent:'high'},
+}
+
+const PEST_RISK_LABELS: Record<string,{label:string;badge:string}> = {
+  very_high:{label:'Very high',badge:'Very high'},
+  high:{label:'High',badge:'High'},
+  moderate:{label:'Moderate',badge:'Moderate'},
+  low:{label:'Low',badge:'Low'},
+}
+
+// ─── WATER HARDNESS BY STATE (mg/L avg) ────────────────────────────────────
+const WATER_HARDNESS: Record<string,{level:string;avg:number;desc:string}> = {
+  AL:{level:'moderate',avg:80,desc:'Moderate hardness. Annual water heater flush recommended.'},
+  AK:{level:'soft',avg:20,desc:'Very soft water. Low mineral buildup risk.'},
+  AZ:{level:'very_hard',avg:250,desc:'Very hard water common. Water softener strongly recommended. Flush water heater every 6 months.'},
+  AR:{level:'moderate',avg:90,desc:'Moderate hardness. Standard maintenance intervals apply.'},
+  CA:{level:'hard',avg:180,desc:'Hard water in most of CA. Southern CA especially hard. Annual appliance maintenance important.'},
+  CO:{level:'hard',avg:160,desc:'Hard water in Front Range and plains. Softener beneficial for appliances.'},
+  CT:{level:'soft',avg:40,desc:'Generally soft water. Minimal mineral buildup.'},
+  DE:{level:'moderate',avg:110,desc:'Moderate hardness. Annual flush recommended for water heater.'},
+  FL:{level:'very_hard',avg:220,desc:'Very hard water throughout Florida. Water softener highly recommended.'},
+  GA:{level:'soft',avg:50,desc:'Soft water in most of Georgia. Low buildup risk.'},
+  HI:{level:'moderate',avg:100,desc:'Varies by island. Moderate hardness on most islands.'},
+  ID:{level:'hard',avg:150,desc:'Hard water common. Annual appliance maintenance recommended.'},
+  IL:{level:'hard',avg:170,desc:'Hard water throughout. Chicago area particularly hard. Softener beneficial.'},
+  IN:{level:'hard',avg:180,desc:'Hard water state. Annual descaling of fixtures and appliances recommended.'},
+  IA:{level:'hard',avg:190,desc:'Very hard water. Iowa has some of the hardest water in the US.'},
+  KS:{level:'very_hard',avg:230,desc:'Very hard water. Flush water heater every 6 months. Water softener recommended.'},
+  KY:{level:'hard',avg:140,desc:'Hard water in most areas. Annual appliance maintenance.'},
+  LA:{level:'soft',avg:60,desc:'Relatively soft water. Standard maintenance applies.'},
+  ME:{level:'soft',avg:30,desc:'Very soft water. Low mineral buildup.'},
+  MD:{level:'moderate',avg:120,desc:'Moderate hardness. Eastern Shore slightly harder. Annual water heater flush.'},
+  MA:{level:'soft',avg:40,desc:'Soft water throughout. Minimal buildup.'},
+  MI:{level:'hard',avg:160,desc:'Hard water in most of Michigan. Softeners common.'},
+  MN:{level:'hard',avg:170,desc:'Hard water throughout. Annual appliance attention recommended.'},
+  MS:{level:'soft',avg:55,desc:'Soft to moderate water. Standard maintenance.'},
+  MO:{level:'hard',avg:160,desc:'Hard water. Annual descaling recommended.'},
+  MT:{level:'moderate',avg:100,desc:'Moderate hardness in most areas.'},
+  NE:{level:'hard',avg:190,desc:'Hard water. Annual water heater flush important.'},
+  NV:{level:'very_hard',avg:270,desc:'Some of the hardest water in the US. Water softener essential for Las Vegas area.'},
+  NH:{level:'soft',avg:35,desc:'Soft water. Minimal buildup risk.'},
+  NJ:{level:'moderate',avg:110,desc:'Moderate hardness. Annual maintenance recommended.'},
+  NM:{level:'hard',avg:170,desc:'Hard water. Drip irrigation systems may clog. Water softener beneficial.'},
+  NY:{level:'soft',avg:50,desc:'NYC has very soft water. Upstate varies. Generally low buildup.'},
+  NC:{level:'soft',avg:55,desc:'Soft water in most areas. Standard maintenance.'},
+  ND:{level:'hard',avg:200,desc:'Very hard water. Annual water heater flush essential.'},
+  OH:{level:'hard',avg:160,desc:'Hard water throughout Ohio. Softeners common.'},
+  OK:{level:'hard',avg:160,desc:'Hard water. Annual appliance maintenance recommended.'},
+  OR:{level:'soft',avg:45,desc:'Very soft water west of Cascades. Eastern OR harder.'},
+  PA:{level:'moderate',avg:110,desc:'Moderate hardness. Annual water heater flush recommended.'},
+  RI:{level:'soft',avg:40,desc:'Soft water. Low buildup risk.'},
+  SC:{level:'soft',avg:55,desc:'Soft water in most areas.'},
+  SD:{level:'hard',avg:200,desc:'Very hard water. Annual maintenance essential.'},
+  TN:{level:'moderate',avg:90,desc:'Moderate hardness. Standard maintenance.'},
+  TX:{level:'hard',avg:190,desc:'Hard to very hard water across most of Texas. Softener common.'},
+  UT:{level:'hard',avg:180,desc:'Hard water. Salt Lake area especially hard. Softener recommended.'},
+  VT:{level:'soft',avg:35,desc:'Very soft water. Minimal buildup.'},
+  VA:{level:'moderate',avg:115,desc:'Moderate hardness. Northern VA harder. Annual water heater flush.'},
+  WA:{level:'soft',avg:40,desc:'Very soft water west of Cascades. Minimal buildup.'},
+  WV:{level:'moderate',avg:95,desc:'Moderate hardness. Standard maintenance.'},
+  WI:{level:'hard',avg:175,desc:'Hard water throughout. Annual appliance attention.'},
+  WY:{level:'moderate',avg:120,desc:'Moderate to hard water. Annual maintenance.'},
+  DC:{level:'moderate',avg:120,desc:'Moderate hardness. Annual water heater flush recommended.'},
+}
+
+// ─── DAYLIGHT HOURS BY LATITUDE ────────────────────────────────────────────
+function getDaylightHours(lat: number): {summerPeak:string;winterLow:string;bestProjectMonths:string} {
+  if (lat >= 47) return {summerPeak:'15.5 hrs',winterLow:'8.5 hrs',bestProjectMonths:'May–Sep'}
+  if (lat >= 44) return {summerPeak:'15.0 hrs',winterLow:'9.0 hrs',bestProjectMonths:'May–Sep'}
+  if (lat >= 41) return {summerPeak:'14.5 hrs',winterLow:'9.5 hrs',bestProjectMonths:'Apr–Sep'}
+  if (lat >= 38) return {summerPeak:'14.5 hrs',winterLow:'10.0 hrs',bestProjectMonths:'Apr–Oct'}
+  if (lat >= 35) return {summerPeak:'14.0 hrs',winterLow:'10.0 hrs',bestProjectMonths:'Apr–Oct'}
+  if (lat >= 30) return {summerPeak:'13.5 hrs',winterLow:'10.5 hrs',bestProjectMonths:'Mar–Nov'}
+  return {summerPeak:'13.0 hrs',winterLow:'11.0 hrs',bestProjectMonths:'Year-round'}
+}
+
+// ─── FIXED HARDINESS ZONE LOOKUP — single value not range ─────────────────
+// More accurate lookup for common ZIP prefixes
+function getHardinessZoneAccurate(zip: string, state: string): string {
+  const prefix = parseInt(zip.substring(0,3))
+  // MD specific
+  if (state === 'MD') {
+    if (prefix >= 216 && prefix <= 218) return '7b' // Eastern Shore including Queenstown
+    if (prefix === 207 || prefix === 208) return '7a' // Montgomery County
+    if (prefix === 212 || prefix === 211) return '7a' // Baltimore
+    if (prefix === 217) return '7b' // Annapolis area
+    return '7a'
+  }
+  // VA
+  if (state === 'VA') {
+    if (prefix >= 220 && prefix <= 222) return '7a' // Northern VA
+    if (prefix >= 234 && prefix <= 238) return '8a' // Norfolk/Chesapeake
+    return '7a'
+  }
+  // NC
+  if (state === 'NC') {
+    if (prefix >= 284 && prefix <= 289) return '8a' // Coastal
+    if (prefix >= 278 && prefix <= 279) return '7b' // Raleigh
+    return '7a'
+  }
+  // GA
+  if (state === 'GA') {
+    if (prefix >= 300 && prefix <= 303) return '8a' // Atlanta
+    if (prefix >= 314 && prefix <= 316) return '8b' // South GA
+    return '8a'
+  }
+  // FL
+  if (state === 'FL') {
+    if (prefix >= 330 && prefix <= 334) return '10b' // Miami
+    if (prefix >= 320 && prefix <= 322) return '9a' // Jacksonville
+    if (prefix >= 326 && prefix <= 327) return '9b' // Central FL
+    return '10a'
+  }
+  // PA
+  if (state === 'PA') {
+    if (prefix >= 190 && prefix <= 191) return '7a' // Philadelphia
+    if (prefix >= 152 && prefix <= 153) return '6a' // Pittsburgh
+    return '6b'
+  }
+  // NY
+  if (state === 'NY') {
+    if (prefix >= 100 && prefix <= 104) return '7b' // NYC
+    if (prefix >= 120 && prefix <= 121) return '5b' // Albany
+    return '6a'
+  }
+  // Default fallback by state
+  const stateDefaults: Record<string,string> = {
+    ME:'5b',NH:'5b',VT:'5a',MA:'6a',RI:'6b',CT:'6b',
+    NJ:'7a',DE:'7a',DC:'7a',
+    WV:'6a',KY:'6b',TN:'7a',AL:'8a',MS:'8a',
+    SC:'8a',
+    OH:'6a',IN:'6a',IL:'6a',MI:'5b',WI:'5a',MN:'4b',
+    IA:'5b',MO:'6a',AR:'7b',LA:'9a',
+    ND:'4a',SD:'4b',NE:'5b',KS:'6a',OK:'7a',TX:'8b',
+    MT:'4b',WY:'4b',CO:'5b',NM:'7a',AZ:'9a',UT:'6b',NV:'8a',
+    ID:'6a',WA:'8a',OR:'8b',CA:'9b',AK:'3a',HI:'12a',
+  }
+  return stateDefaults[state] || '7a'
+}
+
 // ─── MAIN ROUTE ────────────────────────────────────────────────────────────
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -265,7 +468,11 @@ export async function GET(request: Request) {
   const precipitation = PRECIP_BY_STATE[stateCode] || 38
 
   // ── Plant hardiness zone
-  const hardinessZone = getHardinessZone(zip)
+  const hardinessZone = getHardinessZoneAccurate(zip, stateCode)
+  const pollenSeasons = getPollenSeasons(hardinessZone)
+  const pestRisk = PEST_BY_STATE[stateCode] || {termite:'moderate',mosquito:'moderate',deer:'moderate',rodent:'moderate'}
+  const waterInfo = WATER_HARDNESS[stateCode] || {level:'moderate',avg:120,desc:'Moderate hardness. Annual water heater flush recommended.'}
+  const daylightInfo = lat ? getDaylightHours(lat) : {summerPeak:'14.5 hrs',winterLow:'9.5 hrs',bestProjectMonths:'Apr–Sep'}
   const frostDates = getFrostDates(hardinessZone)
   const nativePlants = getNativePlants(hardinessZone)
 
@@ -383,6 +590,29 @@ export async function GET(request: Request) {
     // Utility costs
     avg_utility_electric: utilityInfo.electric,
     avg_utility_gas: utilityInfo.gas,
+
+    // Pollen
+    pollen_tree: pollenSeasons.tree,
+    pollen_grass: pollenSeasons.grass,
+    pollen_ragweed: pollenSeasons.ragweed,
+    pollen_mold: pollenSeasons.mold,
+    pollen_worst_months: pollenSeasons.worstMonths,
+
+    // Pest risk
+    pest_termite: pestRisk.termite,
+    pest_mosquito: pestRisk.mosquito,
+    pest_deer: pestRisk.deer,
+    pest_rodent: pestRisk.rodent,
+
+    // Water
+    water_hardness_level: waterInfo.level,
+    water_hardness_avg: waterInfo.avg,
+    water_hardness_desc: waterInfo.desc,
+
+    // Daylight
+    daylight_summer: daylightInfo.summerPeak,
+    daylight_winter: daylightInfo.winterLow,
+    daylight_best_months: daylightInfo.bestProjectMonths,
   })
 }
 

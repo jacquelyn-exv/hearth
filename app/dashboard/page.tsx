@@ -1151,6 +1151,12 @@ export default function Dashboard() {
   const [wishlistToast,setWishlistToast]=useState<string|null>(null)
   const [envData,setEnvData]=useState<any>(null)
   const [envLoading,setEnvLoading]=useState(false)
+  const [crops,setCrops]=useState<any[]>([])
+  const [showAddCrop,setShowAddCrop]=useState(false)
+  const [newCrop,setNewCrop]=useState<any>({name:'',crop_type:'vegetable',location:'',date_planted:'',water_interval_days:'',fertilize_interval_days:'',notes:''})
+  const [showGardenLog,setShowGardenLog]=useState<string|null>(null)
+  const [gardenLogType,setGardenLogType]=useState('watered')
+  const [gardenLogNotes,setGardenLogNotes]=useState('')
   const [wishlistSyncModal,setWishlistSyncModal]=useState<{sysName:string;projectId:string;type:'in_service'|'scheduled'}|null>(null)
   const [savedSystemId,setSavedSystemId]=useState<string|null>(null)
   const [systemEdits,setSystemEdits]=useState<any>({})
@@ -1191,6 +1197,8 @@ export default function Dashboard() {
       supabase.from('home_invites').select('*').eq('home_id',homeId).eq('status','pending').order('created_at',{ascending:false})
     ])
     setDetails(det);setSystems(sys||[]);setJobs(j||[])
+    const {data:cr}=await supabase.from('garden_crops').select('*').eq('home_id',homeId).eq('archived',false).order('date_planted',{ascending:false})
+    if(cr)setCrops(cr)
     if(sc&&sc.length>0)setScore(sc[0])
     setTasks(tk||[])
     setDismissedSmartTasks((tk||[]).filter((t:any)=>t.status==='dismissed').map((t:any)=>t.title))
@@ -1238,6 +1246,63 @@ export default function Dashboard() {
       if(!seen){setShowHistoryModal(true);localStorage.setItem('hearth_history_modal_seen','true')}
     }
   },[loading,homeownerType,jobs.length])
+
+  const addCrop=async()=>{
+    if(!newCrop.name.trim())return
+    const payload:any={home_id:home.id,user_id:user.id,...newCrop}
+    if(payload.water_interval_days)payload.water_interval_days=parseInt(payload.water_interval_days)
+    else delete payload.water_interval_days
+    if(payload.fertilize_interval_days)payload.fertilize_interval_days=parseInt(payload.fertilize_interval_days)
+    else delete payload.fertilize_interval_days
+    // Auto-calculate expected harvest from zone frost dates + crop type
+    if(payload.date_planted&&envData?.frost_date_last_spring){
+      const planted=new Date(payload.date_planted)
+      const vegDays:Record<string,number>={tomatoes:75,peppers:80,cucumbers:55,squash:50,beans:55,lettuce:45,spinach:40,kale:55,broccoli:60,carrots:70,peas:60,basil:30,eggplant:75}
+      const lower=payload.name.toLowerCase()
+      const days=Object.entries(vegDays).find(([k])=>lower.includes(k))?.[1]||70
+      const harvestStart=new Date(planted);harvestStart.setDate(harvestStart.getDate()+days)
+      const harvestEnd=new Date(harvestStart);harvestEnd.setDate(harvestEnd.getDate()+21)
+      payload.expected_harvest_start=harvestStart.toISOString().split('T')[0]
+      payload.expected_harvest_end=harvestEnd.toISOString().split('T')[0]
+    }
+    const {data}=await supabase.from('garden_crops').insert(payload).select().single()
+    if(data){
+      setCrops(prev=>[data,...prev])
+      setShowAddCrop(false)
+      setNewCrop({name:'',crop_type:'vegetable',location:'',date_planted:'',water_interval_days:'',fertilize_interval_days:'',notes:''})
+      // Add watering reminder task if interval set
+      if(data.water_interval_days){
+        const dueDate=new Date();dueDate.setDate(dueDate.getDate()+data.water_interval_days)
+        await supabase.from('home_tasks').insert({home_id:home.id,created_by:user.id,title:`Water ${data.name}`,source:'garden',source_type:'garden',crop_id:data.id,status:'todo',due_date:dueDate.toISOString().split('T')[0]})
+      }
+    }
+  }
+
+  const logGardenActivity=async(cropId:string,cropName:string)=>{
+    await supabase.from('garden_activity').insert({crop_id:cropId,home_id:home.id,user_id:user.id,activity_type:gardenLogType,notes:gardenLogNotes||null})
+    // Update crop stage
+    if(gardenLogType==='harvested'){
+      await supabase.from('garden_crops').update({stage:'harvested'}).eq('id',cropId)
+      setCrops(prev=>prev.map(c=>c.id===cropId?{...c,stage:'harvested'}:c))
+    }
+    // Log to home_activity feed
+    await supabase.from('home_activity').insert({home_id:home.id,user_id:user.id,job_type:'garden',title:`${gardenLogType.charAt(0).toUpperCase()+gardenLogType.slice(1)} ${cropName}`,notes:gardenLogNotes||null,job_date:new Date().toISOString().split('T')[0]})
+    // Schedule next watering task if watered
+    if(gardenLogType==='watered'){
+      const crop=crops.find(c=>c.id===cropId)
+      if(crop?.water_interval_days){
+        const dueDate=new Date();dueDate.setDate(dueDate.getDate()+crop.water_interval_days)
+        await supabase.from('home_tasks').insert({home_id:home.id,created_by:user.id,title:`Water ${cropName}`,source:'garden',source_type:'garden',crop_id:cropId,status:'todo',due_date:dueDate.toISOString().split('T')[0]})
+      }
+    }
+    setShowGardenLog(null)
+    setGardenLogNotes('')
+  }
+
+  const archiveCrop=async(cropId:string)=>{
+    await supabase.from('garden_crops').update({archived:true}).eq('id',cropId)
+    setCrops(prev=>prev.filter(c=>c.id!==cropId))
+  }
 
   const fetchEnvironmentData=async(homeObj:any)=>{
     if(!homeObj?.zip&&!homeObj?.state)return
@@ -1786,12 +1851,11 @@ const STATUS_OPTIONS=[
                 <div style={{padding:'10px 16px',borderTop:'1px solid rgba(30,58,47,0.06)'}}><button onClick={()=>setActiveTab('maintenance')} style={{background:'none',border:'none',fontSize:'12px',color:'#3D7A5A',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",fontWeight:500,padding:0}}>View full calendar →</button></div>
               </div>
 
-              {/* Weather */}
-              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden',marginBottom:'16px'}}>
-                {weatherLoading?<div style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:'10px'}}><span style={{fontSize:'24px'}}>⛅</span><span style={{fontSize:'13px',color:'#8A8A82'}}>Loading weather...</span></div>:weather?<div style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:'10px'}}><span style={{fontSize:'24px'}}>{weather.emoji}</span><div style={{flex:1}}><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>{weather.temp}° · {weather.desc}</div><div style={{fontSize:'11px',color:'#8A8A82'}}>{home?.city}, {home?.state}</div></div></div>:<div style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:'10px'}}><span style={{fontSize:'24px'}}>⛅</span><span style={{fontSize:'13px',color:'#8A8A82'}}>Weather unavailable</span></div>}
-                {showActiveStorm&&!stormIsFuture&&(<div style={{background:'#FBF0DC',padding:'10px 16px',borderTop:'1px solid rgba(196,123,43,0.15)'}}><div style={{fontSize:'12px',fontWeight:500,color:'#7A4A10'}}>⚠️ {weather.recentStorm.label} — {new Date(weather.recentStorm.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>Check exterior for damage before calling contractors</div></div>)}
-                {showActiveStorm&&stormIsFuture&&(<div style={{background:'#E6F2F8',padding:'10px 16px',borderTop:'1px solid rgba(58,124,168,0.15)'}}><div style={{fontSize:'12px',fontWeight:500,color:'#3A7CA8'}}>🌨️ {weather.recentStorm.label} forecast — {new Date(weather.recentStorm.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>Check gutters and clear drains before it hits</div></div>)}
-                {stormHistory.length>0&&(<div style={{borderTop:'1px solid rgba(30,58,47,0.06)'}}><button onClick={()=>setShowStormHistory(!showStormHistory)} style={{width:'100%',background:'none',border:'none',padding:'9px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}><span style={{fontSize:'11px',color:'#8A8A82'}}>🌩️ {stormHistory.length} storm event{stormHistory.length!==1?'s':''} on record</span><span style={{fontSize:'10px',color:'#8A8A82'}}>{showStormHistory?'▲':'▼'}</span></button>{showStormHistory&&stormHistory.map(storm=>{const daysAgo=Math.round((Date.now()-new Date(storm.event_date).getTime())/(1000*60*60*24));return(<div key={storm.id} style={{padding:'8px 16px',borderTop:'1px solid rgba(30,58,47,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center',gap:'8px'}}><div><div style={{fontSize:'11px',fontWeight:500,color:'#1E3A2F'}}>{storm.notes||storm.event_type?.replace(/_/g,' ')}</div><div style={{fontSize:'10px',color:'#8A8A82'}}>{new Date(storm.event_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}{storm.max_windspeed>0&&` · ${Math.round(storm.max_windspeed)} mph`}</div></div><span style={{fontSize:'10px',padding:'2px 6px',borderRadius:'10px',flexShrink:0,background:daysAgo<=21?'#FBF0DC':'#F5F5F5',color:daysAgo<=21?'#7A4A10':'#8A8A82'}}>{daysAgo===0?'Today':`${daysAgo}d ago`}</span></div>)})}</div>)}
+              {/* Weather — compact, links to environment tab */}
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',overflow:'hidden',marginBottom:'16px',cursor:'pointer'}} onClick={()=>setActiveTab('environment')}>
+                {weatherLoading?<div style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:'10px'}}><span style={{fontSize:'24px'}}>⛅</span><span style={{fontSize:'13px',color:'#8A8A82'}}>Loading weather...</span></div>:weather?<div style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:'10px'}}><span style={{fontSize:'24px'}}>{weather.emoji}</span><div style={{flex:1}}><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>{weather.temp}° · {weather.desc}</div><div style={{fontSize:'11px',color:'#8A8A82'}}>{home?.city}, {home?.state}</div></div><span style={{fontSize:'11px',color:'#3D7A5A',fontWeight:500}}>View →</span></div>:<div style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:'10px'}}><span style={{fontSize:'24px'}}>⛅</span><span style={{fontSize:'13px',color:'#8A8A82'}}>Weather unavailable</span></div>}
+                {showActiveStorm&&!stormIsFuture&&(<div style={{background:'#FBF0DC',padding:'8px 16px',borderTop:'1px solid rgba(196,123,43,0.15)'}}><div style={{fontSize:'12px',fontWeight:500,color:'#7A4A10'}}>⚠️ {weather.recentStorm.label} — tap to view storm center</div></div>)}
+                {showActiveStorm&&stormIsFuture&&(<div style={{background:'#E6F2F8',padding:'8px 16px',borderTop:'1px solid rgba(58,124,168,0.15)'}}><div style={{fontSize:'12px',fontWeight:500,color:'#3A7CA8'}}>🌨️ {weather.recentStorm.label} incoming — tap to view</div></div>)}
               </div>
 
               {/* Quick actions */}
@@ -2079,6 +2143,24 @@ const STATUS_OPTIONS=[
 
             {!envLoading&&envData&&(<>
 
+              {/* ── Weather & Storm Center ── */}
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
+                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#E6F1FB',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>⛅</div>
+                  <div style={{flex:1}}><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Weather & storm center</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>{home?.city}, {home?.state}</div></div>
+                  {weather&&<div style={{textAlign:'right' as const}}><div style={{fontSize:'20px',fontWeight:500,color:'#1E3A2F'}}>{weather.temp}°</div><div style={{fontSize:'10px',color:'#8A8A82'}}>{weather.desc}</div></div>}
+                </div>
+                {showActiveStorm&&!stormIsFuture&&(<div style={{background:'#FBF0DC',padding:'11px 16px',borderBottom:'1px solid rgba(196,123,43,0.15)'}}><div style={{fontSize:'13px',fontWeight:500,color:'#7A4A10'}}>⚠️ {weather?.recentStorm?.label} — {weather?.recentStorm?.date?new Date(weather.recentStorm.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):''}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>Walk your property and document any damage with photos before contacting contractors.</div></div>)}
+                {showActiveStorm&&stormIsFuture&&(<div style={{background:'#E6F2F8',padding:'11px 16px',borderBottom:'1px solid rgba(58,124,168,0.15)'}}><div style={{fontSize:'13px',fontWeight:500,color:'#3A7CA8'}}>🌨️ {weather?.recentStorm?.label} forecast — {weather?.recentStorm?.date?new Date(weather.recentStorm.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):''}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px'}}>Check gutters and clear drains before it hits.</div></div>)}
+                {stormHistory.length>0&&(
+                  <div style={{padding:'12px 16px'}}>
+                    <div style={{fontSize:'11px',fontWeight:500,color:'#8A8A82',textTransform:'uppercase' as const,letterSpacing:'1px',marginBottom:'8px'}}>Storm history</div>
+                    {stormHistory.slice(0,3).map((storm:any)=>{const daysAgo=Math.round((Date.now()-new Date(storm.event_date).getTime())/(1000*60*60*24));return(<div key={storm.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:'1px solid rgba(30,58,47,0.06)'}}><div><div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F'}}>{storm.notes||storm.event_type?.replace(/_/g,' ')}</div><div style={{fontSize:'10px',color:'#8A8A82'}}>{new Date(storm.event_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}{storm.max_windspeed>0?` · ${Math.round(storm.max_windspeed)} mph`:''}</div></div><span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'10px',background:daysAgo<=21?'#FBF0DC':'#F5F5F5',color:daysAgo<=21?'#7A4A10':'#8A8A82'}}>{daysAgo===0?'Today':`${daysAgo}d ago`}</span></div>)})}
+                  </div>
+                )}
+                {!stormHistory.length&&!showActiveStorm&&<div style={{padding:'12px 16px',fontSize:'12px',color:'#8A8A82'}}>No storm events on record for your area.</div>}
+              </div>
+
               {(envData.radon_zone===1||envData.lead_paint_risk||envData.asbestos_risk||['AE','A','VE'].includes(envData.flood_zone))&&(
                 <div style={{background:'#FEF5F5',border:'1px solid rgba(226,75,74,0.2)',borderRadius:'14px',padding:'16px 18px',marginBottom:'12px'}}>
                   <div style={{fontSize:'11px',fontWeight:500,letterSpacing:'1px',textTransform:'uppercase' as const,color:'#791F1F',marginBottom:'10px'}}>Safety alerts for your home</div>
@@ -2102,28 +2184,129 @@ const STATUS_OPTIONS=[
                   <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>☀️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>UV index — avg {envData.avg_uv_index}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px'}}>{envData.uv_implications}</div></div></div>
                   {envData.freeze_risk_days>0&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>🧊</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Freeze risk — ~{envData.freeze_risk_days} days/year</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px'}}>Insulate exposed pipes before November. Check weatherstripping annually.</div></div></div>}
                   {envData.solar_potential_kwh&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>⚡</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Solar potential — ~{envData.solar_potential_kwh.toLocaleString()} kWh/yr estimated</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px'}}>Based on a typical 25-panel system · State avg: {envData.avg_utility_electric}¢/kWh</div></div></div>}
+                  {envData.daylight_summer&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>🌅</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Daylight hours</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px'}}>Summer peak: <strong>{envData.daylight_summer}</strong> · Winter low: <strong>{envData.daylight_winter}</strong> · Best months for outdoor projects: {envData.daylight_best_months}</div></div></div>}
                 </div>
               </div>
 
               <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
                 <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
                   <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#EAF3DE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>🌱</div>
-                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Soil & garden</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>{envData.soil_type} · {envData.soil_drainage} drainage</div></div>
+                  <div style={{flex:1}}><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Soil & garden</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>{envData.soil_type} · Zone {envData.hardiness_zone} · {envData.soil_drainage} drainage</div></div>
+                  <button onClick={()=>setShowAddCrop(true)} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'6px 12px',borderRadius:'8px',fontSize:'12px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0}}>+ Add crop</button>
                 </div>
-                <div style={{padding:'14px 18px',display:'flex',flexDirection:'column' as const,gap:'14px'}}>
-                  <div><div style={{fontSize:'12px',color:'#8A8A82',marginBottom:'6px'}}>{envData.soil_desc}</div><div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>Gardening tip</div><div style={{fontSize:'12px',color:'#8A8A82'}}>{envData.soil_gardening}</div></div>
-                  <div>
-                    <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'8px'}}>Planting calendar — Zone {envData.hardiness_zone}</div>
-                    <div style={{display:'grid',gridTemplateColumns:'repeat(12,1fr)',gap:'3px',marginBottom:'6px'}}>
-                      {['J','F','M','A','M','J','J','A','S','O','N','D'].map((mo,i)=>{const ls=envData.frost_date_last_spring?new Date(envData.frost_date_last_spring+' 2024').getMonth():3;const ff=envData.frost_date_first_fall?new Date(envData.frost_date_first_fall+' 2024').getMonth():9;const growing=i>=ls&&i<=ff;const peak=i>=ls+1&&i<=ff-1;return <div key={i} style={{textAlign:'center' as const}}><div style={{fontSize:'9px',color:'#8A8A82',marginBottom:'2px'}}>{mo}</div><div style={{height:'22px',borderRadius:'3px',background:peak?'#FAEEDA':growing?'#EAF3DE':'#F5F5F5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'9px'}}>{peak?'🌿':growing?'🌱':''}</div></div>})}
+
+                {/* Soil info */}
+                <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(30,58,47,0.06)',background:'#F8F4EE'}}>
+                  <div style={{fontSize:'12px',color:'#8A8A82',marginBottom:'4px'}}>{envData.soil_desc}</div>
+                  <div style={{fontSize:'12px',color:'#1E3A2F'}}><strong>Gardening tip:</strong> {envData.soil_gardening}</div>
+                </div>
+
+                {/* Planting calendar */}
+                <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(30,58,47,0.06)'}}>
+                  <div style={{fontSize:'11px',fontWeight:500,color:'#1E3A2F',marginBottom:'7px'}}>Planting calendar — Zone {envData.hardiness_zone}</div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(12,1fr)',gap:'2px',marginBottom:'5px'}}>
+                    {['J','F','M','A','M','J','J','A','S','O','N','D'].map((mo,i)=>{const ls=envData.frost_date_last_spring?new Date(envData.frost_date_last_spring+' 2024').getMonth():3;const ff=envData.frost_date_first_fall?new Date(envData.frost_date_first_fall+' 2024').getMonth():9;const growing=i>=ls&&i<=ff;const peak=i>=ls+1&&i<=ff-1;return <div key={i} style={{textAlign:'center' as const}}><div style={{fontSize:'8px',color:'#8A8A82',marginBottom:'2px'}}>{mo}</div><div style={{height:'18px',borderRadius:'2px',background:peak?'#FAEEDA':growing?'#EAF3DE':'#F5F5F5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'8px'}}>{peak?'🌿':growing?'🌱':''}</div></div>})}
+                  </div>
+                  <div style={{display:'flex',gap:'10px'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'4px',fontSize:'10px',color:'#8A8A82'}}><div style={{width:'8px',height:'8px',borderRadius:'2px',background:'#EAF3DE'}}/>Planting</div>
+                    <div style={{display:'flex',alignItems:'center',gap:'4px',fontSize:'10px',color:'#8A8A82'}}><div style={{width:'8px',height:'8px',borderRadius:'2px',background:'#FAEEDA'}}/>Peak</div>
+                  </div>
+                </div>
+
+                {/* Zone-specific recommendations */}
+                <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(30,58,47,0.06)'}}>
+                  <div style={{fontSize:'11px',fontWeight:500,color:'#1E3A2F',marginBottom:'6px'}}>Vegetables for Zone {envData.hardiness_zone}</div>
+                  <div style={{fontSize:'10px',color:'#8A8A82',fontWeight:500,marginBottom:'4px'}}>COOL SEASON — Plant {envData.frost_date_last_spring?`${new Date(envData.frost_date_last_spring+' 2024').toLocaleDateString('en-US',{month:'short'})} & ${new Date(envData.frost_date_first_fall+' 2024').toLocaleDateString('en-US',{month:'short'})}`:''}</div>
+                  <div style={{display:'flex',flexWrap:'wrap' as const,gap:'5px',marginBottom:'8px'}}>
+                    {(parseFloat(envData.hardiness_zone?.split('-')[0]||'7')<=5?['Lettuce','Kale','Broccoli','Brussels sprouts','Carrots','Peas','Radishes']:parseFloat(envData.hardiness_zone?.split('-')[0]||'7')<=7?['Lettuce','Spinach','Kale','Broccoli','Carrots','Peas','Radishes']:['Lettuce','Collards','Mustard greens','Swiss chard','Turnips']).map((v:string)=><span key={v} style={{background:'#E6F1FB',color:'#0C447C',padding:'3px 8px',borderRadius:'20px',fontSize:'10px',fontWeight:500}}>{v}</span>)}
+                  </div>
+                  <div style={{fontSize:'10px',color:'#8A8A82',fontWeight:500,marginBottom:'4px'}}>WARM SEASON — Plant {envData.frost_date_last_spring||'after last frost'}</div>
+                  <div style={{display:'flex',flexWrap:'wrap' as const,gap:'5px',marginBottom:'10px'}}>
+                    {(parseFloat(envData.hardiness_zone?.split('-')[0]||'7')<=5?['Tomatoes','Peppers','Squash','Beans','Basil']:parseFloat(envData.hardiness_zone?.split('-')[0]||'7')<=7?['Tomatoes','Peppers','Cucumbers','Squash','Beans','Basil','Eggplant']:['Sweet potatoes','Okra','Peppers','Eggplant','Southern peas']).map((v:string)=><span key={v} style={{background:'#FAEEDA',color:'#633806',padding:'3px 8px',borderRadius:'20px',fontSize:'10px',fontWeight:500}}>{v}</span>)}
+                  </div>
+                  <div style={{fontSize:'11px',fontWeight:500,color:'#1E3A2F',marginBottom:'5px'}}>Perennial flowers</div>
+                  <div style={{display:'flex',flexWrap:'wrap' as const,gap:'5px',marginBottom:'8px'}}>
+                    {(parseFloat(envData.hardiness_zone?.split('-')[0]||'7')<=5?['Black-eyed Susan','Purple coneflower','Bee balm','Sedum','Baptisia','Russian sage']:parseFloat(envData.hardiness_zone?.split('-')[0]||'7')<=7?['Black-eyed Susan','Purple coneflower','Salvia','Baptisia','Phlox','Rudbeckia','Aster','Sedum']:['Lantana','Salvia','Agapanthus','Canna','Gaillardia','Verbena']).map((v:string)=><span key={v} style={{background:'#EAF3DE',color:'#27500A',padding:'3px 8px',borderRadius:'20px',fontSize:'10px',fontWeight:500}}>{v}</span>)}
+                  </div>
+                  <div style={{fontSize:'11px',fontWeight:500,color:'#1E3A2F',marginBottom:'5px'}}>Native plants</div>
+                  <div style={{display:'flex',flexWrap:'wrap' as const,gap:'5px'}}>
+                    {envData.native_plants?.map((p:string)=><span key={p} style={{background:'var(--color-background-secondary,#F5F5F5)',color:'#5F5E5A',padding:'3px 8px',borderRadius:'20px',fontSize:'10px',fontWeight:500}}>{p}</span>)}
+                  </div>
+                </div>
+
+                {/* Crop cards */}
+                <div style={{padding:'12px 16px'}}>
+                  <div style={{fontSize:'11px',fontWeight:500,color:'#1E3A2F',marginBottom:'8px'}}>Your crops {crops.length>0?`· ${crops.length} growing`:''}</div>
+                  {crops.length===0&&<div style={{fontSize:'12px',color:'#8A8A82',marginBottom:'8px'}}>No crops tracked yet. Add your first one to get personalized reminders and harvest tracking.</div>}
+                  {crops.map((crop:any)=>{
+                    const planted=crop.date_planted?new Date(crop.date_planted):null
+                    const harvestStart=crop.expected_harvest_start?new Date(crop.expected_harvest_start):null
+                    const harvestEnd=crop.expected_harvest_end?new Date(crop.expected_harvest_end):null
+                    const now=new Date()
+                    const harvestReady=harvestStart&&now>=harvestStart&&(!harvestEnd||now<=harvestEnd)
+                    const harvestSoon=harvestStart&&!harvestReady&&harvestStart.getTime()-now.getTime()<14*24*60*60*1000
+                    const totalDays=planted&&harvestStart?Math.round((harvestStart.getTime()-planted.getTime())/(1000*60*60*24)):null
+                    const elapsedDays=planted?Math.round((now.getTime()-planted.getTime())/(1000*60*60*24)):null
+                    const progress=totalDays&&elapsedDays?Math.min(100,Math.round((elapsedDays/totalDays)*100)):null
+                    return(
+                      <div key={crop.id} style={{background:harvestReady?'#EAF3DE':harvestSoon?'#FAEEDA':'var(--color-background-secondary,#F8F8F8)',borderRadius:'10px',padding:'12px',marginBottom:'8px',border:`1px solid ${harvestReady?'rgba(61,122,90,0.3)':harvestSoon?'rgba(196,123,43,0.3)':'rgba(30,58,47,0.08)'}`}}>
+                        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:'6px'}}>
+                          <div>
+                            <div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{crop.name}</div>
+                            <div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>{crop.crop_type}{crop.location?` · ${crop.location}`:''}{planted?` · Planted ${planted.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:''}</div>
+                          </div>
+                          <div style={{display:'flex',gap:'6px'}}>
+                            {harvestReady&&<span style={{background:'#EAF3DE',color:'#27500A',fontSize:'10px',fontWeight:500,padding:'2px 7px',borderRadius:'20px'}}>🌿 Harvest ready</span>}
+                            {harvestSoon&&<span style={{background:'#FAEEDA',color:'#633806',fontSize:'10px',fontWeight:500,padding:'2px 7px',borderRadius:'20px'}}>Soon</span>}
+                          </div>
+                        </div>
+                        {progress!==null&&<div style={{marginBottom:'8px'}}><div style={{display:'flex',justifyContent:'space-between',fontSize:'10px',color:'#8A8A82',marginBottom:'3px'}}><span>Growing</span><span>{harvestStart?harvestStart.toLocaleDateString('en-US',{month:'short',day:'numeric'}):''}</span></div><div style={{height:'4px',background:'rgba(30,58,47,0.1)',borderRadius:'2px'}}><div style={{width:`${progress}%`,height:'100%',background:harvestReady?'#3D7A5A':harvestSoon?'#C47B2B':'#1E3A2F',borderRadius:'2px'}}/></div></div>}
+                        <div style={{display:'flex',gap:'6px'}}>
+                          <button onClick={()=>{setShowGardenLog(crop.id);setGardenLogType('watered')}} style={{flex:1,background:'#fff',border:'0.5px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'6px 0',borderRadius:'7px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>💧 Water</button>
+                          <button onClick={()=>{setShowGardenLog(crop.id);setGardenLogType('fertilized')}} style={{flex:1,background:'#fff',border:'0.5px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'6px 0',borderRadius:'7px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>🌿 Feed</button>
+                          <button onClick={()=>{setShowGardenLog(crop.id);setGardenLogType('harvested')}} style={{flex:1,background:'#fff',border:'0.5px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'6px 0',borderRadius:'7px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>🧺 Harvest</button>
+                          <button onClick={()=>archiveCrop(crop.id)} style={{background:'#fff',border:'0.5px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'6px 8px',borderRadius:'7px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>×</button>
+                        </div>
+                        {showGardenLog===crop.id&&(
+                          <div style={{marginTop:'8px',padding:'10px',background:'#fff',borderRadius:'8px',border:'0.5px solid rgba(30,58,47,0.15)'}}>
+                            <select value={gardenLogType} onChange={e=>setGardenLogType(e.target.value)} style={{width:'100%',padding:'7px',borderRadius:'7px',border:'1px solid rgba(30,58,47,0.2)',fontSize:'12px',fontFamily:"'DM Sans', sans-serif",marginBottom:'6px',background:'#fff'}}>
+                              <option value="watered">💧 Watered</option>
+                              <option value="fertilized">🌿 Fertilized</option>
+                              <option value="harvested">🧺 Harvested</option>
+                              <option value="pruned">✂️ Pruned</option>
+                              <option value="treated">🛡️ Treated for pests</option>
+                              <option value="noted">📝 Note</option>
+                            </select>
+                            <input value={gardenLogNotes} onChange={e=>setGardenLogNotes(e.target.value)} placeholder="Notes (optional)" style={{width:'100%',padding:'7px',borderRadius:'7px',border:'1px solid rgba(30,58,47,0.2)',fontSize:'12px',fontFamily:"'DM Sans', sans-serif",marginBottom:'6px',boxSizing:'border-box' as const}}/>
+                            <div style={{display:'flex',gap:'6px'}}>
+                              <button onClick={()=>logGardenActivity(crop.id,crop.name)} style={{flex:1,background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'7px',borderRadius:'7px',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Log</button>
+                              <button onClick={()=>setShowGardenLog(null)} style={{background:'none',border:'0.5px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'7px 12px',borderRadius:'7px',fontSize:'12px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Add crop modal */}
+                {showAddCrop&&(
+                  <div style={{margin:'0 16px 16px',padding:'14px',background:'#F8F4EE',borderRadius:'10px',border:'0.5px solid rgba(30,58,47,0.15)'}}>
+                    <div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F',marginBottom:'10px'}}>Add a crop</div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',marginBottom:'8px'}}>
+                      <div><label style={{fontSize:'10px',color:'#8A8A82',display:'block',marginBottom:'3px'}}>Crop name *</label><input value={newCrop.name} onChange={e=>setNewCrop((p:any)=>({...p,name:e.target.value}))} placeholder="e.g. Tomatoes" style={{width:'100%',padding:'7px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'7px',fontSize:'12px',fontFamily:"'DM Sans', sans-serif",boxSizing:'border-box' as const}}/></div>
+                      <div><label style={{fontSize:'10px',color:'#8A8A82',display:'block',marginBottom:'3px'}}>Type</label><select value={newCrop.crop_type} onChange={e=>setNewCrop((p:any)=>({...p,crop_type:e.target.value}))} style={{width:'100%',padding:'7px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'7px',fontSize:'12px',fontFamily:"'DM Sans', sans-serif",background:'#fff'}}><option value="vegetable">Vegetable</option><option value="flower">Flower</option><option value="herb">Herb</option><option value="fruit">Fruit</option><option value="native">Native plant</option><option value="other">Other</option></select></div>
+                      <div><label style={{fontSize:'10px',color:'#8A8A82',display:'block',marginBottom:'3px'}}>Date planted</label><input type="date" value={newCrop.date_planted} onChange={e=>setNewCrop((p:any)=>({...p,date_planted:e.target.value}))} style={{width:'100%',padding:'7px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'7px',fontSize:'12px',fontFamily:"'DM Sans', sans-serif",boxSizing:'border-box' as const}}/></div>
+                      <div><label style={{fontSize:'10px',color:'#8A8A82',display:'block',marginBottom:'3px'}}>Location</label><input value={newCrop.location} onChange={e=>setNewCrop((p:any)=>({...p,location:e.target.value}))} placeholder="Raised bed, front yard..." style={{width:'100%',padding:'7px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'7px',fontSize:'12px',fontFamily:"'DM Sans', sans-serif",boxSizing:'border-box' as const}}/></div>
+                      <div><label style={{fontSize:'10px',color:'#8A8A82',display:'block',marginBottom:'3px'}}>Water reminder (days)</label><input type="number" value={newCrop.water_interval_days} onChange={e=>setNewCrop((p:any)=>({...p,water_interval_days:e.target.value}))} placeholder="e.g. 2" style={{width:'100%',padding:'7px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'7px',fontSize:'12px',fontFamily:"'DM Sans', sans-serif",boxSizing:'border-box' as const}}/></div>
+                      <div><label style={{fontSize:'10px',color:'#8A8A82',display:'block',marginBottom:'3px'}}>Fertilize reminder (days)</label><input type="number" value={newCrop.fertilize_interval_days} onChange={e=>setNewCrop((p:any)=>({...p,fertilize_interval_days:e.target.value}))} placeholder="e.g. 14" style={{width:'100%',padding:'7px',border:'1px solid rgba(30,58,47,0.2)',borderRadius:'7px',fontSize:'12px',fontFamily:"'DM Sans', sans-serif",boxSizing:'border-box' as const}}/></div>
                     </div>
-                    <div style={{display:'flex',gap:'12px',marginBottom:'4px'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:'4px',fontSize:'10px',color:'#8A8A82'}}><div style={{width:'10px',height:'10px',borderRadius:'2px',background:'#EAF3DE'}}/>Planting</div>
-                      <div style={{display:'flex',alignItems:'center',gap:'4px',fontSize:'10px',color:'#8A8A82'}}><div style={{width:'10px',height:'10px',borderRadius:'2px',background:'#FAEEDA'}}/>Peak growing</div>
+                    <div style={{display:'flex',gap:'8px'}}>
+                      <button onClick={addCrop} style={{flex:1,background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'9px',borderRadius:'8px',fontSize:'13px',fontWeight:500,cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Add crop</button>
+                      <button onClick={()=>setShowAddCrop(false)} style={{background:'none',border:'0.5px solid rgba(30,58,47,0.2)',color:'#8A8A82',padding:'9px 14px',borderRadius:'8px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Cancel</button>
                     </div>
                   </div>
-                  <div><div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'6px'}}>Native plants for your zone</div><div style={{display:'flex',flexWrap:'wrap' as const,gap:'6px'}}>{envData.native_plants?.map((p:string)=><span key={p} style={{background:'#EAF3DE',color:'#27500A',padding:'3px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:500}}>{p}</span>)}</div></div>
-                </div>
+                )}
               </div>
 
               <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
@@ -2136,6 +2319,92 @@ const STATUS_OPTIONS=[
                 </div>
               </div>
 
+              {/* ── Pollen & Air Quality ── */}
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
+                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#FAEEDA',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>🌸</div>
+                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Pollen & air quality</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>Zone {envData.hardiness_zone} seasonal calendar</div></div>
+                </div>
+                <div style={{padding:'14px 18px'}}>
+                  {envData.pollen_tree&&[
+                    {label:'Tree pollen',season:envData.pollen_tree,color:'#EF9F27',intensity:0.85},
+                    {label:'Grass pollen',season:envData.pollen_grass,color:'#639922',intensity:0.70},
+                    {label:'Ragweed',season:envData.pollen_ragweed,color:'#E24B4A',intensity:0.90},
+                    {label:'Mold spores',season:envData.pollen_mold,color:'#888780',intensity:0.60},
+                  ].map(p=>(
+                    <div key={p.label} style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'8px'}}>
+                      <div style={{fontSize:'12px',color:'#8A8A82',width:'90px',flexShrink:0}}>{p.label}</div>
+                      <div style={{flex:1,height:'6px',background:'rgba(30,58,47,0.08)',borderRadius:'3px',overflow:'hidden'}}><div style={{width:`${p.intensity*100}%`,height:'100%',background:p.color,borderRadius:'3px'}}/></div>
+                      <div style={{fontSize:'11px',color:'#8A8A82',width:'70px',textAlign:'right' as const,flexShrink:0}}>{p.season}</div>
+                    </div>
+                  ))}
+                  <div style={{marginTop:'10px',padding:'10px 12px',background:'#EAF3DE',borderRadius:'8px'}}>
+                    <div style={{fontSize:'12px',fontWeight:500,color:'#27500A',marginBottom:'2px'}}>💨 HVAC filter tip</div>
+                    <div style={{fontSize:'11px',color:'#3B6D11',lineHeight:1.5}}>Worst pollen months in your zone: <strong>{envData.pollen_worst_months}</strong>. Use MERV 11+ filters and change monthly during peak season. Consider upgrading to MERV 13 if household members have allergies.</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Pest Risk ── */}
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
+                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#FCEBEB',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>🐛</div>
+                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Pest risk</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>Common in your region</div></div>
+                </div>
+                <div style={{padding:'14px 18px',display:'flex',flexDirection:'column' as const,gap:'10px'}}>
+                  {envData.pest_termite&&[
+                    {icon:'🐜',name:'Termites',risk:envData.pest_termite,tips:{very_high:'Termite populations are very active here. Annual professional inspection strongly recommended. Consider preventive baiting system.',high:'Active termite populations. Annual inspection recommended. Inspect foundation sills and wood-to-soil contact annually.',moderate:'Moderate termite risk. Inspect foundation perimeter every 2-3 years.',low:'Low termite risk in your region. No specific action required.'}},
+                    {icon:'🦟',name:'Mosquitoes',risk:envData.pest_mosquito,tips:{very_high:'Extreme mosquito pressure. Eliminate all standing water. Consider mosquito treatments for yard May–Oct.',high:'High mosquito season. Check gutters and low areas after rain. Eliminate standing water.',moderate:'Moderate mosquito pressure seasonally. Standard precautions apply.',low:'Low mosquito pressure. No specific action needed.'}},
+                    {icon:'🦌',name:'Deer pressure',risk:envData.pest_deer,tips:{very_high:'Very high deer activity. Choose deer-resistant plants. Consider fencing for vegetable gardens.',high:'High deer activity. Inspect young trees for rubbing damage. Use deer-resistant plants in garden.',moderate:'Moderate deer activity. Take precautions with young trees and garden beds.',low:'Low deer pressure in your area.'}},
+                    {icon:'🐭',name:'Rodents',risk:envData.pest_rodent,tips:{very_high:'High rodent risk. Seal all gaps around pipes, foundation, and vents.',high:'Seal gaps around pipes and foundation before fall. Check attic and crawl space annually.',moderate:'Seasonal entry risk. Seal gaps before October.',low:'Low rodent risk. Standard home sealing applies.'}},
+                  ].map(pest=>{
+                    const badgeColor=pest.risk==='very_high'||pest.risk==='high'?{bg:'#FCEBEB',text:'#791F1F'}:pest.risk==='moderate'?{bg:'#FAEEDA',text:'#633806'}:{bg:'#EAF3DE',text:'#27500A'}
+                    return(
+                      <div key={pest.name} style={{display:'flex',gap:'10px',paddingBottom:'10px',borderBottom:'0.5px solid rgba(30,58,47,0.08)'}}>
+                        <span style={{fontSize:'16px',flexShrink:0,marginTop:'1px'}}>{pest.icon}</span>
+                        <div style={{flex:1}}>
+                          <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'3px'}}>
+                            <div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{pest.name}</div>
+                            <span style={{fontSize:'10px',fontWeight:500,padding:'2px 7px',borderRadius:'20px',background:badgeColor.bg,color:badgeColor.text}}>{pest.risk.replace('_',' ')}</span>
+                          </div>
+                          <div style={{fontSize:'12px',color:'#8A8A82',lineHeight:1.5}}>{pest.tips[pest.risk as keyof typeof pest.tips]}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* ── Water Quality ── */}
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
+                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#E6F1FB',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>💧</div>
+                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Water quality</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>Municipal supply · {home?.state} average</div></div>
+                </div>
+                <div style={{padding:'14px 18px',display:'flex',flexDirection:'column' as const,gap:'10px'}}>
+                  {envData.water_hardness_level&&(()=>{
+                    const hwColor=envData.water_hardness_level==='very_hard'?{bg:'#FCEBEB',text:'#791F1F'}:envData.water_hardness_level==='hard'?{bg:'#FAEEDA',text:'#633806'}:{bg:'#EAF3DE',text:'#27500A'}
+                    return(
+                      <div>
+                        <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'6px'}}>
+                          <div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Water hardness — {envData.water_hardness_avg} mg/L avg</div>
+                          <span style={{fontSize:'10px',fontWeight:500,padding:'2px 7px',borderRadius:'20px',background:hwColor.bg,color:hwColor.text}}>{(envData.water_hardness_level||'').replace('_',' ')}</span>
+                        </div>
+                        <div style={{fontSize:'12px',color:'#8A8A82',lineHeight:1.5,marginBottom:'8px'}}>{envData.water_hardness_desc}</div>
+                        {(envData.water_hardness_level==='hard'||envData.water_hardness_level==='very_hard')&&(
+                          <div style={{padding:'9px 12px',background:'#EAF3DE',borderRadius:'8px',fontSize:'11px',color:'#27500A',lineHeight:1.5}}>
+                            Hard water tip: Flush your water heater annually and check the anode rod every 3 years. Consider a water softener to extend appliance life by 20–30%.
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                  <div style={{display:'flex',gap:'10px',paddingTop:'2px'}}><span style={{fontSize:'16px',flexShrink:0}}>📋</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Annual water quality report</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>Your water utility publishes a Consumer Confidence Report (CCR) every year. Search "{home?.city||home?.state} water quality report CCR" to find your local report.</div></div></div>
+                  {systems.find((s:any)=>s.system_type==='well')&&<div style={{padding:'9px 12px',background:'#FAEEDA',borderRadius:'8px',fontSize:'11px',color:'#633806',lineHeight:1.5}}>You have a well system logged — test your well water annually for bacteria and nitrates. Every 5 years test for heavy metals and VOCs.</div>}
+                </div>
+              </div>
+
+              {/* ── Risk Profile ── */}
               <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
                 <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
                   <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#FCEBEB',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>🛡️</div>
@@ -2146,17 +2415,6 @@ const STATUS_OPTIONS=[
                   <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>🌨️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{envData.hail_label}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>{envData.hail_action}</div></div></div>
                   <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>☢️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{envData.radon_label} — Zone {envData.radon_zone}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>{envData.radon_desc}</div></div></div>
                   <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>🏔️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{envData.earthquake_label}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>{envData.earthquake_action}</div></div></div>
-                </div>
-              </div>
-
-              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
-                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
-                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#E6F1FB',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>💡</div>
-                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Average utility costs</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>State averages · EIA 2023 data</div></div>
-                </div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',padding:'14px 18px',gap:'16px'}}>
-                  <div><div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'4px'}}>Electricity</div><div style={{fontSize:'22px',fontWeight:500,color:'#1E3A2F'}}>{envData.avg_utility_electric}¢<span style={{fontSize:'13px',fontWeight:400,color:'#8A8A82'}}>/kWh</span></div></div>
-                  <div><div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'4px'}}>Natural gas</div><div style={{fontSize:'22px',fontWeight:500,color:'#1E3A2F'}}>${envData.avg_utility_gas}<span style={{fontSize:'13px',fontWeight:400,color:'#8A8A82'}}>/MMBtu</span></div></div>
                 </div>
               </div>
 
