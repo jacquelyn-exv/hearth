@@ -3,9 +3,20 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const SYSTEMS = [
+  // Core systems
   'Roof','Siding','Gutters & Trim','Windows','Entry Door','Sliding Door',
-  'HVAC','Water Heater','Deck / Patio','Driveway','Fencing','Chimney',
-  'Sump Pump','Landscaping','Plumbing','Electrical','Refrigerator','Dishwasher','Other',
+  'Garage Door','HVAC','Water Heater','Plumbing','Electrical',
+  'Deck / Patio','Driveway','Fencing','Chimney','Sump Pump','Foundation',
+  // Situational
+  'Septic System','Well','Solar Panels','Generator','Pool / Hot Tub',
+  'Crawl Space','Water Softener','Irrigation',
+  // Appliances
+  'Refrigerator','Dishwasher','Washer','Dryer','Oven / Range',
+  // Project types only
+  'Interior Painting','Exterior Painting','Flooring','Insulation',
+  'Pest Control','Landscaping','Basement Waterproofing',
+  'Bathroom Remodel','Kitchen Remodel','Addition / New Space',
+  'Security System','General Repair','Other',
 ]
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const YEARS = Array.from({ length: 20 }, (_, i) => (new Date().getFullYear() - i).toString())
