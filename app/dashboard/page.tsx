@@ -1392,7 +1392,8 @@ export default function Dashboard() {
 
   const startEditSystem=(sys:any)=>{
     const edits:any={}
-    Object.keys(sys).forEach(k=>{edits[k]=sys[k]})
+    Object.keys(sys).forEach(k=>{if(k!=='condition')edits[k]=sys[k]})
+    // condition must be explicitly chosen by user — never carry over
     const fields=SYSTEM_FIELDS[sys.system_type]||[]
     fields.forEach(f=>{const key=f.label.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');if(!(key in edits))edits[key]=f.type==='boolean'?false:''})
     // Autofill install year from home build year if not set
@@ -2523,7 +2524,7 @@ const STATUS_OPTIONS=[
                 <div style={{marginBottom:'14px'}}>
                   <label style={{display:'block',fontSize:'11px',color:'#8A8A82',marginBottom:'6px'}}>Condition</label>
                   <div style={{display:'flex',gap:'8px'}}>
-                    {!systemEdits.condition&&<div style={{fontSize:'11px',color:'#C47B2B',marginBottom:'8px',fontWeight:500}}>👆 Select a condition to complete setup</div>}
+                    {(!systemEdits.condition||systemEdits.condition==='unknown')&&<div style={{fontSize:'11px',color:'#C47B2B',marginBottom:'8px',fontWeight:500}}>👆 Select a condition to complete setup</div>}
                     {[
                       {v:'Good',color:'#27500A',bg:'#EAF2EC',border:'#3D7A5A',desc:'No issues, well maintained'},
                       {v:'Fair',color:'#633806',bg:'#FBF0DC',border:'#C47B2B',desc:'Minor wear, worth monitoring'},
@@ -2531,7 +2532,7 @@ const STATUS_OPTIONS=[
                       {v:'Critical',color:'#501313',bg:'#FCEBEB',border:'#791F1F',desc:'Urgent — act now'},
                     ].map(opt=>(
                       <button key={opt.v} onClick={()=>setSystemEdits((p:any)=>({...p,condition:opt.v}))}
-                        style={{flex:1,padding:'10px 8px',borderRadius:'10px',border:`${systemEdits.condition===opt.v?'1.5px':'0.5px'} solid ${systemEdits.condition===opt.v?opt.border:'rgba(30,58,47,0.15)'}`,background:systemEdits.condition===opt.v?opt.bg:'#fff',cursor:'pointer',textAlign:'center' as const,fontFamily:"'DM Sans', sans-serif"}}>
+                        style={{flex:1,padding:'10px 8px',borderRadius:'10px',border:`${(systemEdits.condition?.charAt(0).toUpperCase()+(systemEdits.condition?.slice(1)||''))===opt.v?'1.5px':'0.5px'} solid ${(systemEdits.condition?.charAt(0).toUpperCase()+(systemEdits.condition?.slice(1)||''))===opt.v?opt.border:'rgba(30,58,47,0.15)'}`,background:(systemEdits.condition?.charAt(0).toUpperCase()+(systemEdits.condition?.slice(1)||''))===opt.v?opt.bg:'#fff',cursor:'pointer',textAlign:'center' as const,fontFamily:"'DM Sans', sans-serif"}}>
                         <div style={{fontSize:'11px',fontWeight:500,color:opt.color,marginBottom:'2px'}}>{opt.v}</div>
                         <div style={{fontSize:'10px',color:opt.color,opacity:0.8,lineHeight:1.3}}>{opt.desc}</div>
                       </button>
