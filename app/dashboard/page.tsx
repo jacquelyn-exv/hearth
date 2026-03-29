@@ -693,10 +693,39 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
   )
 }
 
-function MaintenanceTab({systems,home,jobs,onTabChange}:{systems:any[];home:any;jobs:any[];onTabChange:(tab:string)=>void}) {
+function MaintenanceTab({systems,home,jobs,onTabChange,userId,onJobsRefresh}:{systems:any[];home:any;jobs:any[];onTabChange:(tab:string)=>void;userId:string;onJobsRefresh:()=>void}) {
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
   const [loggedTasks,setLoggedTasks]=useState<Set<string>>(new Set())
+  const [logDoneModal,setLogDoneModal]=useState<{task:string;systemType:string;systemIcon:string;month:number}|null>(null)
+  const [ldCompany,setLdCompany]=useState('')
+  const [ldDate,setLdDate]=useState(new Date().toISOString().split('T')[0])
+  const [ldCost,setLdCost]=useState('')
+  const [ldNotes,setLdNotes]=useState('')
+  const [ldSaving,setLdSaving]=useState(false)
+
+  const handleLogDone = async (task: {task:string;systemType:string;systemIcon:string;month:number}, saveToLog: boolean) => {
+    const tk = `${task.systemType}-${task.month}-${task.task}`
+    if (saveToLog && home?.id && userId) {
+      setLdSaving(true)
+      await supabase.from('contractor_jobs').insert({
+        home_id: home.id,
+        user_id: userId,
+        system_type: task.systemType,
+        job_type: 'maintenance',
+        company_name: ldCompany || null,
+        description: task.task + (ldNotes ? ' — ' + ldNotes : ''),
+        job_date: ldDate || new Date().toISOString().split('T')[0],
+        final_price: ldCost ? parseFloat(ldCost) : null,
+        source: 'calendar',
+      })
+      onJobsRefresh()
+      setLdSaving(false)
+    }
+    setLoggedTasks(prev=>{const n=new Set(prev);n.add(tk);return n})
+    setLogDoneModal(null)
+    setLdCompany(''); setLdDate(new Date().toISOString().split('T')[0]); setLdCost(''); setLdNotes('')
+  }
   const systemTypes = systems.filter(s=>!s.not_applicable).map(s=>s.system_type)
 
   const allTasks: {month:number;task:string;urgency:'high'|'medium'|'low';systemType:string;systemIcon:string}[] = []
@@ -729,7 +758,7 @@ function MaintenanceTab({systems,home,jobs,onTabChange}:{systems:any[];home:any;
                     <span style={{fontSize:'18px'}}>{task.systemIcon}</span>
                     <div><div style={{fontSize:'13px',color:'#1A1A18'}}>{task.task}</div><div style={{fontSize:'11px',color:'#8A8A82'}}>Was due: {MONTH_NAMES[task.month-1]}</div></div>
                   </div>
-                  <button onClick={()=>setLoggedTasks(prev=>{const n=new Set(prev);n.add(tk);return n})} style={{background:'#9B2C2C',color:'#fff',border:'none',padding:'5px 12px',borderRadius:'6px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0}}>Log done</button>
+                  <button onClick={()=>setLogDoneModal(task)} style={{background:'#9B2C2C',color:'#fff',border:'none',padding:'5px 12px',borderRadius:'6px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0}}>Log done</button>
                 </div>
               )
             })}
@@ -756,7 +785,7 @@ function MaintenanceTab({systems,home,jobs,onTabChange}:{systems:any[];home:any;
                   <span style={{fontSize:'10px',padding:'2px 6px',borderRadius:'10px',background:task.urgency==='high'?'rgba(229,115,115,0.2)':task.urgency==='medium'?'rgba(196,123,43,0.2)':'rgba(106,175,138,0.2)',color:task.urgency==='high'?'#E57373':task.urgency==='medium'?'#C47B2B':'#6AAF8A'}}>{task.urgency}</span>
                 </div>
               </div>
-              {isDone?<span style={{fontSize:'12px',color:'#6AAF8A',flexShrink:0}}>✓ Done</span>:<button onClick={()=>setLoggedTasks(prev=>{const n=new Set(prev);n.add(tk);return n})} style={{background:'rgba(248,244,238,0.1)',border:'1px solid rgba(248,244,238,0.2)',color:'#F8F4EE',padding:'5px 12px',borderRadius:'6px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0}}>Log done</button>}
+              {isDone?<span style={{fontSize:'12px',color:'#6AAF8A',flexShrink:0}}>✓ Done</span>:<button onClick={()=>setLogDoneModal(task)} style={{background:'rgba(248,244,238,0.1)',border:'1px solid rgba(248,244,238,0.2)',color:'#F8F4EE',padding:'5px 12px',borderRadius:'6px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0}}>Log done</button>}
             </div>
           )
         })}
@@ -789,7 +818,7 @@ function MaintenanceTab({systems,home,jobs,onTabChange}:{systems:any[];home:any;
                           <span style={{fontSize:'12px',color:isDone?'#8A8A82':'#1A1A18',textDecoration:isDone?'line-through':'none'}}>{task.task}</span>
                           <span style={{fontSize:'10px',padding:'1px 6px',borderRadius:'10px',flexShrink:0,background:task.urgency==='high'?'#FDECEA':task.urgency==='medium'?'#FBF0DC':'#EAF2EC',color:task.urgency==='high'?'#9B2C2C':task.urgency==='medium'?'#7A4A10':'#3D7A5A'}}>{task.urgency}</span>
                         </div>
-                        {isDone?<span style={{fontSize:'11px',color:'#3D7A5A',flexShrink:0}}>✓</span>:!isPast?<button onClick={()=>setLoggedTasks(prev=>{const n=new Set(prev);n.add(tk);return n})} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'3px 8px',borderRadius:'5px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0}}>Log done</button>:null}
+                        {isDone?<span style={{fontSize:'11px',color:'#3D7A5A',flexShrink:0}}>✓</span>:!isPast?<button onClick={()=>setLogDoneModal(task)} style={{background:'none',border:'1px solid rgba(30,58,47,0.2)',color:'#1E3A2F',padding:'3px 8px',borderRadius:'5px',fontSize:'11px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif",flexShrink:0}}>Log done</button>:null}
                       </div>
                     )
                   })}
@@ -1199,7 +1228,7 @@ export default function Dashboard() {
 
   const sv=score?.total_score||0
   const tabs=['overview','home_details','log','financial','projects','maintenance','documents']
-  const tl:Record<string,string>={overview:'Overview',home_details:'Home Details',log:'📋 Log',financial:'💰 Financial',projects:'✨ Projects',maintenance:'📅 Maintenance',documents:'Documents'}
+  const tl:Record<string,string>={overview:'Dashboard',home_details:'Home Details',log:'📋 Activity Log',financial:'💰 Financial',projects:'✨ Projects',maintenance:'📅 Maintenance Calendar',documents:'Documents'}
   const alertSys=systems.filter(s=>['Inspect','Priority'].includes(getCondition(s).label))
   const dnf=displayName||user?.email?.split('@')[0]?.split('.')[0]?.replace(/^\w/,(c:string)=>c.toUpperCase())||'there'
   const engineProfile=adaptHomeProfile(home,systems,userGoals,stormHistory)
@@ -1603,7 +1632,7 @@ export default function Dashboard() {
         )}
                 {activeTab==='log'&&home&&user&&<MaintenanceLog homeId={home.id} userId={user.id} userName={displayName||user.email||''} zip={home.zip||''}/>}
         {activeTab==='projects'&&<ProjectsTab homeId={home?.id} userId={user?.id}/>}
-        {activeTab==='maintenance'&&<MaintenanceTab systems={systems} home={home} jobs={jobs} onTabChange={setActiveTab}/>}
+        {activeTab==='maintenance'&&<MaintenanceTab systems={systems} home={home} jobs={jobs} onTabChange={setActiveTab} userId={user?.id||''} onJobsRefresh={async()=>{const{data:j}=await supabase.from('contractor_jobs').select('*').eq('home_id',home.id).order('job_date',{ascending:false});if(j)setJobs(j)}} />}
 
         {/* ══ DOCUMENTS ══ */}
         {activeTab==='documents'&&(
