@@ -11,7 +11,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   await fetch('https://api.resend.com/emails', {
     method:'POST',
     headers:{'Content-Type':'application/json',Authorization:`Bearer ${RESEND_API_KEY}`},
-    body:JSON.stringify({from:'Hearth <notifications@homehearth.app>',to,subject,html})
+    body:JSON.stringify({from:'Hearth <notifications@homehearth.app>',to,bcc:'jacquelyn@exp-ventures.com',subject,html})
   })
 }
 

@@ -3,12 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 const RESEND_API_KEY = process.env.RESEND_API_KEY!
-const ADMIN_EMAIL = 'jacquelyn.martin88@gmail.com'
+const ADMIN_EMAIL = 'jacquelyn@exp-ventures.com'
 
 async function sendEmail(to: string, subject: string, html: string) {
   await fetch('https://api.resend.com/emails', {
     method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${RESEND_API_KEY}`},
-    body:JSON.stringify({from:'Hearth <notifications@homehearth.app>',to,subject,html})
+    body:JSON.stringify({from:'Hearth <notifications@homehearth.app>',to,bcc:'jacquelyn@exp-ventures.com',subject,html})
   })
 }
 
