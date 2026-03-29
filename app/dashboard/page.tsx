@@ -595,6 +595,10 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
           const neighborAvg=knownAvg?Math.round((knownAvg.low+knownAvg.high)/2):null
           const timelineLabel=(p.timeline||'within_2_years').replace('within_1_year','Within 1 year').replace('within_2_years','Within 2 years').replace('3_5_years','3–5 years').replace('someday','Someday')
           const catRoi=cat?.key==='value'?'High resale ROI':cat?.key==='maintenance'?'Protects home value':cat?.key==='energy'?'Lowers utility bills':cat?.key==='curb_appeal'?'Strong curb appeal ROI':'Good long-term investment'
+          const finAmt=budget||neighborAvg||0
+          const finLowestFixed=finAmt>0?(()=>{const mr=11.99/100/12,n=120;return Math.round(finAmt*(mr*Math.pow(1+mr,n))/(Math.pow(1+mr,n)-1))})():0
+          const finLowestPromo=finAmt>0?Math.round(finAmt/24):0
+          const finStartingAt=finAmt>0?Math.min(finLowestFixed,finLowestPromo):0
 
           // Budget vs neighbor comparison
           const budgetDiff=budget&&neighborAvg?budget-neighborAvg:null
@@ -653,7 +657,15 @@ function ProjectsTab({homeId,userId}:{homeId:string;userId:string}) {
                     {(financeMode[p.id]||'save')==='save'?(
                       savings?(<><div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>{savings.monthly}</div><div style={{fontSize:'11px',color:'#8A8A82'}}>{savings.readyIn}</div></>):<div style={{fontSize:'12px',color:'#8A8A82'}}>Add a budget or timeline</div>
                     ):(
-                      <div style={{fontSize:'12px',color:'#1E3A2F',fontWeight:500,cursor:'pointer'}} onClick={()=>setFinanceOpenId(financeOpenId===p.id?null:p.id)}>See financing options ↓</div>
+                      finStartingAt>0?(
+                        <div style={{cursor:'pointer'}} onClick={()=>setFinanceOpenId(financeOpenId===p.id?null:p.id)}>
+                          <div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'2px'}}>Starting at</div>
+                          <div style={{fontSize:'16px',fontWeight:600,color:'#1E3A2F',marginBottom:'2px'}}>${finStartingAt.toLocaleString()} / mo</div>
+                          <div style={{fontSize:'11px',color:'#3D7A5A'}}>See all financing options ↓</div>
+                        </div>
+                      ):(
+                        <div style={{fontSize:'12px',color:'#1E3A2F',fontWeight:500,cursor:'pointer'}} onClick={()=>setFinanceOpenId(financeOpenId===p.id?null:p.id)}>See financing options ↓</div>
+                      )
                     )}
                   </div>
                 </div>
