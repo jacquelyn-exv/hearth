@@ -1149,6 +1149,8 @@ export default function Dashboard() {
   const [expandedSections,setExpandedSections]=useState<Set<string>>(new Set(['about']))
   const [systemModal,setSystemModal]=useState<any|null>(null)
   const [wishlistToast,setWishlistToast]=useState<string|null>(null)
+  const [envData,setEnvData]=useState<any>(null)
+  const [envLoading,setEnvLoading]=useState(false)
   const [wishlistSyncModal,setWishlistSyncModal]=useState<{sysName:string;projectId:string;type:'in_service'|'scheduled'}|null>(null)
   const [savedSystemId,setSavedSystemId]=useState<string|null>(null)
   const [systemEdits,setSystemEdits]=useState<any>({})
@@ -1218,6 +1220,7 @@ export default function Dashboard() {
         setHome(ph)
         if(ph.city||ph.zip){fetch(`/api/weather?city=${encodeURIComponent(ph.city||'')}&state=${encodeURIComponent(ph.state||'')}&zip=${encodeURIComponent(ph.zip||'')}`).then(r=>r.json()).then(d=>{if(!d.error)setWeather(d)}).finally(()=>setWeatherLoading(false))}else{setWeatherLoading(false)}
         await loadHomeData(ph.id)
+        fetchEnvironmentData(ph)
         await supabase.rpc('recalculate_community_score',{p_user_id:user.id})
         const {data:cs}=await supabase.from('community_scores').select('*').eq('user_id',user.id).single()
         if(cs)setCommunityScore(cs)
@@ -1235,6 +1238,46 @@ export default function Dashboard() {
       if(!seen){setShowHistoryModal(true);localStorage.setItem('hearth_history_modal_seen','true')}
     }
   },[loading,homeownerType,jobs.length])
+
+  const fetchEnvironmentData=async(homeObj:any)=>{
+    if(!homeObj?.zip&&!homeObj?.state)return
+    setEnvLoading(true)
+    try{
+      const params=new URLSearchParams({
+        zip:homeObj.zip||'',
+        state:homeObj.state||'',
+        lat:homeObj.lat||'',
+        lng:homeObj.lng||'',
+        year_built:String(homeObj.year_built||''),
+      })
+      const res=await fetch(`/api/environment?${params}`)
+      const data=await res.json()
+      if(!data.error){
+        setEnvData(data)
+        const update={
+          climate_zone:data.climate_zone,
+          hardiness_zone:data.hardiness_zone,
+          frost_date_last_spring:data.frost_date_last_spring,
+          frost_date_first_fall:data.frost_date_first_fall,
+          freeze_risk_days:data.freeze_risk_days,
+          radon_zone:data.radon_zone,
+          flood_zone:data.flood_zone,
+          hail_frequency:data.hail_frequency,
+          lead_paint_risk:data.lead_paint_risk,
+          asbestos_risk:data.asbestos_risk,
+          soil_type:data.soil_type,
+          avg_precipitation:data.avg_precipitation,
+          avg_uv_index:data.avg_uv_index,
+          solar_potential_kwh:data.solar_potential_kwh,
+          avg_utility_electric:data.avg_utility_electric,
+          avg_utility_gas:data.avg_utility_gas,
+          earthquake_risk:data.earthquake_risk,
+        }
+        await supabase.from('home_details').update(update).eq('home_id',homeObj.id)
+      }
+    }catch(e){console.error('env fetch:',e)}
+    setEnvLoading(false)
+  }
 
   const switchHome=async(h:any)=>{
     setHome(h);setSystems([]);setJobs([]);setTasks([]);setScore(null);setDetails(null);setDocs([]);setWeather(null);setWeatherLoading(true);setLoading(true);setStormHistory([])
@@ -1274,6 +1317,7 @@ export default function Dashboard() {
         }
       }
       await recalculateScore()
+      if(section==='about')fetchEnvironmentData(home)
       setEditingHomeSection(null)
       setSavedSection(section)
       setTimeout(()=>setSavedSection(null),2500)
@@ -2023,13 +2067,100 @@ const STATUS_OPTIONS=[
         {/* ══ ENVIRONMENT ══ */}
         {activeTab==='environment'&&home&&(
           <div style={{padding:'20px'}}>
-            <h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'22px',fontWeight:400,color:'#1E3A2F',marginBottom:'6px'}}>Your Home's Environment</h2>
-            <p style={{fontSize:'13px',color:'#8A8A82',marginBottom:'24px',lineHeight:1.6}}>Climate, soil, and seasonal intelligence personalized to your property.</p>
-            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'24px',textAlign:'center'}}>
-              <div style={{fontSize:'32px',marginBottom:'12px'}}>🌱</div>
-              <div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F',marginBottom:'8px'}}>Coming soon</div>
-              <p style={{fontSize:'13px',color:'#8A8A82',lineHeight:1.6,maxWidth:'320px',margin:'0 auto'}}>Your personalized climate profile, planting calendar, soil type, storm center, and seasonal project windows — built around your ZIP code and property.</p>
-            </div>
+            <h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'22px',fontWeight:400,color:'#1E3A2F',marginBottom:'4px'}}>Your Home's Environment</h2>
+            <p style={{fontSize:'13px',color:'#8A8A82',marginBottom:'20px'}}>{home.address}{home.city?', '+home.city:''}{home.state?' '+home.state:''} {home.zip||''}</p>
+
+            {envLoading&&<div style={{textAlign:'center' as const,padding:'40px',color:'#8A8A82',fontSize:'13px'}}>Loading your environment profile...</div>}
+
+            {!envLoading&&!envData&&<div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'24px',textAlign:'center' as const}}>
+              <div style={{fontSize:'13px',color:'#8A8A82',marginBottom:'12px'}}>We need your ZIP code to load environment data.</div>
+              <button onClick={()=>setActiveTab('home_details')} style={{background:'#1E3A2F',color:'#F8F4EE',border:'none',padding:'9px 18px',borderRadius:'8px',fontSize:'13px',cursor:'pointer',fontFamily:"'DM Sans', sans-serif"}}>Add your address</button>
+            </div>}
+
+            {!envLoading&&envData&&(<>
+
+              {(envData.radon_zone===1||envData.lead_paint_risk||envData.asbestos_risk||['AE','A','VE'].includes(envData.flood_zone))&&(
+                <div style={{background:'#FEF5F5',border:'1px solid rgba(226,75,74,0.2)',borderRadius:'14px',padding:'16px 18px',marginBottom:'12px'}}>
+                  <div style={{fontSize:'11px',fontWeight:500,letterSpacing:'1px',textTransform:'uppercase' as const,color:'#791F1F',marginBottom:'10px'}}>Safety alerts for your home</div>
+                  <div style={{display:'flex',flexDirection:'column' as const,gap:'8px'}}>
+                    {envData.radon_zone===1&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>☢️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#791F1F'}}>High radon risk area</div><div style={{fontSize:'12px',color:'#9B2C2C',marginTop:'2px',lineHeight:1.5}}>{envData.radon_action}</div></div></div>}
+                    {envData.lead_paint_risk&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>⚠️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#791F1F'}}>Lead paint probable — built before 1978</div><div style={{fontSize:'12px',color:'#9B2C2C',marginTop:'2px',lineHeight:1.5}}>Test before any renovation or sanding. EPA-certified contractors required for renovation work in pre-1978 homes.</div></div></div>}
+                    {envData.asbestos_risk&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>⚠️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#791F1F'}}>Asbestos materials probable — built before 1980</div><div style={{fontSize:'12px',color:'#9B2C2C',marginTop:'2px',lineHeight:1.5}}>Common in insulation, floor tiles, roof shingles, and drywall of this era. Test before any demolition or renovation.</div></div></div>}
+                    {['AE','A','VE'].includes(envData.flood_zone)&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>🌊</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#791F1F'}}>High flood hazard — FEMA Zone {envData.flood_zone}</div><div style={{fontSize:'12px',color:'#9B2C2C',marginTop:'2px',lineHeight:1.5}}>{envData.flood_action}</div></div></div>}
+                  </div>
+                </div>
+              )}
+
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
+                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#E6F1FB',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>🌡️</div>
+                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Your climate</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>IECC Zone {envData.climate_zone} · USDA Zone {envData.hardiness_zone}</div></div>
+                </div>
+                <div style={{padding:'14px 18px',display:'flex',flexDirection:'column' as const,gap:'12px'}}>
+                  <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>❄️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Frost dates</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px'}}>Last spring frost: <strong>{envData.frost_date_last_spring}</strong> · First fall frost: <strong>{envData.frost_date_first_fall}</strong> · {envData.growing_days} growing days/year</div></div></div>
+                  <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>🌧️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Average rainfall — {envData.avg_precipitation}" per year</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px'}}>{envData.avg_precipitation>50?'High rainfall — check gutters and drainage annually':envData.avg_precipitation>30?'Moderate rainfall — standard gutter maintenance':'Low rainfall — irrigation likely needed'}</div></div></div>
+                  <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>☀️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>UV index — avg {envData.avg_uv_index}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px'}}>{envData.uv_implications}</div></div></div>
+                  {envData.freeze_risk_days>0&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>🧊</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Freeze risk — ~{envData.freeze_risk_days} days/year</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px'}}>Insulate exposed pipes before November. Check weatherstripping annually.</div></div></div>}
+                  {envData.solar_potential_kwh&&<div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>⚡</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Solar potential — ~{envData.solar_potential_kwh.toLocaleString()} kWh/yr estimated</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px'}}>Based on a typical 25-panel system · State avg: {envData.avg_utility_electric}¢/kWh</div></div></div>}
+                </div>
+              </div>
+
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
+                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#EAF3DE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>🌱</div>
+                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Soil & garden</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>{envData.soil_type} · {envData.soil_drainage} drainage</div></div>
+                </div>
+                <div style={{padding:'14px 18px',display:'flex',flexDirection:'column' as const,gap:'14px'}}>
+                  <div><div style={{fontSize:'12px',color:'#8A8A82',marginBottom:'6px'}}>{envData.soil_desc}</div><div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>Gardening tip</div><div style={{fontSize:'12px',color:'#8A8A82'}}>{envData.soil_gardening}</div></div>
+                  <div>
+                    <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'8px'}}>Planting calendar — Zone {envData.hardiness_zone}</div>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(12,1fr)',gap:'3px',marginBottom:'6px'}}>
+                      {['J','F','M','A','M','J','J','A','S','O','N','D'].map((mo,i)=>{const ls=envData.frost_date_last_spring?new Date(envData.frost_date_last_spring+' 2024').getMonth():3;const ff=envData.frost_date_first_fall?new Date(envData.frost_date_first_fall+' 2024').getMonth():9;const growing=i>=ls&&i<=ff;const peak=i>=ls+1&&i<=ff-1;return <div key={i} style={{textAlign:'center' as const}}><div style={{fontSize:'9px',color:'#8A8A82',marginBottom:'2px'}}>{mo}</div><div style={{height:'22px',borderRadius:'3px',background:peak?'#FAEEDA':growing?'#EAF3DE':'#F5F5F5',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'9px'}}>{peak?'🌿':growing?'🌱':''}</div></div>})}
+                    </div>
+                    <div style={{display:'flex',gap:'12px',marginBottom:'4px'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'4px',fontSize:'10px',color:'#8A8A82'}}><div style={{width:'10px',height:'10px',borderRadius:'2px',background:'#EAF3DE'}}/>Planting</div>
+                      <div style={{display:'flex',alignItems:'center',gap:'4px',fontSize:'10px',color:'#8A8A82'}}><div style={{width:'10px',height:'10px',borderRadius:'2px',background:'#FAEEDA'}}/>Peak growing</div>
+                    </div>
+                  </div>
+                  <div><div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'6px'}}>Native plants for your zone</div><div style={{display:'flex',flexWrap:'wrap' as const,gap:'6px'}}>{envData.native_plants?.map((p:string)=><span key={p} style={{background:'#EAF3DE',color:'#27500A',padding:'3px 10px',borderRadius:'20px',fontSize:'11px',fontWeight:500}}>{p}</span>)}</div></div>
+                </div>
+              </div>
+
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
+                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#FAEEDA',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>🔨</div>
+                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Best months for exterior work</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>Based on Climate Zone {envData.climate_zone}</div></div>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr'}}>
+                  {[{task:'Roof inspection',months:(envData.climate_zone||'').startsWith('1')||(envData.climate_zone||'').startsWith('2')?'Feb – Apr':'Apr – May'},{task:'Exterior painting',months:'May – Sep'},{task:'Deck sealing',months:'Apr – Oct'},{task:'Driveway sealing',months:'Jun – Aug'},{task:'Gutter cleaning',months:'Apr & Oct'},{task:'Winterization',months:envData.freeze_risk_days>60?'Oct – Nov':'Nov – Dec'}].map((item,i)=><div key={i} style={{padding:'11px 16px',borderBottom:i<4?'1px solid rgba(30,58,47,0.06)':'none',borderRight:i%2===0?'1px solid rgba(30,58,47,0.06)':'none'}}><div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'2px'}}>{item.months}</div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{item.task}</div></div>)}
+                </div>
+              </div>
+
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
+                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#FCEBEB',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>🛡️</div>
+                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Risk profile</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>Natural hazards for your area</div></div>
+                </div>
+                <div style={{padding:'14px 18px',display:'flex',flexDirection:'column' as const,gap:'12px'}}>
+                  <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>🌊</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>Flood — FEMA Zone {envData.flood_zone}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>{envData.flood_desc}</div></div></div>
+                  <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>🌨️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{envData.hail_label}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>{envData.hail_action}</div></div></div>
+                  <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>☢️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{envData.radon_label} — Zone {envData.radon_zone}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>{envData.radon_desc}</div></div></div>
+                  <div style={{display:'flex',gap:'10px'}}><span style={{fontSize:'16px',flexShrink:0}}>🏔️</span><div><div style={{fontSize:'13px',fontWeight:500,color:'#1E3A2F'}}>{envData.earthquake_label}</div><div style={{fontSize:'12px',color:'#8A8A82',marginTop:'2px',lineHeight:1.5}}>{envData.earthquake_action}</div></div></div>
+                </div>
+              </div>
+
+              <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'14px',overflow:'hidden',marginBottom:'12px'}}>
+                <div style={{padding:'14px 18px',borderBottom:'1px solid rgba(30,58,47,0.08)',display:'flex',alignItems:'center',gap:'10px'}}>
+                  <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'#E6F1FB',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'16px',flexShrink:0}}>💡</div>
+                  <div><div style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>Average utility costs</div><div style={{fontSize:'11px',color:'#8A8A82',marginTop:'1px'}}>State averages · EIA 2023 data</div></div>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',padding:'14px 18px',gap:'16px'}}>
+                  <div><div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'4px'}}>Electricity</div><div style={{fontSize:'22px',fontWeight:500,color:'#1E3A2F'}}>{envData.avg_utility_electric}¢<span style={{fontSize:'13px',fontWeight:400,color:'#8A8A82'}}>/kWh</span></div></div>
+                  <div><div style={{fontSize:'11px',color:'#8A8A82',marginBottom:'4px'}}>Natural gas</div><div style={{fontSize:'22px',fontWeight:500,color:'#1E3A2F'}}>${envData.avg_utility_gas}<span style={{fontSize:'13px',fontWeight:400,color:'#8A8A82'}}>/MMBtu</span></div></div>
+                </div>
+              </div>
+
+            </>)}
           </div>
         )}
 
