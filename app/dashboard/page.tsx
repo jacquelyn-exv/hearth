@@ -1773,7 +1773,7 @@ const STATUS_OPTIONS=[
                       </div>
                     ):(
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
-                        <div style={{gridColumn:'1/-1',marginBottom:'8px'}}><span style={{display:'inline-flex',alignItems:'center',gap:'6px',padding:'5px 12px',borderRadius:'20px',fontSize:'12px',fontWeight:500,background:home?.occupancy_status==='rental'?'#E6F2F8':home?.occupancy_status==='former'?'#F5F5F5':'#EAF2EC',color:home?.occupancy_status==='rental'?'#3A7CA8':home?.occupancy_status==='former'?'#8A8A82':'#3D7A5A'}}>{home?.occupancy_status==='rental'?'🔑 I rent this out':home?.occupancy_status==='former'?'📦 Former home':'🏡 I live here'}</span></div>
+                        <div style={{gridColumn:'1/-1',marginBottom:'8px',display:'flex',gap:'8px',flexWrap:'wrap',alignItems:'center'}}><span style={{display:'inline-flex',alignItems:'center',gap:'6px',padding:'5px 12px',borderRadius:'20px',fontSize:'12px',fontWeight:500,background:home?.occupancy_status==='rental'?'#E6F2F8':home?.occupancy_status==='former'?'#F5F5F5':'#EAF2EC',color:home?.occupancy_status==='rental'?'#3A7CA8':home?.occupancy_status==='former'?'#8A8A82':'#3D7A5A'}}>{home?.occupancy_status==='rental'?'🔑 I rent this out':home?.occupancy_status==='former'?'📦 Former home':'🏡 I live here'}</span>{details?.has_hoa&&<span style={{background:'#E6F2F8',color:'#3A7CA8',padding:'5px 12px',borderRadius:'20px',fontSize:'12px',fontWeight:500}}>🏘️ HOA</span>}</div>
                       {[{label:'Address',value:home?.address},{label:'City / State / ZIP',value:`${home?.city||''}${home?.state?`, ${home.state}`:''}${home?.zip?` ${home.zip}`:''}`},{label:'Year built',value:home?.year_built},{label:'Home type',value:(details?.home_type||home?.home_type)?.replace('_',' ')},{label:'Sq ft',value:details?.sqft?`${details.sqft.toLocaleString()} sq ft`:null},{label:'Beds / Baths',value:details?.bedrooms?`${details.bedrooms} bd · ${details.bathrooms||'?'} ba`:null},{label:'Stories',value:details?.stories},{label:'Lot size',value:details?.lot_size}].filter(s=>s.value).map(stat=>(<div key={stat.label} style={{fontSize:'13px'}}><span style={{color:'#8A8A82'}}>{stat.label}: </span><span style={{fontWeight:500,textTransform:'capitalize'}}>{stat.value}</span></div>))}
                       {details?.has_hoa&&(<div style={{gridColumn:'1/-1' as const}}><span style={{background:'#E6F2F8',color:'#3A7CA8',padding:'3px 10px',borderRadius:'20px',fontSize:'12px',fontWeight:500}}>🏘️ HOA member</span></div>)}
                       </div>
@@ -2025,6 +2025,19 @@ const STATUS_OPTIONS=[
                 {activeTab==='log'&&home&&user&&<HomeLog homeId={home.id} userId={user.id} userName={displayName||user.email||''} zip={home.zip||''} systems={systems} jobs={jobs} onActivityUpdate={async()=>{const{data:j}=await supabase.from('home_activity').select('*').eq('home_id',home.id).order('created_at',{ascending:false});if(j)setJobs(j)}} />}
         {activeTab==='projects'&&<ProjectsTab homeId={home?.id} userId={user?.id}/>}
         {activeTab==='maintenance'&&<MaintenanceTab systems={systems} home={home} jobs={jobs} onTabChange={setActiveTab} userId={user?.id||''} onJobsRefresh={async()=>{const{data:j}=await supabase.from('home_activity').select('*').eq('home_id',home.id).order('created_at',{ascending:false});if(j)setJobs(j)}} />}
+
+        {/* ══ ENVIRONMENT ══ */}
+        {activeTab==='environment'&&home&&(
+          <div style={{padding:'20px'}}>
+            <h2 style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'22px',fontWeight:400,color:'#1E3A2F',marginBottom:'6px'}}>Your Home's Environment</h2>
+            <p style={{fontSize:'13px',color:'#8A8A82',marginBottom:'24px',lineHeight:1.6}}>Climate, soil, and seasonal intelligence personalized to your property.</p>
+            <div style={{background:'#fff',border:'1px solid rgba(30,58,47,0.11)',borderRadius:'16px',padding:'24px',textAlign:'center'}}>
+              <div style={{fontSize:'32px',marginBottom:'12px'}}>🌱</div>
+              <div style={{fontFamily:"'Playfair Display', Georgia, serif",fontSize:'18px',fontWeight:400,color:'#1E3A2F',marginBottom:'8px'}}>Coming soon</div>
+              <p style={{fontSize:'13px',color:'#8A8A82',lineHeight:1.6,maxWidth:'320px',margin:'0 auto'}}>Your personalized climate profile, planting calendar, soil type, storm center, and seasonal project windows — built around your ZIP code and property.</p>
+            </div>
+          </div>
+        )}
 
         {/* ══ DOCUMENTS ══ */}
         {activeTab==='documents'&&(
