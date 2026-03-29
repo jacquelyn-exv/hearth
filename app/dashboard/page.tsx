@@ -2106,13 +2106,14 @@ const STATUS_OPTIONS=[
               {SITUATIONAL_SYSTEMS.map(st=>{
                 const ex=systems.find((s:any)=>s.system_type===st)
                 const cond=ex?getCondition(ex):null
-                const age=ex?(ex.replacement_year||ex.install_year)?new Date().getFullYear()-(ex.replacement_year||ex.install_year):null:null
+                const age=ex?(ex.replacement_year||ex.install_year||ex.purchase_year)?new Date().getFullYear()-(ex.replacement_year||ex.install_year||ex.purchase_year):null:null
                 const lifespan=SYSTEM_LIFESPANS[st]||20
                 const pct=age?Math.min(100,Math.round((age/lifespan)*100)):0
+                const exOk=!!(ex&&!ex.not_applicable&&ex.condition&&ex.condition!=='unknown'&&age)
                 return(
                   <div key={st}
                     onClick={()=>{if(ex){startEditSystem(ex);setSystemModal(ex)}else{addSystem(st)}}}
-                    style={{background:'#fff',border:`1px solid ${ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer',opacity:ex?.not_applicable?0.5:1}}>
+                    style={{background:ex?.not_applicable?'#F5F5F3':exOk?'#EAF3DE':'#fff',border:`1px solid ${ex?.not_applicable?'rgba(30,58,47,0.08)':exOk?'rgba(61,122,90,0.25)':ex?'rgba(30,58,47,0.15)':'rgba(30,58,47,0.1)'}`,borderRadius:'12px',padding:'12px',cursor:'pointer',opacity:ex?.not_applicable?0.5:1}}>
                     <div style={{fontSize:'20px',marginBottom:'6px'}}>{SYSTEM_ICONS[st]||'🔧'}</div>
                     <div style={{fontSize:'12px',fontWeight:500,color:'#1E3A2F',marginBottom:'2px'}}>{SYSTEM_DISPLAY_NAMES[st]||st}</div>
                     {ex&&!ex.not_applicable?(
