@@ -397,15 +397,15 @@ function getCondition(sys: any) {
   const saved=sys.condition
   if(saved&&saved!=='unknown'){
     const labelMap:Record<string,string>={'good':'Good','fair':'Fair','poor':'Poor','critical':'Critical','watch':'Fair','inspect':'Poor','priority':'Critical'}
-    const label=labelMap[saved]||'Not set'
+    const label=labelMap[saved]||''
     if(label==='Good')return{label:'Good',color:'#3D7A5A',bg:'#EAF2EC',textColor:'#27500A'}
     if(label==='Fair')return{label:'Fair',color:'#C47B2B',bg:'#FBF0DC',textColor:'#633806'}
     if(label==='Poor')return{label:'Poor',color:'#E24B4A',bg:'#FDECEA',textColor:'#791F1F'}
     if(label==='Critical')return{label:'Critical',color:'#791F1F',bg:'#FCEBEB',textColor:'#501313'}
-    return{label:'Not set',color:'#8A8A82',bg:'#F5F5F5',textColor:'#8A8A82'}
+    return{label:'',color:'#8A8A82',bg:'transparent',textColor:'#8A8A82'}
   }
-  // No saved condition — return not set
-  return{label:'Not set',color:'#8A8A82',bg:'#F5F5F5',textColor:'#8A8A82'}
+  // No saved condition
+  return{label:'',color:'#8A8A82',bg:'transparent',textColor:'#8A8A82'}
 }
 
 function getDeferredLiability(systems: any[]): number {
@@ -1614,13 +1614,13 @@ const STATUS_OPTIONS=[
           <div style={{flex:1}}>
             <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'2px',flexWrap:'wrap'}}>
               <span style={{fontSize:'14px',fontWeight:500,color:'#1E3A2F'}}>{SYSTEM_DISPLAY_NAMES[sys.system_type]||sys.system_type}</span>
-              <span style={{fontSize:'10px',fontWeight:500,padding:'2px 7px',borderRadius:'20px',background:cond.bg,color:cond.textColor}}>{cond.label}</span>
+              {cond.label&&<span style={{fontSize:'10px',fontWeight:500,padding:'2px 7px',borderRadius:'20px',background:cond.bg,color:cond.textColor}}>{cond.label}</span>}
               {savedSystemId===sys.id&&<span style={{fontSize:'10px',fontWeight:500,padding:'2px 10px',borderRadius:'20px',background:'#EAF2EC',color:'#3D7A5A'}}>✓ Saved</span>}
               {sys.system_status==='getting_quotes'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#FBF0DC',color:'#633806'}}>Getting quotes</span>}
               {sys.system_status==='scheduled'&&<span style={{fontSize:'10px',padding:'2px 7px',borderRadius:'20px',background:'#E6F1FB',color:'#0C447C'}}>Scheduled</span>}
             </div>
             <div style={{fontSize:'12px',color:'#8A8A82'}}>
-              {sys.not_applicable?'Not applicable':age?`${age} yr old${sys.material?` · ${sys.material}`:''}${sys.condition?` · ${sys.condition} condition`:''}`:sys.material||'Tap to add details'}
+              {sys.not_applicable?'Not applicable':age?`${age} yr old${sys.material?` · ${sys.material}`:''}`:sys.material||'Tap to set up'}
             </div>
           </div>
           {age!==null&&!sys.not_applicable&&<div style={{width:'60px',flexShrink:0}}><div style={{height:'4px',background:'#EDE8E0',borderRadius:'2px'}}><div style={{width:`${pct}%`,height:'100%',background:cond.color,borderRadius:'2px'}}/></div><div style={{fontSize:'10px',color:'#8A8A82',textAlign:'right',marginTop:'2px'}}>{pct}%</div></div>}
